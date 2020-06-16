@@ -195,7 +195,7 @@ class DicomInfo:
                 modality = 'T2STAR'
             body_part = 'BRAIN'
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
-            study_desc = self.StudyDescription.lower().replace(' ', '')
+            study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
             if 'brain' in series_desc:
                 body_part = 'BRAIN'
             elif 'cerv' in series_desc or 'csp' in series_desc or \
