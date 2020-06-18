@@ -61,7 +61,7 @@ class BuildWithCommitInfoCommand(build_py):
         cfg_parser = configparser.RawConfigParser()
         cfg_parser.read(os.path.join(pkg_path, 'COMMIT_INFO.txt'))
         cfg_parser.set('commit hash', 'install_hash', repo_commit.strip())
-        out_pth = os.path.join(self.build_lib, 'COMMIT_INFO.txt')
+        out_pth = os.path.join(self.build_lib, 'autoconv', 'COMMIT_INFO.txt')
         cfg_parser.write(open(out_pth, 'wt'))
 # End code from Nipype #####
 
@@ -73,7 +73,7 @@ setup(
     long_description="Automatic conversion process for MRI data",
     author='Blake Dewey',
     author_email='blake.dewey@jhu.edu',
-    url='https://gitlab.com/iacl/tms-converter',
+    url='https://gitlab.com/iacl/autoconv',
     license='Apache License, 2.0',
     classifiers=[
       'Development Status :: 3 - Alpha',
@@ -93,5 +93,6 @@ setup(
       'pydicom',
       'numpy'
     ],
+    package_data={'autoconv': ['parrec_templates/*.txt']},
     cmdclass={'build_py': BuildWithCommitInfoCommand},
 )

@@ -1,0 +1,10 @@
+# === DATA DESCRIPTION FILE ======================================================
+#
+# CAUTION - Investigational device.
+# Limited by Federal Law to investigational use.
+# This file is IACL-Specific and not guaranteed to work in any non-IACL software
+#
+# Dataset name: $dataset_name
+#
+# CLINICAL TRYOUT             Research image export tool     V4.2
+#

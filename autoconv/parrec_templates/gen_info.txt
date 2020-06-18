@@ -1,0 +1,38 @@
+# === GENERAL INFORMATION ========================================================
+#
+.    Patient name                       :   $patient_name
+.    Examination name                   :   $exam_name
+.    Protocol name                      :   $protocol_name
+.    Examination date/time              :   $exam_date
+.    Series Type                        :   $series_type
+.    Acquisition nr                     :   $acq_nr
+.    Reconstruction nr                  :   $recon_nr
+.    Scan Duration [sec]                :   $scan_duration
+.    Max. number of cardiac phases      :   $max_cardiac_phases
+.    Max. number of echoes              :   $max_echoes
+.    Max. number of slices/locations    :   $max_slices
+.    Max. number of dynamics            :   $max_dynamics
+.    Max. number of mixes               :   $max_mixes
+.    Patient position                   :   $patient_position
+.    Preparation direction              :   $prep_direction
+.    Technique                          :   $tech
+.    Scan resolution  (x, y)            :   $scan_resolution
+.    Scan mode                          :   $scan_mode
+.    Repetition time [ms]               :   $repetition_time
+.    FOV (ap,fh,rl) [mm]                :   $fov
+.    Water Fat shift [pixels]           :   $water_fat_shift
+.    Angulation midslice(ap,fh,rl)[degr]:   $angulation
+.    Off Centre midslice(ap,fh,rl) [mm] :   $off_center
+.    Flow compensation <0=no 1=yes> ?   :   $flow_compensation
+.    Presaturation     <0=no 1=yes> ?   :   $presaturation
+.    Phase encoding velocity [cm/sec]   :   $phase_enc_velocity
+.    MTC               <0=no 1=yes> ?   :   $mtc
+.    SPIR              <0=no 1=yes> ?   :   $spir
+.    EPI factor        <0,1=no EPI>     :   $epi_factor
+.    Dynamic scan      <0=no 1=yes> ?   :   $dyn_scan
+.    Diffusion         <0=no 1=yes> ?   :   $diffusion
+.    Diffusion echo time [ms]           :   $diffusion_echo_time
+.    Max. number of diffusion values    :   $max_diffusion_values
+.    Max. number of gradient orients    :   $max_gradient_orient
+.    Number of label types   <0=no ASL> :   $nr_label_types
+#

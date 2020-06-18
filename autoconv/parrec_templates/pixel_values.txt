@@ -1,0 +1,60 @@
+# === PIXEL VALUES =============================================================
+#  PV = pixel value in REC file, FP = floating point value, DV = displayed value on console
+#  RS = rescale slope,           RI = rescale intercept,    SS = scale slope
+#  DV = PV * RS + RI             FP = DV / (RS * SS)
+#
+# === IMAGE INFORMATION DEFINITION =============================================
+#  The rest of this file contains ONE line per image, this line contains the following information:
+#
+#  slice number                             (integer)
+#  echo number                              (integer)
+#  dynamic scan number                      (integer)
+#  cardiac phase number                     (integer)
+#  image_type_mr                            (integer)
+#  scanning sequence                        (integer)
+#  index in REC file (in images)            (integer)
+#  image pixel size (in bits)               (integer)
+#  scan percentage                          (integer)
+#  recon resolution (x y)                   (2*integer)
+#  rescale intercept                        (float)
+#  rescale slope                            (float)
+#  scale slope                              (float)
+#  window center                            (integer)
+#  window width                             (integer)
+#  image angulation (ap,fh,rl in degrees )  (3*float)
+#  image offcentre (ap,fh,rl in mm )        (3*float)
+#  slice thickness (in mm )                 (float)
+#  slice gap (in mm )                       (float)
+#  image_display_orientation                (integer)
+#  slice orientation ( TRA/SAG/COR )        (integer)
+#  fmri_status_indication                   (integer)
+#  image_type_ed_es  (end diast/end syst)   (integer)
+#  pixel spacing (x,y) (in mm)              (2*float)
+#  echo_time                                (float)
+#  dyn_scan_begin_time                      (float)
+#  trigger_time                             (float)
+#  diffusion_b_factor                       (float)
+#  number of averages                       (integer)
+#  image_flip_angle (in degrees)            (float)
+#  cardiac frequency   (bpm)                (integer)
+#  minimum RR-interval (in ms)              (integer)
+#  maximum RR-interval (in ms)              (integer)
+#  TURBO factor  <0=no turbo>               (integer)
+#  Inversion delay (in ms)                  (float)
+#  diffusion b value number    (imagekey!)  (integer)
+#  gradient orientation number (imagekey!)  (integer)
+#  contrast type                            (integer)
+#  diffusion anisotropy type                (integer)
+#  diffusion (ap, fh, rl)                   (3*float)
+#  label type (ASL)            (imagekey!)  (integer)
+#  Contrast Bolus Agent                     (string)
+#  Contrast Bolus Route                     (float)
+#  Contrast Bolus Volume                    (string)
+#  Contrast Bolus Start Time                (string)
+#  Contrast Bolus Total Dose                (float)
+#  Contrast Bolus Ingredient                (string)
+#  Contrast Bolus Ingredient Concentration  (float)
+#
+# === IMAGE INFORMATION ==========================================================
+#sl  ec  dyn  ph  ty  idx  pix  scan%  rec  size  rescale_int  rescale_sl  scale_sl  window  angulation  offcentre  thick  gap  info  spacing  echo  dtime  ttime  diff  avg  flip  freq  RR-int  turbo  delay  b  grad  cont  anis  diffusion  L.ty  contagent  controute  contvolume  conttime  contdose  contingr  contingrconcen
+
