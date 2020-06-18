@@ -69,7 +69,7 @@ class ParrecInfo(BaseInfo):
         self.InversionTime = float(image_defs.inversion_delay[0])
         self.ExContrastAgent = image_defs.contrast_bolus_agent[0].decode('UTF-8') \
             if 'contrast_bolus_agent' in hdr.image_defs.dtype.fields.keys() else ''
-        self.ComplexImageComponent = COMPLEX_IMAGE_TYPES[image_defs.image_type_mr[0]]
+        self.ComplexImageComponent = COMPLEX_IMAGE_TYPES.get(image_defs.image_type_mr[0], 'MAGNITUDE')
         self.SliceThickness = float(image_defs.slice_thickness[0])
         self.SliceSpacing = float(image_defs.slice_thickness[0]) + float(image_defs.slice_gap[0])
 
