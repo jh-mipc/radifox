@@ -1,6 +1,5 @@
 from copy import deepcopy
 import os
-import shutil
 from string import Template
 import secrets
 
@@ -159,7 +158,7 @@ def split_fix_parrec(in_filename, study_uid, outdir):
         generate_par_file(in_filename, this_hdr,
                           os.path.join(outdir, series_uid + ('.%02d' % (i+1)) + '.par'))
     if len(split_vols) == 1:
-        shutil.copyfile(file_map['image'].filename, os.path.join(outdir, series_uid + '.01.rec'))
+        os.rename(file_map['image'].filename, os.path.join(outdir, series_uid + '.01.rec'))
     else:
         rec_fobj = file_map['image'].get_prepare_fileobj()
         data = PARRECArrayProxy(rec_fobj, hdr).get_unscaled()

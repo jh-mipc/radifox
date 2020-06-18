@@ -77,7 +77,8 @@ def main(args=None):
             if parsed_args.no_zip:
                 logging.info('Copying files from source to %s folder' % type_folder)
                 shutil.copytree(parsed_args.source,
-                                os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
+                                os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder),
+                                copy_function=shutil.copyfile)
                 logging.info('Copying complete')
             else:
                 unzip(parsed_args.source, os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
