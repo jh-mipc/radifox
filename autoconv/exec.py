@@ -86,9 +86,11 @@ def main(args=None):
                 shutil.copytree(parsed_args.source,
                                 os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder),
                                 copy_function=shutil.copyfile)
+                recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
                 logging.info('Copying complete')
             else:
                 unzip(parsed_args.source, os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
+                recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
             sort_func(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
             recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
 
