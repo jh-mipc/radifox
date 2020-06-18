@@ -351,6 +351,7 @@ class BaseSet:
                 logging.debug('Adjusting name for %s: %s --> %s' %
                               (di.SeriesUID, di.PredictedName, di.PredictedName + '-SUM'))
                 di.PredictedName = di.PredictedName + '-SUM'
+            # TODO: If this becomes a problem, can use ImagePositionPatient to determine if position has changed
             if di.PredictedName.split('_')[-1].split('-')[0] == 'SPINE':
                 if di.SeriesDescription == self.series_list[i-1].SeriesDescription:
                     di.PredictedName = di.PredictedName.replace('SPINE', 'TSPINE')
