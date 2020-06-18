@@ -32,7 +32,7 @@ class Metadata:
 
     def __repr_json__(self):
         return self.__dict__ if self.tms_metadata_file is not None \
-            else {k: v for k, v in self.__dict__ if k != 'tms_metadata_file'}
+            else {k: v for k, v in self.__dict__.items() if k != 'tms_metadata_file'}
 
     def prefix_to_str(self):
         if self.site_id is None:
