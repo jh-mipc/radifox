@@ -196,6 +196,8 @@ class BaseInfo:
                 modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
             elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
                 modality = 'T2STAR'
+            elif modality == 'T2' and self.EchoTime < 30:
+                modality = 'PD'
             body_part = 'BRAIN'
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
@@ -250,8 +252,8 @@ class BaseInfo:
             pred_list = [body_part, modality, sequence, resolution, orientation, excontrast]
         else:
             logging.debug('Name lookup successful.')
-        if pred_list[1] == 'T2' and self.EchoTime < 30:
-            pred_list[1] = 'PD'
+        if pred_list[1] == 'DE':
+            pred_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
         pred_name = '_'.join([scan_str, '-'.join(pred_list)])
         logging.debug('Predicted name: %s' % pred_name)
         self.PredictedName = pred_name
