@@ -13,6 +13,7 @@ class Metadata:
         self.time_id = time_id
         self.site_id = site_id
         self.project_shortname = self.project_id.upper() if project_shortname is None else project_shortname
+        self.tms_metadata_file = None
 
     @classmethod
     def from_tms_metadata(cls, metadata_file):
@@ -25,10 +26,13 @@ class Metadata:
                 tp_num = int(re.findall(r'\d+', key)[0])
                 time_id = str(83 + tp_num) if tp_num > 6 else META_TIME_CODES[tp_num]
                 break
-        return cls('treatms', patient_id, time_id, site_id, 'TMS')
+        out_cls = cls('treatms', patient_id, time_id, site_id, 'TMS')
+        out_cls.tms_metadata_file = metadata_file
+        return out_cls
 
     def __repr_json__(self):
-        return self.__dict__
+        return self.__dict__ if self.tms_metadata_file is not None \
+            else {k: v for k, v in self.__dict__ if k != 'tms_metadata_file'}
 
     def prefix_to_str(self):
         if self.site_id is None:
