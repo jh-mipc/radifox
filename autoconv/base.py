@@ -95,6 +95,8 @@ class BaseInfo:
             logging.debug('Name lookup failed, using automatic name generation.')
             autogen = True
             series_desc = self.SeriesDescription.lower().replace(' ', '')
+            if series_desc.startswith('wip'):
+                series_desc = series_desc[3:].lstrip()
             manu = self.Manufacturer.lower()
             # Needs automatic naming
             # 1) Orientation
