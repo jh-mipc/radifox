@@ -46,7 +46,7 @@ class DicomInfo(BaseInfo):
         self.StudyUID = getattr(ds, 'StudyInstanceUID', None)
         self.NumFiles = len(glob(os.path.join(dcmdir, '*')))
         for item in DCM_HEADER_ATTRS:
-            get_item, set_item = (item, item) if len(item) == 1 else item
+            get_item, set_item = item if isinstance(item, tuple) else (item, item)
             setattr(self, set_item, convert_type(getattr(ds, get_item, None)))
         self.Manufacturer = self.Manufacturer.lower().split(' ')[0]
         self.SequenceType = make_tuple(self.SequenceType)
