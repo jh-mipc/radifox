@@ -12,7 +12,7 @@ from .json import JSONObjectEncoder
 from .logging import create_loggers
 from .metadata import Metadata
 from .parrec import ParrecSet, sort_parrecs
-from .utils import silentremove, mkdir_p, unzip
+from .utils import silentremove, mkdir_p, unzip, recursive_chmod
 
 
 def main(args=None):
@@ -36,6 +36,11 @@ def main(args=None):
     parser.add_argument('--field_strength', type=int, default=3)
     parsed_args = parser.parse_args(args)
 
+    parsed_args.output_root = os.path.realpath(os.path.expanduser(parsed_args.output_root))
+    parsed_args.tms_metafile = os.path.realpath(os.path.expanduser(parsed_args.tms_metafile)) \
+        if parsed_args.tms_metafile else None
+    parsed_args.source = os.path.realpath(os.path.expanduser(parsed_args.source))
+
     if parsed_args.tms_metafile:
         metadata = Metadata.from_tms_metadata(parsed_args.tms_metafile)
         for arg in ['patient_id', 'time_id', 'site_id']:
@@ -51,7 +56,7 @@ def main(args=None):
         if parsed_args.force:
             shutil.rmtree(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
         else:
-            raise RuntimeError('Output directory exists, run with --force to remove outputs and re-run.')
+            raise RuntimeError('Output directory exists, run with --force or --rerun to remove outputs and re-run.')
     elif parsed_args.rerun:
         silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'nii'))
         silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
@@ -62,8 +67,10 @@ def main(args=None):
                                   'logs', 'conversion-warnings.log'))
         silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
                                   'logs', 'conversion-errors.log'))
+    else:
+        mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
+        recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
 
-    mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
     create_loggers(parsed_args.output_root, metadata.dir_to_str(), parsed_args.verbose)
 
     try:
@@ -83,6 +90,7 @@ def main(args=None):
             else:
                 unzip(parsed_args.source, os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
             sort_func(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
+            recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
 
         if parsed_args.parrec:
             img_set = ParrecSet(parsed_args.output_root, metadata, parsed_args.lut_file, parsed_args.institution,
@@ -90,11 +98,15 @@ def main(args=None):
         else:
             img_set = DicomSet(parsed_args.output_root, metadata, parsed_args.lut_file)
         img_set.create_all_nii()
+        recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'nii'))
 
         logging.info('Writing info file to ' + metadata.prefix_to_str() + '_ScanInfo.json')
         with open(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
                                metadata.prefix_to_str() + '_ScanInfo.json'), 'w') as json_fp:
             json_fp.write(json.dumps(img_set, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+        os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
+                              metadata.prefix_to_str() + '_ScanInfo.json'), 0o640)
+        recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'logs'))
     except KeyboardInterrupt:
         raise
     except:

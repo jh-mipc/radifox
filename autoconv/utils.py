@@ -136,3 +136,10 @@ def add_acq_num(name, count):
     addons = '' if len(contrast_arr) == 6 else ('-' + '-'.join(contrast_arr[6:]))
     base_contrast = '-'.join(contrast_arr[:6])
     return prefix + '_' + base_contrast + ('-ACQ%d' % count) + addons
+
+
+def recursive_chmod(directory, dir_octal=0o2750, file_octal=0o640):
+    for dirpath, dirnames, filenames in os.walk(directory):
+        os.chmod(dirpath, dir_octal)
+        for filename in filenames:
+            os.chmod(os.path.join(dirpath, filename), file_octal)
