@@ -199,7 +199,7 @@ class BaseInfo:
             body_part = 'BRAIN'
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
-            if 'brain' in series_desc:
+            if 'brain' in series_desc or series_desc.startswith('br_'):
                 body_part = 'BRAIN'
             elif 'cerv' in series_desc or 'csp' in series_desc or \
                     'c-sp' in series_desc or 'msma' in series_desc:
@@ -209,9 +209,10 @@ class BaseInfo:
             elif 'lumb' in series_desc or 'lsp' in series_desc:
                 body_part = 'LSPINE'
             elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
-                    re.search(r'\sct(?:\s+|$)', self.SeriesDescription.lower()) or 'vibe' in series_desc:
+                    re.search(r'\sct(?:\s+|$)', self.SeriesDescription.lower()) or 'vibe' in series_desc or \
+                    series_desc.startswith('sp_'):
                 body_part = 'SPINE'
-            elif 'orbit' in series_desc or 'thin' in series_desc:
+            elif 'orbit' in series_desc or 'thin' in series_desc or series_desc.startswith('on_'):
                 body_part = 'ORBITS'
             elif 'brain' in study_desc:
                 body_part = 'BRAIN'
