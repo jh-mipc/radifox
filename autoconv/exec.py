@@ -67,10 +67,10 @@ def main(args=None):
                                   'logs', 'conversion-warnings.log'))
         silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
                                   'logs', 'conversion-errors.log'))
-
-    mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
-    os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str()), mode=DIR_OCTAL)
-    os.chmod(os.path.dirname(os.path.join(parsed_args.output_root, metadata.dir_to_str())), mode=DIR_OCTAL)
+    else:
+        mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
+        os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str()), mode=DIR_OCTAL)
+        os.chmod(os.path.dirname(os.path.join(parsed_args.output_root, metadata.dir_to_str())), mode=DIR_OCTAL)
 
     create_loggers(parsed_args.output_root, metadata.dir_to_str(), parsed_args.verbose)
 
