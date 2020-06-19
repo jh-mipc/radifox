@@ -59,7 +59,7 @@ class ParrecInfo(BaseInfo):
 
         image_defs = hdr.image_defs.view(np.recarray)
         self.ImageOrientationPatient = ImageOrientation(np.concatenate([hdr.general_info['angulation'],
-                                                                       image_defs.slice_orientation[0]]))
+                                                                        [image_defs.slice_orientation[0]]]))
         self.ImagePositionPatient = TruncatedImageValue(hdr.general_info['off_center'])
         self.SliceOrientation = self.ImageOrientationPatient.get_plane()
         self.EchoTime = float(image_defs.echo_time[0])
@@ -72,8 +72,8 @@ class ParrecInfo(BaseInfo):
         self.ComplexImageComponent = COMPLEX_IMAGE_TYPES.get(image_defs.image_type_mr[0], 'MAGNITUDE')
         self.SliceThickness = float(image_defs.slice_thickness[0])
         self.SliceSpacing = float(image_defs.slice_thickness[0]) + float(image_defs.slice_gap[0])
-        self.ReconMatrix = [int(image_defs.recon_resolution[0]), int(image_defs.recon_resolution[0])]
-        self.ReconResolution = [int(image_defs.pixel_spacing[0]), int(image_defs.pixel_spacing[0])]
+        self.ReconMatrix = [int(image_defs.recon_resolution[0][0]), int(image_defs.recon_resolution[0][1])]
+        self.ReconResolution = [int(image_defs.pixel_spacing[0][0]), int(image_defs.pixel_spacing[0][1])]
         self.FieldOfView = [res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
         self.AcquiredResolution = [fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
 
