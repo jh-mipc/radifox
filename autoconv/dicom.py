@@ -34,7 +34,8 @@ DCM_HEADER_ATTRS = [
     'ComplexImageComponent',
     'BodyPartExamined',
     'StudyDescription',
-    'SequenceVariant'
+    'SequenceVariant',
+    ('PixelSpacing', 'ReconResolution')
 ]
 
 
@@ -58,7 +59,6 @@ class DicomInfo(BaseInfo):
         self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \
             if self.AcquisitionMatrix[1] == 0 else [self.AcquisitionMatrix[2], self.AcquisitionMatrix[1]]
         self.ReconMatrix = [getattr(ds, 'Columns', 0), getattr(ds, 'Rows', 0)]
-        self.ReconResolution = getattr(ds, 'PixelSpacing')
         self.FieldOfView = [res*num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
         self.AcquiredResolution = [fov/num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
         self.SequenceName = getattr(ds, 'SequenceName', getattr(ds, 'PulseSequenceName', None))
