@@ -7,7 +7,7 @@ import shutil
 
 import numpy as np
 
-from .base import BaseInfo, BaseSet, ImageOrientation
+from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue
 from .nib_parrec_fork import PARRECHeader, PARRECImage, TruncatedPARRECError
 from .parrec_writer import split_fix_parrec
 from .utils import make_tuple, silentremove
@@ -20,7 +20,6 @@ GENERAL_INFO_FIELDS = {
     'SequenceType': 'tech',
     'AcquisitionDimension': 'scan_mode',
 }
-PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 COMPLEX_IMAGE_TYPES = {0: 'MAGNITUDE', 1: 'REAL', 2: 'IMAGINARY', 3: 'PHASE'}
 
 
@@ -59,9 +58,10 @@ class ParrecInfo(BaseInfo):
                                   int(hdr.general_info['scan_resolution'][1]), 0]
 
         image_defs = hdr.image_defs.view(np.recarray)
-        self.ImageOrientationObj = ImageOrientation(np.concatenate([hdr.general_info['angulation'],
-                                                                    hdr.general_info['off_center']]))
-        self.ImageOrientation = PARREC_ORIENTATIONS[image_defs.slice_orientation[0]]
+        self.ImageOrientationPatient = ImageOrientation(np.concatenate([hdr.general_info['angulation'],
+                                                                       image_defs.slice_orientation[0]]))
+        self.ImagePositionPatient = TruncatedImageValue(hdr.general_info['off_center'])
+        self.SliceOrientation = self.ImageOrientationPatient.get_plane()
         self.EchoTime = float(image_defs.echo_time[0])
         self.FlipAngle = float(image_defs.image_flip_angle[0])
         self.EchoTrainLength = int(image_defs.turbo_factor[0])/int(hdr.general_info['max_echoes']) \

@@ -9,7 +9,7 @@ import pydicom as dicom
 from pydicom.errors import InvalidDicomError
 from pydicom.dicomdir import DicomDir
 
-from .base import BaseInfo, BaseSet, ImageOrientation, MATCHING_ITEMS
+from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue, MATCHING_ITEMS
 from .utils import mkdir_p, convert_type, make_tuple
 
 
@@ -56,8 +56,9 @@ class DicomInfo(BaseInfo):
         self.SequenceVariant = make_tuple(self.SequenceVariant)
         self.SequenceName = getattr(ds, 'SequenceName', getattr(ds, 'PulseSequenceName', None))
         self.ExContrastAgent = getattr(ds, 'ContrastBolusAgent', getattr(ds, 'ContrastBolusAgentSequence', None))
-        self.ImageOrientationObj = ImageOrientation(getattr(ds, 'ImageOrientationPatient', None))
-        self.ImageOrientation = self.ImageOrientationObj.dcm_plane()
+        self.ImageOrientationPatient = ImageOrientation(getattr(ds, 'ImageOrientationPatient', None))
+        self.SliceOrientation = self.ImageOrientationPatient.get_plane()
+        self.ImagePositionPatient = TruncatedImageValue(getattr(ds, 'ImagePositionPatient', None))
         if self.ComplexImageComponent is None and any([comp in self.ImageType for comp in ['M', 'P']]):
             self.ComplexImageComponent = 'MAGNITUDE' if 'M' in self.ImageType else 'PHASE'
 
@@ -120,7 +121,7 @@ def sort_dicoms(dcm_dir):
                 uid = getattr(dcm_ds, 'SeriesInstanceUID', None)
                 if uid is not None:
                     valid_dcms.append((dcm_img, uid, dcm_ds.InstanceNumber,
-                                       tuple([ImageOrientation(getattr(dcm_ds, item, None))
+                                       tuple([TruncatedImageValue(getattr(dcm_ds, item, None))
                                               if item == 'ImageOrientationPatient'
                                               else getattr(dcm_ds, item, None)
                                               for item in MATCHING_ITEMS])))

@@ -16,9 +16,11 @@ from .utils import mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_f
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal']
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc']
-MATCHING_ITEMS = ['ImageOrientation', 'RepetitionTime', 'FlipAngle', 'EchoTime',
+MATCHING_ITEMS = ['ImageOrientationPatient',
+                  'RepetitionTime', 'FlipAngle', 'EchoTime',
                   'InversionTime', 'ComplexImageComponent']
 DCM_ORIENT_PLANES = {0: 'sagittal', 1: 'coronal', 2: 'axial'}
+PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
 
 class BaseInfo:
@@ -52,8 +54,9 @@ class BaseInfo:
         self.SequenceVariant = None
         self.SequenceName = None
         self.ExContrastAgent = None
-        self.ImageOrientationObj = None
-        self.ImageOrientation = None
+        self.ImageOrientationPatient = None
+        self.ImagePositionPatient = None
+        self.SliceOrientation = None
 
         self.ConvertImage = False
         self.NiftiCreated = False
@@ -92,15 +95,14 @@ class BaseInfo:
             self.ConvertImage = False
             return
         if pred_list is None:
+            # Needs automatic naming
             logging.debug('Name lookup failed, using automatic name generation.')
             autogen = True
             series_desc = self.SeriesDescription.lower().replace(' ', '')
             if series_desc.startswith('wip'):
                 series_desc = series_desc[3:].lstrip()
-            manu = self.Manufacturer.lower()
-            # Needs automatic naming
             # 1) Orientation
-            orientation = self.ImageOrientation.upper()
+            orientation = self.SliceOrientation.upper()
             # 2) Resolution
             resolution = self.AcquisitionDimension
             # 3) Ex-contrast
@@ -185,7 +187,7 @@ class BaseInfo:
             if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
                 sequence = sequence.replace('IR', 'IRF')
             if 'mprage' in series_desc or 'bravo' in series_desc or \
-                    'philips' in manu and sequence == 'FSPGR' and 'MP' in self.SequenceVariant:
+                    self.Manufacturer == 'philips' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant:
                 sequence = 'IRFSPGR'
             if modality == 'UNK':
                 if sequence == 'IRFSPGR':
@@ -304,7 +306,7 @@ class BaseInfo:
                 logging.warning('Nifti creation failed.')
                 success = False
                 continue
-            reo_result = reorient(filename + '.nii.gz', self.ImageOrientation)
+            reo_result = reorient(filename + '.nii.gz', self.SliceOrientation)
             if not reo_result:
                 remove_created_files(filename)
                 success = False
@@ -431,34 +433,40 @@ class BaseSet:
                 di.create_nii()
 
 
-class ImageOrientation:
+class TruncatedImageValue:
 
-    def __init__(self, orientation, precision=1e-4):
-        self.orientation = orientation
+    def __init__(self, value, precision=1e-4):
+        self.value = value
         self.precision = precision
 
     def __eq__(self, other):
-        if isinstance(other, ImageOrientation) \
-                and self.orientation is not None \
-                and other.orientation is not None:
-            return all([abs(self.orientation[i]-other.orientation[i]) <= 0.0001
-                        for i in range(len(self.orientation))])
+        if isinstance(other, TruncatedImageValue) \
+                and self.value is not None \
+                and other.value is not None:
+            return all([abs(self.value[i]-other.value[i]) <= self.precision
+                        for i in range(len(self.value))])
         else:
             return super().__eq__(other)
 
     def __hash__(self):
-        return hash(tuple([self.truncate(num) for num in self.orientation]))
+        return hash(tuple(self.truncate()))
 
     def __repr_json__(self):
-        return [self.truncate(num) for num in self.orientation]
+        return self.truncate()
 
-    def truncate(self, num):
-        return np.around(int(num/self.precision)*self.precision,
-                         int(abs(np.log10(self.precision))+1))
+    def truncate(self):
+        return [np.around(int(num/self.precision)*self.precision,
+                          int(abs(np.log10(self.precision))+1))
+                for num in self.value]
 
-    def dcm_plane(self):
-        if self.orientation is None:
+
+class ImageOrientation(TruncatedImageValue):
+    def get_plane(self):
+        if self.value is None:
             return None
-        orient_orth = [round(x) for x in self.orientation]
-        plane = int(np.argmax([abs(x) for x in np.cross(orient_orth[0:3], orient_orth[3:6])]))
-        return DCM_ORIENT_PLANES.get(plane, None)
+        if len(self.value) == 6:  # Direction Cosines
+            orient_orth = [round(x) for x in self.value]
+            plane = int(np.argmax([abs(x) for x in np.cross(orient_orth[0:3], orient_orth[3:6])]))
+            return DCM_ORIENT_PLANES.get(plane, None)
+        if len(self.value) == 4:  # Angulation + Plane
+            return PARREC_ORIENTATIONS.get(self.value[3], None)
