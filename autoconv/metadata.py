@@ -43,6 +43,7 @@ class Metadata:
 
     def dir_to_str(self):
         if self.site_id is None:
-            return os.path.join(self.project_id, self.patient_id, self.time_id)
+            return os.path.join(self.project_id, self.project_shortname + '-' + self.patient_id, self.time_id)
         else:
-            return os.path.join(self.project_id, self.site_id + '-' + self.patient_id, self.time_id)
+            return os.path.join(self.project_id, self.project_shortname + '-'
+                                + self.site_id + '-' + self.patient_id, self.time_id)
