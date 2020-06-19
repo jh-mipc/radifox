@@ -360,9 +360,9 @@ class BaseSet:
                 logging.debug('Adjusting name for %s: %s --> %s' %
                               (di.SeriesUID, di.PredictedName, di.PredictedName + '-SUM'))
                 di.PredictedName = di.PredictedName + '-SUM'
-            # TODO: If this becomes a problem, can use ImagePositionPatient to determine if position has changed
             if di.PredictedName.split('_')[-1].split('-')[0] == 'SPINE':
-                if di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription:
+                if di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \
+                        abs(di.ImagePositionPatient[2] - self.SeriesList[i - 1].ImagePositionPatient[2]) > 50:
                     di.PredictedName = di.PredictedName.replace('SPINE', 'TSPINE')
                 else:
                     di.PredictedName = di.PredictedName.replace('SPINE', 'CSPINE')
