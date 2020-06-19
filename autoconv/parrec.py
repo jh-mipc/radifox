@@ -48,7 +48,6 @@ class ParrecInfo(BaseInfo):
         self.EPIFactor = hdr.general_info['epi_factor']
         self.DiffusionFlag = hdr.general_info['diffusion']
         self.AcquisitionDimension = '2D' if self.AcquisitionDimension == 'MS' else self.AcquisitionDimension
-        self.SequenceType = make_tuple(self.SequenceType)
         self.AcqDateTime = str(datetime.strptime(hdr.general_info['exam_date'], '%Y.%m.%d / %H:%M:%S'))
         self.RepetitionTime = hdr.general_info['repetition_time'][0]
         self.ImageType = ['ORIGINAL', 'PRIMARY'] if hdr.general_info['recon_nr'] == 1 \
@@ -77,7 +76,6 @@ class ParrecInfo(BaseInfo):
         self.FieldOfView = [res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
         self.AcquiredResolution = [fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
 
-        self.SequenceVariant = tuple()
         self.BodyPartExamined = ''
         self.ScannerModelName = None
 

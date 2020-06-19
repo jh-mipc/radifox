@@ -49,13 +49,13 @@ class BaseInfo:
         self.ReconMatrix = None
         self.ReconResolution = None
         self.FieldOfView = None
-        self.SequenceType = []
+        self.SequenceType = tuple()
         self.ImageType = None
         self.SeriesNumber = None
         self.ComplexImageComponent = None
         self.BodyPartExamined = None
         self.StudyDescription = None
-        self.SequenceVariant = None
+        self.SequenceVariant = tuple()
         self.SequenceName = None
         self.ExContrastAgent = None
         self.ImageOrientationPatient = None
