@@ -96,10 +96,10 @@ def main(args=None):
             recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
 
         if parsed_args.parrec:
-            img_set = ParrecSet(parsed_args.output_root, metadata, parsed_args.lut_file, parsed_args.institution,
-                                parsed_args.field_strength)
+            img_set = ParrecSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file,
+                                parsed_args.institution, parsed_args.field_strength)
         else:
-            img_set = DicomSet(parsed_args.output_root, metadata, parsed_args.lut_file)
+            img_set = DicomSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file)
         img_set.create_all_nii()
         recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'nii'))
 
