@@ -54,8 +54,8 @@ class ParrecInfo(BaseInfo):
         self.ImageType = ['ORIGINAL', 'PRIMARY'] if hdr.general_info['recon_nr'] == 1 \
             else ['ORIGINAL', 'SECONDARY']
         self.NumFiles = hdr.general_info['max_slices']
-        self.AcquisitionMatrix = [0, int(hdr.general_info['scan_resolution'][0]),
-                                  int(hdr.general_info['scan_resolution'][1]), 0]
+        self.AcquisitionMatrix = [int(hdr.general_info['scan_resolution'][0]),
+                                  int(hdr.general_info['scan_resolution'][1])]
 
         image_defs = hdr.image_defs.view(np.recarray)
         self.ImageOrientationPatient = ImageOrientation(np.concatenate([hdr.general_info['angulation'],
@@ -72,6 +72,10 @@ class ParrecInfo(BaseInfo):
         self.ComplexImageComponent = COMPLEX_IMAGE_TYPES.get(image_defs.image_type_mr[0], 'MAGNITUDE')
         self.SliceThickness = float(image_defs.slice_thickness[0])
         self.SliceSpacing = float(image_defs.slice_thickness[0]) + float(image_defs.slice_gap[0])
+        self.ReconMatrix = [int(image_defs.recon_resolution[0]), int(image_defs.recon_resolution[0])]
+        self.ReconResolution = [int(image_defs.pixel_spacing[0]), int(image_defs.pixel_spacing[0])]
+        self.FieldOfView = [res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
+        self.AcquiredResolution = [fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
 
         self.SequenceVariant = tuple()
         self.SequenceName = None
@@ -84,24 +88,25 @@ class ParrecInfo(BaseInfo):
 
 class ParrecSet(BaseSet):
 
-    def __init__(self, output_root, metadata_obj, lut_file, institution_name=None, magnetic_field_strength=3):
-        super().__init__(metadata_obj, lut_file)
+    def __init__(self, source, output_root, metadata_obj, lut_file, institution_name=None,
+                 magnetic_field_strength=3):
+        super().__init__(source, metadata_obj, lut_file)
 
-        for parfile in sorted(glob(os.path.join(output_root, self.metadata.dir_to_str(), 'parrec', '*.par'))):
+        for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'parrec', '*.par'))):
             logging.info('Processing %s' % parfile)
-            self.series_list.append(ParrecInfo(parfile, institution_name, magnetic_field_strength))
+            self.SeriesList.append(ParrecInfo(parfile, institution_name, magnetic_field_strength))
 
-        for di in self.series_list:
+        for di in self.SeriesList:
             if di.should_convert():
                 if di.ReconstructionNumber > 1:
-                    other_recons = [other_di for other_di in self.series_list
+                    other_recons = [other_di for other_di in self.SeriesList
                                     if other_di.SeriesNumber == di.SeriesNumber]
                     if any([other_di.ReconstructionNumber == 1 for other_di in other_recons]):
                         di.ConvertImage = False
                     elif not di.SeriesDescription.startswith('sWIP'):
                         di.ConvertImage = False
                 if di.ConvertImage:
-                    di.create_image_name(self.metadata.prefix_to_str(), self.lookup_table)
+                    di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable)
 
         logging.info('Generating unique names')
         self.generate_unique_names()

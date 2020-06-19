@@ -54,6 +54,13 @@ class DicomInfo(BaseInfo):
         self.Manufacturer = self.Manufacturer.lower().split(' ')[0]
         self.SequenceType = make_tuple(self.SequenceType)
         self.SequenceVariant = make_tuple(self.SequenceVariant)
+        # noinspection PyUnresolvedReferences
+        self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \
+            if self.AcquisitionMatrix[1] == 0 else [self.AcquisitionMatrix[2], self.AcquisitionMatrix[1]]
+        self.ReconMatrix = [getattr(ds, 'Columns', 0), getattr(ds, 'Rows', 0)]
+        self.ReconResolution = getattr(ds, 'PixelSpacing')
+        self.FieldOfView = [res*num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
+        self.AcquiredResolution = [fov/num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
         self.SequenceName = getattr(ds, 'SequenceName', getattr(ds, 'PulseSequenceName', None))
         self.ExContrastAgent = getattr(ds, 'ContrastBolusAgent', getattr(ds, 'ContrastBolusAgentSequence', None))
         self.ImageOrientationPatient = ImageOrientation(getattr(ds, 'ImageOrientationPatient', None))
@@ -64,15 +71,15 @@ class DicomInfo(BaseInfo):
 
 
 class DicomSet(BaseSet):
-    def __init__(self, output_root, metadata_obj, lut_file):
-        super().__init__(metadata_obj, lut_file)
+    def __init__(self, source, output_root, metadata_obj, lut_file):
+        super().__init__(source, metadata_obj, lut_file)
 
-        for dcmdir in sorted(glob(os.path.join(output_root, self.metadata.dir_to_str(), 'dcm', '*'))):
+        for dcmdir in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'dcm', '*'))):
             logging.info('Processing %s' % dcmdir)
             di = DicomInfo(dcmdir)
             if di.should_convert():
-                di.create_image_name(self.metadata.prefix_to_str(), self.lookup_table)
-            self.series_list.append(di)
+                di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable)
+            self.SeriesList.append(di)
 
         logging.info('Generating unique names')
         self.generate_unique_names()

@@ -44,7 +44,11 @@ class BaseInfo:
         self.EchoTime = None
         self.InversionTime = None
         self.EchoTrainLength = None
-        self.AcquisitionMatrix = None
+        self.AcquisitionMatrix = []
+        self.AcquiredResolution = None
+        self.ReconMatrix = None
+        self.ReconResolution = None
+        self.FieldOfView = None
         self.SequenceType = None
         self.ImageType = None
         self.SeriesNumber = None
@@ -324,21 +328,22 @@ class BaseInfo:
 
 
 class BaseSet:
-    def __init__(self, metadata_obj, lut_file):
+    def __init__(self, source, metadata_obj, lut_file):
         self.AutoConvVersion = __version__
-        self.metadata = metadata_obj
-        self.lookup_table = LookupTable(lut_file, self.metadata.project_id, self.metadata.site_id)
-        self.series_list = []
+        self.InputSource = source
+        self.Metadata = metadata_obj
+        self.LookupTable = LookupTable(lut_file, self.Metadata.ProjectID, self.Metadata.SiteID)
+        self.SeriesList = []
 
     def __repr_json__(self):
         return self.__dict__
 
     def generate_unique_names(self):
-        self.series_list = sorted(sorted(self.series_list, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
-                                  key=lambda x: x.ConvertImage, reverse=True)
-        names_set = set([di.PredictedName for di in self.series_list])
+        self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
+                                 key=lambda x: x.ConvertImage, reverse=True)
+        names_set = set([di.PredictedName for di in self.SeriesList])
         names_dict = {name: {} for name in names_set}
-        for di in self.series_list:
+        for di in self.SeriesList:
             if di.PredictedName is None:
                 continue
             root_uid = '.'.join(di.SeriesUID.split('.')[:-1])
@@ -346,7 +351,7 @@ class BaseSet:
                 names_dict[di.PredictedName][root_uid] = []
             names_dict[di.PredictedName][root_uid].append(di.SeriesUID.split('.')[-1])
         dyn_checks = {}
-        for i, di in enumerate(self.series_list):
+        for i, di in enumerate(self.SeriesList):
             if di.PredictedName is None:
                 continue
             root_uid = '.'.join(di.SeriesUID.split('.')[:-1])
@@ -357,7 +362,7 @@ class BaseSet:
                 di.PredictedName = di.PredictedName + '-SUM'
             # TODO: If this becomes a problem, can use ImagePositionPatient to determine if position has changed
             if di.PredictedName.split('_')[-1].split('-')[0] == 'SPINE':
-                if di.SeriesDescription == self.series_list[i-1].SeriesDescription:
+                if di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription:
                     di.PredictedName = di.PredictedName.replace('SPINE', 'TSPINE')
                 else:
                     di.PredictedName = di.PredictedName.replace('SPINE', 'CSPINE')
@@ -408,7 +413,7 @@ class BaseSet:
             else:
                 continue
 
-        for di in self.series_list:
+        for di in self.SeriesList:
             if di.PredictedName is None:
                 continue
             if di.PredictedName.split('_')[2].split('-')[1] == 'T2STAR' and not \
@@ -418,16 +423,16 @@ class BaseSet:
                               (di.SeriesUID, di.PredictedName, di.PredictedName + '-' + comp))
                 di.PredictedName = di.PredictedName + '-' + comp
 
-        for di in self.series_list:
+        for di in self.SeriesList:
             if di.PredictedName is not None and ' '.join(di.ImageType[:2]).lower() == 'derived primary':
-                if len([di2.PredictedName for di2 in self.series_list
+                if len([di2.PredictedName for di2 in self.SeriesList
                         if di2.PredictedName == di.PredictedName and
                         ' '.join(di2.ImageType[:2]).lower() == 'original primary']) > 0:
                     di.PredictedName = None
                     di.ConvertImage = False
 
     def create_all_nii(self):
-        for di in self.series_list:
+        for di in self.SeriesList:
             if di.ConvertImage:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
                 di.create_nii()
