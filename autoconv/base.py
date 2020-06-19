@@ -284,9 +284,6 @@ class BaseInfo:
             logging.debug('Adjusting name for %s: %s --> %s' % (self.SeriesUID, self.NiftiName,
                                                                 add_acq_num(self.NiftiName, count)))
             self.NiftiName = add_acq_num(self.NiftiName, count)
-        if '-ACQ3' in self.NiftiName:
-            logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and should be checked.'
-                            % self.NiftiName.replace('-ACQ3', ''))
 
         success = True
         dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y']
@@ -331,6 +328,9 @@ class BaseInfo:
             self.NiftiCreated = True
             logging.info('Nifti created successfully at %s' %
                          (os.path.join(niidir, self.NiftiName + '.nii.gz')))
+            if '-ACQ3' in self.NiftiName:
+                logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
+                                'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
 
 
 class BaseSet:
