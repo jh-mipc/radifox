@@ -18,11 +18,11 @@ ORIENT_CODES = {'sagittal': 'PIL', 'coronal': 'LIP', 'axial': 'LPS'}
 
 
 # http://stackoverflow.com/a/22718321
-def mkdir_p(path):
+def mkdir_p(path, mode=0o777):
     import os
     import errno
     try:
-        os.makedirs(path)
+        os.makedirs(path, mode=mode)
     except OSError as exc:
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
@@ -138,7 +138,11 @@ def add_acq_num(name, count):
     return prefix + '_' + base_contrast + ('-ACQ%d' % count) + addons
 
 
-def recursive_chmod(directory, dir_octal=0o2770, file_octal=0o660):
+FILE_OCTAL=0o660
+DIR_OCTAL=0o2770
+
+
+def recursive_chmod(directory, dir_octal=DIR_OCTAL, file_octal=FILE_OCTAL):
     for dirpath, dirnames, filenames in os.walk(directory):
         os.chmod(dirpath, dir_octal)
         for filename in filenames:

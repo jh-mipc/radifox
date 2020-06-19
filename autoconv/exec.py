@@ -12,7 +12,7 @@ from .json import JSONObjectEncoder
 from .logging import create_loggers
 from .metadata import Metadata
 from .parrec import ParrecSet, sort_parrecs
-from .utils import silentremove, mkdir_p, unzip, recursive_chmod
+from .utils import silentremove, mkdir_p, unzip, recursive_chmod, FILE_OCTAL, DIR_OCTAL
 
 
 def main(args=None):
@@ -68,9 +68,7 @@ def main(args=None):
         silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
                                   'logs', 'conversion-errors.log'))
     else:
-        mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
-        os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str()), 0o2770)
-        os.chmod(os.path.dirname(os.path.join(parsed_args.output_root, metadata.dir_to_str())), 0o2770)
+        mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()), mode=DIR_OCTAL)
 
     create_loggers(parsed_args.output_root, metadata.dir_to_str(), parsed_args.verbose)
 
@@ -108,7 +106,7 @@ def main(args=None):
                                metadata.prefix_to_str() + '_ScanInfo.json'), 'w') as json_fp:
             json_fp.write(json.dumps(img_set, indent=4, sort_keys=True, cls=JSONObjectEncoder))
         os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
-                              metadata.prefix_to_str() + '_ScanInfo.json'), 0o640)
+                              metadata.prefix_to_str() + '_ScanInfo.json'), FILE_OCTAL)
         recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'logs'))
     except KeyboardInterrupt:
         raise
