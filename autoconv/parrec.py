@@ -17,7 +17,7 @@ GENERAL_INFO_FIELDS = {
     'StudyDescription': 'exam_name',
     'SeriesDescription': 'protocol_name',
     'SeriesNumber': 'acq_nr',
-    'SequenceType': 'tech',
+    'SequenceName': 'tech',
     'AcquisitionDimension': 'scan_mode',
 }
 COMPLEX_IMAGE_TYPES = {0: 'MAGNITUDE', 1: 'REAL', 2: 'IMAGINARY', 3: 'PHASE'}
