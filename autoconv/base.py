@@ -169,14 +169,15 @@ class BaseInfo:
                 sequence = 'SE'
             elif any([seq == 'gr' for seq in seq_type]):
                 sequence = 'GRE'
+            elif any(['ep' == seq for seq in seq_type]) or \
+                    'epi' in seq_name or 'epi' in series_desc or \
+                    getattr(self, 'EPIFactor', 0) > 1 or \
+                    any([seq == 'feepi' for seq in seq_type]):
+                sequence = 'EPI'
             elif any([seq == 't1ffe' for seq in seq_type]):
                 sequence = 'SPGR'
             elif self.FlipAngle >= 90:
                 sequence = 'SE'
-            if any(['ep' == seq for seq in seq_type]) or \
-                    'epi' in seq_name or 'epi' in series_desc or \
-                    getattr(self, 'EPIFactor', 0) > 1:
-                sequence = 'EPI'
             if sequence == 'GRE' and any([variant == 'sp' for variant in seq_var]) or \
                     any([variant == 'ss' for variant in seq_var]):
                 sequence = 'SPGR'
