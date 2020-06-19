@@ -53,6 +53,9 @@ class DicomInfo(BaseInfo):
         self.AcqDateTime = str(datetime.strptime(ds.SeriesDate + '-' + ds.SeriesTime.split('.')[0].ljust(6, '0'),
                                                  '%Y%m%d-%H%M%S'))
         self.Manufacturer = self.Manufacturer.lower().split(' ')[0]
+        if (0x2005, 0x1444) in ds:
+            turbo = int(ds[(0x2005, 0x1444)].value)
+            self.EchoTrainLength = turbo if turbo > 0 else self.EchoTrainLength
         self.SequenceType = make_tuple(self.SequenceType)
         self.SequenceVariant = make_tuple(self.SequenceVariant)
         # noinspection PyUnresolvedReferences
