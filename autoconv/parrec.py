@@ -78,7 +78,6 @@ class ParrecInfo(BaseInfo):
         self.AcquiredResolution = [fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
 
         self.SequenceVariant = tuple()
-        self.SequenceName = None
         self.BodyPartExamined = ''
         self.ScannerModelName = None
 
