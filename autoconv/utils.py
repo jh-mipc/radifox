@@ -138,7 +138,7 @@ def add_acq_num(name, count):
     return prefix + '_' + base_contrast + ('-ACQ%d' % count) + addons
 
 
-def recursive_chmod(directory, dir_octal=0o2750, file_octal=0o640):
+def recursive_chmod(directory, dir_octal=0o2770, file_octal=0o660):
     for dirpath, dirnames, filenames in os.walk(directory):
         os.chmod(dirpath, dir_octal)
         for filename in filenames:

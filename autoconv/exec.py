@@ -69,7 +69,8 @@ def main(args=None):
                                   'logs', 'conversion-errors.log'))
     else:
         mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
-        recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
+        os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str()), 0o2770)
+        os.chmod(os.path.dirname(os.path.join(parsed_args.output_root, metadata.dir_to_str())), 0o2770)
 
     create_loggers(parsed_args.output_root, metadata.dir_to_str(), parsed_args.verbose)
 
