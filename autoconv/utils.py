@@ -19,15 +19,7 @@ ORIENT_CODES = {'sagittal': 'PIL', 'coronal': 'LIP', 'axial': 'LPS'}
 
 # http://stackoverflow.com/a/22718321
 def mkdir_p(path, mode=0o777):
-    import os
-    import errno
-    try:
-        os.makedirs(path, mode=mode)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
+    os.makedirs(path, mode=mode, exist_ok=True)
 
 
 # http://stackoverflow.com/a/10840586
