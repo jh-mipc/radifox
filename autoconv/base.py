@@ -178,8 +178,8 @@ class BaseInfo:
                     getattr(self, 'EPIFactor', 0) > 1 or \
                     'feepi' in seq_name:
                 sequence = 'EPI'
-            if sequence == 'GRE' and any([variant == 'sp' for variant in seq_var]) or \
-                    any([variant == 'ss' for variant in seq_var]):
+            if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
+                                      any([variant == 'ss' for variant in seq_var])):
                 sequence = 'SPGR'
             if sequence != 'EPI' and etl > 1:
                 sequence = 'F' + sequence
