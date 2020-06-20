@@ -286,10 +286,8 @@ class BaseInfo:
             self.NiftiName = add_acq_num(self.NiftiName, count)
 
         success = True
-        dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y']
-        if self.NiftiName.split('_')[-1].split('-')[1] == 'DIFF':
-            dcm2niix_cmd += ['-i', 'y']
-        dcm2niix_cmd += ['-f', self.NiftiName, '-o', niidir, self.SourcePath]
+        dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
+                        self.NiftiName, '-o', niidir, self.SourcePath]
         result = run(dcm2niix_cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
@@ -322,12 +320,19 @@ class BaseInfo:
                 os.rename(filename + '.nii.gz', re.sub(r'_(e[0-9]+|ph)$', '', filename) + '.nii.gz')
                 filename = re.sub(r'_(e[0-9]+|ph)$', '', filename)
         if success:
-            self.NiftiCreated = True
-            logging.info('Nifti created successfully at %s' %
-                         (os.path.join(niidir, self.NiftiName + '.nii.gz')))
-            if '-ACQ3' in self.NiftiName:
-                logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
-                                'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
+            if os.path.exists(os.path.join(niidir, self.NiftiName + '.nii.gz')):
+                self.NiftiCreated = True
+                logging.info('Nifti created successfully at %s' %
+                             (os.path.join(niidir, self.NiftiName + '.nii.gz')))
+                if '-ACQ3' in self.NiftiName:
+                    logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
+                                    'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
+            else:
+                self.NiftiCreated = False
+                logging.warning('dcm2niix failed for %s' % self.SourcePath)
+                logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
+                logging.warning('\n' + result.stdout)
+                logging.warning('Nifti creation failed.')
 
 
 class BaseSet:
