@@ -15,16 +15,13 @@ class Metadata:
         self.SiteID = site_id
         self.ProjectShortName = self.ProjectID.upper() if project_shortname is None else project_shortname
         self.TMSMetaFile = None
+        self._metafile_obj = None
 
     @classmethod
     def from_tms_metadata(cls, metadata_file):
         with open(metadata_file) as fp:
             metadata_obj = json.load(fp)['metadataFieldsToValues']
         site_id, patient_id = metadata_obj['patient_id'].split('-')
-        if site_id != metadata_obj['site_id']:
-            logging.warning('Site ID (%s) does not match site portion of Patient ID (%s). '
-                            'Using %s as Site ID.' %
-                            (metadata_obj['site_id'], site_id, site_id))
         time_id = None
         for key in metadata_obj.keys():
             if re.match(r'mri_timepoint\(\d+\)', key):
@@ -33,11 +30,20 @@ class Metadata:
                 break
         out_cls = cls('treatms', patient_id, time_id, site_id, 'TMS')
         out_cls.TMSMetaFile = metadata_file
+        out_cls._metafile_obj = metadata_obj
         return out_cls
 
     def __repr_json__(self):
-        return self.__dict__ if self.TMSMetaFile is not None \
-            else {k: v for k, v in self.__dict__.items() if k != 'tms_metadata_file'}
+        skip_keys = ['_metafile_obj']
+        if self.TMSMetaFile is None:
+            skip_keys += ['tms_metadata_file']
+        return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
+
+    def check_metadata(self):
+        if self._metafile_obj is not None and self.SiteID != self._metafile_obj['site_id']:
+            logging.warning('Site ID (%s) does not match site portion of Patient ID (%s). '
+                            'Using %s as Site ID.' %
+                            (self._metafile_obj['site_id'], self.SiteID, self.SiteID))
 
     def prefix_to_str(self):
         if self.SiteID is None:

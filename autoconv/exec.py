@@ -73,6 +73,7 @@ def main(args=None):
     os.chmod(os.path.dirname(os.path.join(parsed_args.output_root, metadata.dir_to_str())), mode=DIR_OCTAL)
 
     create_loggers(parsed_args.output_root, metadata.dir_to_str(), parsed_args.verbose)
+    metadata.check_metadata()
 
     try:
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
