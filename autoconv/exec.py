@@ -43,9 +43,10 @@ def main(args=None):
 
     if parsed_args.tms_metafile:
         metadata = Metadata.from_tms_metadata(parsed_args.tms_metafile)
+        mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
         for arg in ['patient_id', 'time_id', 'site_id']:
             if getattr(parsed_args, arg, None) is not None:
-                setattr(metadata, arg, getattr(parsed_args, arg))
+                setattr(metadata, mapping[arg], getattr(parsed_args, arg))
     else:
         if any([getattr(parsed_args, item) is None for item in ['project_id', 'patient_id', 'time_id']]):
             raise ValueError('Project ID, Patient ID and Time ID are all required arguments.')
