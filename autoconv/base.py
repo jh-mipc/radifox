@@ -207,7 +207,7 @@ class BaseInfo:
             elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
                 modality = 'T2STAR'
             elif modality == 'T2' and self.EchoTime < 30:
-                modality = 'PD'
+                modality = 'PD' if self.RepetitionTime > 800 else 'T1'
             body_part = 'BRAIN'
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
