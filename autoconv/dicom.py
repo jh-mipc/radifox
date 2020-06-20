@@ -58,12 +58,12 @@ class DicomInfo(BaseInfo):
             self.EchoTrainLength = turbo if turbo > 0 else self.EchoTrainLength
         self.SequenceType = make_tuple(self.SequenceType)
         self.SequenceVariant = make_tuple(self.SequenceVariant)
-        # noinspection PyUnresolvedReferences
-        self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \
-            if self.AcquisitionMatrix[1] == 0 else [self.AcquisitionMatrix[2], self.AcquisitionMatrix[1]]
-        self.ReconMatrix = [getattr(ds, 'Columns', 0), getattr(ds, 'Rows', 0)]
-        self.FieldOfView = [res*num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
-        self.AcquiredResolution = [fov/num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
+        if self.AcquisitionMatrix is not None:
+            self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \
+                if self.AcquisitionMatrix[1] == 0 else [self.AcquisitionMatrix[2], self.AcquisitionMatrix[1]]
+            self.ReconMatrix = [getattr(ds, 'Columns', 0), getattr(ds, 'Rows', 0)]
+            self.FieldOfView = [res*num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
+            self.AcquiredResolution = [fov/num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
         self.SequenceName = getattr(ds, 'SequenceName', getattr(ds, 'PulseSequenceName', None))
         self.ExContrastAgent = getattr(ds, 'ContrastBolusAgent', getattr(ds, 'ContrastBolusAgentSequence', None))
         self.ImageOrientationPatient = ImageOrientation(getattr(ds, 'ImageOrientationPatient', None))
