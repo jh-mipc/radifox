@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 
@@ -20,6 +21,10 @@ class Metadata:
         with open(metadata_file) as fp:
             metadata_obj = json.load(fp)['metadataFieldsToValues']
         site_id, patient_id = metadata_obj['patient_id'].split('-')
+        if site_id != metadata_obj['site_id']:
+            logging.warning('Site ID (%s) does not match site portion of Patient ID (%s). '
+                            'Using %s as Site ID.' %
+                            (metadata_obj['site_id'], site_id, site_id))
         time_id = None
         for key in metadata_obj.keys():
             if re.match(r'mri_timepoint\(\d+\)', key):
