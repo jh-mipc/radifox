@@ -295,10 +295,7 @@ class BaseInfo:
         if result.returncode != 0:
             logging.warning('dcm2niix failed for %s' % self.SourcePath)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
-            if logging.getLogger().level > logging.DEBUG:
-                logging.warning('Run again with -v to print dcm2niix output')
-            else:
-                logging.log(WARNING_DEBUG, '\n' + result.stdout)
+            logging.warning('\n' + result.stdout)
             for filename in parse_dcm2niix_filenames(result.stdout):
                 remove_created_files(filename)
             logging.warning('Nifti creation failed.')
