@@ -50,8 +50,14 @@ class DicomInfo(BaseInfo):
         for item in DCM_HEADER_ATTRS:
             get_item, set_item = item if isinstance(item, tuple) else (item, item)
             setattr(self, set_item, convert_type(getattr(ds, get_item, None)))
-        self.AcqDateTime = str(datetime.strptime(ds.SeriesDate + '-' + ds.SeriesTime.split('.')[0].ljust(6, '0'),
-                                                 '%Y%m%d-%H%M%S'))
+        try:
+            self.AcqDateTime = str(datetime.strptime(ds.SeriesDate + '-' +
+                                                     ds.SeriesTime.split('.')[0].ljust(6, '0'),
+                                                     '%Y%m%d-%H%M%S'))
+        except ValueError:
+            self.AcqDateTime = str(datetime.strptime(ds.SeriesDate + '-' +
+                                                     ds.SeriesTime.split('.')[0].ljust(6, '0'),
+                                                     '%Y-%m-%d-%H%M%S'))
         self.Manufacturer = self.Manufacturer.lower().split(' ')[0]
         if (0x2005, 0x1444) in ds:
             turbo = int(ds[(0x2005, 0x1444)].value)
@@ -59,6 +65,7 @@ class DicomInfo(BaseInfo):
         self.SequenceType = make_tuple(self.SequenceType)
         self.SequenceVariant = make_tuple(self.SequenceVariant)
         if self.AcquisitionMatrix is not None:
+            # noinspection PyUnresolvedReferences
             self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \
                 if self.AcquisitionMatrix[1] == 0 else [self.AcquisitionMatrix[2], self.AcquisitionMatrix[1]]
             self.ReconMatrix = [getattr(ds, 'Columns', 0), getattr(ds, 'Rows', 0)]

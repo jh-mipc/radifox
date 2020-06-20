@@ -9,7 +9,7 @@ import numpy as np
 
 from .info import __version__
 from .json import NoIndent
-from .logging import WARNING_DEBUG
+# from .logging import WARNING_DEBUG
 from .lut import LookupTable
 from .utils import mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, add_acq_num
 
