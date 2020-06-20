@@ -14,7 +14,7 @@ from .lut import LookupTable
 from .utils import mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, add_acq_num
 
 
-DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal']
+DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
