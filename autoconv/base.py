@@ -451,6 +451,8 @@ class BaseSet:
             if di.ConvertImage:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
                 di.create_nii()
+        self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
+                                 key=lambda x: (x.ConvertImage, x.NiftiCreated), reverse=True)
 
 
 class TruncatedImageValue:
