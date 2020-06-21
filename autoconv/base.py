@@ -83,7 +83,7 @@ class BaseInfo:
             'composed' in series_desc or any(['composed' in img_type.lower() for img_type in self.ImageType])
         mip_ignore = 'mip' in series_desc or any([img_type.lower() == 'mnip' for img_type in self.ImageType]) or \
             any([img_type.lower() == 'maximum' for img_type in self.ImageType])
-        processed_ignore = any([img_type.lower() == 'adc' for img_type in self.ImageType]) or \
+        processed_ignore = any(['adc' in img_type.lower() for img_type in self.ImageType]) or \
             any([img_type.lower() == 'sub' for img_type in self.ImageType])
         logging.debug('Derived:%s, Description:%s, MPR:%s, MIP:%s, Processed:%s' %
                       (not type_status, desc_ignore, mpr_ignore, mip_ignore, processed_ignore))
@@ -171,7 +171,7 @@ class BaseInfo:
                 sequence = 'GRE'
             elif 't1ffe' in seq_name:
                 sequence = 'SPGR'
-            elif self.FlipAngle >= 90:
+            elif self.FlipAngle >= 60:
                 sequence = 'SE'
             if any(['ep' == seq for seq in seq_type]) or \
                     'epi' in seq_name or 'epi' in series_desc or \
