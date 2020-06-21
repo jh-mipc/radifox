@@ -262,7 +262,7 @@ class BaseInfo:
                 body_part = 'BRAIN'
             elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 and orientation == 'SAGITTAL':
                 body_part = 'SPINE'
-            if self.NumFiles <= 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
+            if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
                 logging.info('This series is localizer, derived or processed image. Skipping.')
                 self.ConvertImage = False
                 return
