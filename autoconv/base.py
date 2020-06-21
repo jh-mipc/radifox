@@ -208,10 +208,6 @@ class BaseInfo:
                 modality = 'T2STAR'
             elif modality == 'T2' and self.EchoTime < 30:
                 modality = 'PD' if self.RepetitionTime > 800 else 'T1'
-            if self.NumFiles <= 5 and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
-                logging.info('This series is localizer, derived or processed image. Skipping.')
-                self.ConvertImage = False
-                return
             body_part = 'BRAIN'
             series_desc = self.SeriesDescription.lower()
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
@@ -266,6 +262,10 @@ class BaseInfo:
                 body_part = 'BRAIN'
             elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 and orientation == 'SAGITTAL':
                 body_part = 'SPINE'
+            if self.NumFiles <= 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
+                logging.info('This series is localizer, derived or processed image. Skipping.')
+                self.ConvertImage = False
+                return
             pred_list = [body_part, modality, sequence, resolution, orientation, excontrast]
         else:
             logging.debug('Name lookup successful.')
