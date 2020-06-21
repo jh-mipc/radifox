@@ -258,14 +258,16 @@ class BaseInfo:
                 body_part = 'TSPINE'
             slice_sp = float(self.SliceThickness) if self.SliceSpacing is None \
                 else float(self.SliceSpacing)
-            if body_part == 'ORBITS' and self.NumFiles * slice_sp > 120:
-                body_part = 'BRAIN'
-            elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 and orientation == 'SAGITTAL':
-                body_part = 'SPINE'
             if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
                 logging.info('This series is localizer, derived or processed image. Skipping.')
                 self.ConvertImage = False
                 return
+            elif body_part == 'ORBITS' and self.NumFiles * slice_sp > 120:
+                body_part = 'BRAIN'
+            elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
+                    and orientation == 'SAGITTAL':
+                body_part = 'SPINE'
+
             pred_list = [body_part, modality, sequence, resolution, orientation, excontrast]
         else:
             logging.debug('Name lookup successful.')
