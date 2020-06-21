@@ -209,16 +209,19 @@ class BaseInfo:
             elif modality == 'T2' and self.EchoTime < 30:
                 modality = 'PD' if self.RepetitionTime > 800 else 'T1'
             body_part = 'BRAIN'
+            series_desc = self.SeriesDescription.lower()
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
             if 'brain' in series_desc or series_desc.startswith('br_'):
                 body_part = 'BRAIN'
-            elif 'cerv' in series_desc or 'csp' in series_desc or \
+            elif 'cerv' in series_desc or 'csp' in series_desc or 'c sp' in series_desc or \
                     'c-sp' in series_desc or 'msma' in series_desc:
                 body_part = 'CSPINE'
-            elif 'thor' in series_desc or 'tsp' in series_desc or 't-sp' in series_desc:
+            elif 'thor' in series_desc or 'tsp' in series_desc or 't sp' in series_desc or \
+                    't-sp' in series_desc:
                 body_part = 'TSPINE'
-            elif 'lumb' in series_desc or 'lsp' in series_desc:
+            elif 'lumb' in series_desc or 'lsp' in series_desc or 'l sp' in series_desc or \
+                    'l-sp' in series_desc:
                 body_part = 'LSPINE'
             elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
                     re.search(r'\sct(?:\s+|$)', self.SeriesDescription.lower()) or 'vibe' in series_desc or \
