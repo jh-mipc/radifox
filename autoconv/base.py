@@ -372,7 +372,8 @@ class BaseSet:
                               (di.SeriesUID, di.NiftiName, di.NiftiName + '-SUM'))
                 di.NiftiName = di.NiftiName + '-SUM'
             if di.NiftiName.split('_')[-1].split('-')[0] == 'SPINE':
-                if di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \
+                if self.SeriesList[i - 1].NiftiName is not None and \
+                        di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \
                         abs(di.ImagePositionPatient[2] - self.SeriesList[i - 1].ImagePositionPatient[2]) > 100:
                     if self.SeriesList[i - 1].NiftiName.split('_')[-1].split('-')[0] == 'CSPINE':
                         di.NiftiName = di.NiftiName.replace('SPINE', 'TSPINE')
