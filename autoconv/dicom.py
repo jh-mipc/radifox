@@ -71,6 +71,9 @@ class DicomInfo(BaseInfo):
             self.ReconMatrix = [getattr(ds, 'Columns', 0), getattr(ds, 'Rows', 0)]
             self.FieldOfView = [res*num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
             self.AcquiredResolution = [fov/num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
+            self.FieldOfView = [round(fov, 2) for fov in self.FieldOfView]
+            self.AcquiredResolution = [round(res, 5) for res in self.AcquiredResolution]
+            self.ReconResolution = [round(res, 5) for res in self.ReconResolution]
         self.SequenceName = getattr(ds, 'SequenceName', getattr(ds, 'PulseSequenceName', None))
         self.ExContrastAgent = getattr(ds, 'ContrastBolusAgent', getattr(ds, 'ContrastBolusAgentSequence', None))
         self.ImageOrientationPatient = ImageOrientation(getattr(ds, 'ImageOrientationPatient', None))
