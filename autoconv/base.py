@@ -103,7 +103,7 @@ class BaseInfo:
             # Needs automatic naming
             logging.debug('Name lookup failed, using automatic name generation.')
             autogen = True
-            series_desc = self.SeriesDescription.lower().replace(' ', '')
+            series_desc = self.SeriesDescription.lower()
             if series_desc.startswith('wip'):
                 series_desc = series_desc[3:].lstrip()
             # 1) Orientation
@@ -210,7 +210,6 @@ class BaseInfo:
             elif modality == 'T2' and self.EchoTime < 30:
                 modality = 'PD' if self.RepetitionTime > 800 else 'T1'
             body_part = 'BRAIN'
-            series_desc = self.SeriesDescription.lower()
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
             if 'brain' in series_desc or series_desc.startswith('br_'):
