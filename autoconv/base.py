@@ -11,7 +11,7 @@ from .info import __version__
 from .json import NoIndent
 # from .logging import WARNING_DEBUG
 from .lut import LookupTable
-from .utils import mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, add_acq_num
+from .utils import mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, add_acq_num, find_closest
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
@@ -202,7 +202,7 @@ class BaseInfo:
                 elif sequence.endswith('SE'):
                     modality = 'T2'
                 elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
-                    modality = 'T1' if self.EchoTime < 10 and self.RepetitionTime < 60 else 'T2STAR'
+                    modality = 'T1' if self.EchoTime < 15 and self.RepetitionTime < 60 else 'T2STAR'
             if modality == 'T2' and sequence.startswith('IR'):
                 modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
             elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
@@ -373,10 +373,35 @@ class BaseSet:
                 continue
             root_uid = '.'.join(di.SeriesUID.split('.')[:-1])
             orig_name = di.NiftiName
+            # sWIP is Philips indicator for a "sum" of a multi-echo image
             if di.SeriesDescription.startswith('sWIP'):
                 logging.debug('Adjusting name for %s: %s --> %s' %
                               (di.SeriesUID, di.NiftiName, di.NiftiName + '-SUM'))
                 di.NiftiName = di.NiftiName + '-SUM'
+            # Change T1 image to MT/MTOFF if matches an MT sequence and add MTON for the corresponding MT scan
+            if di.NiftiName.split('_')[-1].split('-')[1] in ['T1', 'T2STAR'] and \
+                    any([di.NiftiName.split('_')[-1] ==
+                         other_di.NiftiName.split('_')[-1].replace('-MT-', '-%s-' %
+                                                                   di.NiftiName.split('_')[-1].split('-')[1])
+                         for other_di in self.SeriesList if '-MT-' in other_di.NiftiName]):
+                closest_mt = find_closest(i, [j for j, other_di in enumerate(self.SeriesList)
+                                              if '-MT-' in other_di.NiftiName
+                                              and di.NiftiName ==
+                                              other_di.NiftiName.replace('-MT-', '-%s-' %
+                                                                         di.NiftiName.split('_')[-1].split('-')[1])
+                                              and di.EchoTime == other_di.EchoTime
+                                              and di.FlipAngle == other_di.FlipAngle
+                                              and di.RepetitionTime == other_di.RepetitionTime])
+                logging.debug('Adjusting name for %s: %s --> %s' %
+                              (di.SeriesUID, di.NiftiName, di.NiftiName + '-MTOFF'))
+                di.NiftiName = di.NiftiName + '-MTOFF'
+                logging.debug('Adjusting name for %s: %s --> %s' %
+                              (self.SeriesList[closest_mt].SeriesUID,
+                               self.SeriesList[closest_mt].NiftiName,
+                               self.SeriesList[closest_mt].NiftiName + '-MTON'))
+                self.SeriesList[closest_mt].NiftiName = self.SeriesList[closest_mt].NiftiName + '-MTON'
+
+            # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
             if di.NiftiName.split('_')[-1].split('-')[0] == 'SPINE':
                 if self.SeriesList[i - 1].NiftiName is not None and \
                         di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \

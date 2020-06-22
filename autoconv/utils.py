@@ -130,8 +130,8 @@ def add_acq_num(name, count):
     return prefix + '_' + base_contrast + ('-ACQ%d' % count) + addons
 
 
-FILE_OCTAL=0o660
-DIR_OCTAL=0o2770
+FILE_OCTAL = 0o660
+DIR_OCTAL = 0o2770
 
 
 def recursive_chmod(directory, dir_octal=DIR_OCTAL, file_octal=FILE_OCTAL):
@@ -139,3 +139,15 @@ def recursive_chmod(directory, dir_octal=DIR_OCTAL, file_octal=FILE_OCTAL):
         os.chmod(dirpath, dir_octal)
         for filename in filenames:
             os.chmod(os.path.join(dirpath, filename), file_octal)
+
+
+def find_closest(target, to_check):
+    signed_dists = []
+    for i, check_val in enumerate(to_check):
+        signed_dists = (check_val - target, i)
+    min_dist = min([abs(val[0]) for val in signed_dists])
+    candidates = [val[1] for val in signed_dists if abs(val[0]) == min_dist]
+    if len(candidates) == 1:
+        return candidates[0]
+    else:
+        return min(candidates)
