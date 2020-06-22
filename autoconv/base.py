@@ -491,7 +491,7 @@ class BaseSet:
                 di.create_nii()
                 self.generate_sidecar(di)
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
-                                 key=lambda x: (x.ConvertImage, x.NiftiCreated), reverse=True)
+                                 key=lambda x: x.ConvertImage, reverse=True)
 
     def generate_sidecar(self, di_obj):
         logging.info('Writing image sidecar file to ' +
@@ -509,7 +509,7 @@ class BaseSet:
         with open(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
                                self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), 'w') as json_fp:
             out_dict = deepcopy(self.__dict__)
-            out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.ConvertImage]
+            out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
             json_fp.write(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
         os.chmod(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
                               self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), FILE_OCTAL)
