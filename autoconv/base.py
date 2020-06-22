@@ -386,7 +386,8 @@ class BaseSet:
                     any([di.NiftiName.split('_')[-1] ==
                          other_di.NiftiName.split('_')[-1].replace('-MT-', '-%s-' %
                                                                    di.NiftiName.split('_')[-1].split('-')[1])
-                         for other_di in self.SeriesList if '-MT-' in other_di.NiftiName]):
+                         for other_di in self.SeriesList
+                         if other_di.NiftiName is not None and '-MT-' in other_di.NiftiName]):
                 closest_mt = find_closest(i, [j for j, other_di in enumerate(self.SeriesList)
                                               if other_di.NiftiName is not None
                                               and '-MT-' in other_di.NiftiName
