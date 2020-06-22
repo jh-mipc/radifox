@@ -392,14 +392,15 @@ class BaseSet:
                                               and di.EchoTime == other_di.EchoTime
                                               and di.FlipAngle == other_di.FlipAngle
                                               and di.RepetitionTime == other_di.RepetitionTime])
-                logging.debug('Adjusting name for %s: %s --> %s' %
-                              (di.SeriesUID, di.NiftiName, di.NiftiName + '-MTOFF'))
-                di.NiftiName = di.NiftiName + '-MTOFF'
-                logging.debug('Adjusting name for %s: %s --> %s' %
-                              (self.SeriesList[closest_mt].SeriesUID,
-                               self.SeriesList[closest_mt].NiftiName,
-                               self.SeriesList[closest_mt].NiftiName + '-MTON'))
-                self.SeriesList[closest_mt].NiftiName = self.SeriesList[closest_mt].NiftiName + '-MTON'
+                if closest_mt is not None:
+                    logging.debug('Adjusting name for %s: %s --> %s' %
+                                  (di.SeriesUID, di.NiftiName, di.NiftiName + '-MTOFF'))
+                    di.NiftiName = di.NiftiName + '-MTOFF'
+                    logging.debug('Adjusting name for %s: %s --> %s' %
+                                  (self.SeriesList[closest_mt].SeriesUID,
+                                   self.SeriesList[closest_mt].NiftiName,
+                                   self.SeriesList[closest_mt].NiftiName + '-MTON'))
+                    self.SeriesList[closest_mt].NiftiName = self.SeriesList[closest_mt].NiftiName + '-MTON'
 
             # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
             if di.NiftiName.split('_')[-1].split('-')[0] == 'SPINE':
