@@ -1,6 +1,5 @@
 import argparse
 from glob import glob
-import json
 import logging
 import os
 import shutil
@@ -8,11 +7,10 @@ import sys
 
 from .dicom import DicomSet, sort_dicoms
 from .info import __version__
-from .json import JSONObjectEncoder
 from .logging import create_loggers
 from .metadata import Metadata
 from .parrec import ParrecSet, sort_parrecs
-from .utils import silentremove, mkdir_p, unzip, recursive_chmod, FILE_OCTAL, DIR_OCTAL
+from .utils import silentremove, mkdir_p, unzip, recursive_chmod, DIR_OCTAL
 
 
 def main(args=None):
@@ -61,13 +59,10 @@ def main(args=None):
     elif parsed_args.rerun:
         silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'nii'))
         silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
-                                  metadata.prefix_to_str() + '_ScanInfo.json'))
-        silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
-                                  'logs', 'conversion-info.log'))
-        silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
-                                  'logs', 'conversion-warnings.log'))
-        silentremove(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
-                                  'logs', 'conversion-errors.log'))
+                                  metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'))
+        for filepath in glob(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
+                                          'logs', 'autoconv-*.log')):
+            silentremove(filepath)
 
     mkdir_p(os.path.join(parsed_args.output_root, metadata.dir_to_str()))
     os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str()), mode=DIR_OCTAL)
