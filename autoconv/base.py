@@ -202,7 +202,7 @@ class BaseInfo:
                 elif sequence.endswith('SE'):
                     modality = 'T2'
                 elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
-                    modality = 'T1' if self.EchoTime < 15 and self.RepetitionTime < 60 else 'T2STAR'
+                    modality = 'T1' if self.EchoTime < 10 and self.RepetitionTime < 60 else 'T2STAR'
             if modality == 'T2' and sequence.startswith('IR'):
                 modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
             elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
