@@ -103,6 +103,7 @@ def main(args=None):
             img_set = DicomSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file)
         img_set.create_all_nii()
         recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'nii'))
+        img_set.generate_unconverted_info()
 
         recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'logs'))
     except KeyboardInterrupt:
