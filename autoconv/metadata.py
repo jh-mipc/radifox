@@ -34,9 +34,9 @@ class Metadata:
         return out_cls
 
     def __repr_json__(self):
-        skip_keys = ['_metafile_obj']
+        skip_keys = []
         if self.TMSMetaFile is None:
-            skip_keys += ['tms_metadata_file']
+            skip_keys += ['TMSMetaFile', '_metafile_obj']
         return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
 
     def check_metadata(self):
