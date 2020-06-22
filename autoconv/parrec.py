@@ -10,7 +10,7 @@ import numpy as np
 from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue
 from .nib_parrec_fork import PARRECHeader, PARRECImage, TruncatedPARRECError
 from .parrec_writer import split_fix_parrec
-from .utils import make_tuple, silentremove
+from .utils import silentremove
 
 
 GENERAL_INFO_FIELDS = {
@@ -89,7 +89,7 @@ class ParrecSet(BaseSet):
                  magnetic_field_strength=3):
         super().__init__(source, metadata_obj, lut_file)
 
-        for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'parrec', '*.par'))):
+        for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-parrec', '*.par'))):
             logging.info('Processing %s' % parfile)
             self.SeriesList.append(ParrecInfo(parfile, institution_name, magnetic_field_strength))
 
