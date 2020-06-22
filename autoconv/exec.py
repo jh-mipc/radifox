@@ -104,12 +104,6 @@ def main(args=None):
         img_set.create_all_nii()
         recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'nii'))
 
-        logging.info('Writing info file to ' + metadata.prefix_to_str() + '_ScanInfo.json')
-        with open(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
-                               metadata.prefix_to_str() + '_ScanInfo.json'), 'w') as json_fp:
-            json_fp.write(json.dumps(img_set, indent=4, sort_keys=True, cls=JSONObjectEncoder))
-        os.chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(),
-                              metadata.prefix_to_str() + '_ScanInfo.json'), FILE_OCTAL)
         recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'logs'))
     except KeyboardInterrupt:
         raise

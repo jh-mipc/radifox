@@ -85,7 +85,7 @@ class DicomInfo(BaseInfo):
 
 class DicomSet(BaseSet):
     def __init__(self, source, output_root, metadata_obj, lut_file):
-        super().__init__(source, metadata_obj, lut_file)
+        super().__init__(source, output_root, metadata_obj, lut_file)
 
         for dcmdir in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-dcm', '*'))):
             logging.info('Processing %s' % dcmdir)

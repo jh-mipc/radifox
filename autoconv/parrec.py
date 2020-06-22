@@ -87,7 +87,7 @@ class ParrecSet(BaseSet):
 
     def __init__(self, source, output_root, metadata_obj, lut_file, institution_name=None,
                  magnetic_field_strength=3):
-        super().__init__(source, metadata_obj, lut_file)
+        super().__init__(source, output_root, metadata_obj, lut_file)
 
         for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-parrec', '*.par'))):
             logging.info('Processing %s' % parfile)

@@ -1,4 +1,6 @@
+from copy import deepcopy
 from glob import glob
+import json
 import logging
 import os
 import re
@@ -8,10 +10,11 @@ from subprocess import run
 import numpy as np
 
 from .info import __version__
-from .json import NoIndent
+from .json import NoIndent, JSONObjectEncoder
 # from .logging import WARNING_DEBUG
 from .lut import LookupTable
-from .utils import mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, add_acq_num, find_closest
+from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
+                    add_acq_num, find_closest, FILE_OCTAL)
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
@@ -344,11 +347,12 @@ class BaseInfo:
 
 
 class BaseSet:
-    def __init__(self, source, metadata_obj, lut_file):
+    def __init__(self, source, output_root, metadata_obj, lut_file):
         self.AutoConvVersion = __version__
         self.InputSource = source
         self.Metadata = metadata_obj
         self.LookupTable = LookupTable(lut_file, self.Metadata.ProjectID, self.Metadata.SiteID)
+        self.OutputRoot = output_root
         self.SeriesList = []
 
     def __repr_json__(self):
@@ -485,8 +489,30 @@ class BaseSet:
             if di.ConvertImage:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
                 di.create_nii()
+                self.generate_sidecar(di)
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: (x.ConvertImage, x.NiftiCreated), reverse=True)
+
+    def generate_sidecar(self, di_obj):
+        logging.info('Writing image sidecar file to ' +
+                     os.path.join(os.path.dirname(os.path.dirname(di_obj.SourcePath)),
+                                  'nii', di_obj.NiftiName + '.json'))
+        with open(os.path.join(os.path.dirname(os.path.dirname(di_obj.SourcePath)),
+                               'nii', di_obj.NiftiName + '.json'), 'w') as json_fp:
+            out_dict = {k: v for k, v in self.__dict__.items() if k != 'SeriesList'}
+            out_dict['SeriesInfo'] = di_obj
+            json_fp.write(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+
+    def generate_unconverted_info(self):
+        logging.info('Writing unconverted info file to ' + self.Metadata.prefix_to_str() +
+                     '_MR-UnconvertedInfo.json')
+        with open(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
+                               self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), 'w') as json_fp:
+            out_dict = deepcopy(self.__dict__)
+            out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.ConvertImage]
+            json_fp.write(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+        os.chmod(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
+                              self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), FILE_OCTAL)
 
 
 class TruncatedImageValue:
