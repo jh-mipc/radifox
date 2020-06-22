@@ -400,6 +400,9 @@ class BaseSet:
                                   (self.SeriesList[closest_mt].SeriesUID,
                                    self.SeriesList[closest_mt].NiftiName,
                                    self.SeriesList[closest_mt].NiftiName + '-MTON'))
+                    names_dict[self.SeriesList[closest_mt].NiftiName + '-MTON'] = \
+                        names_dict[self.SeriesList[closest_mt].NiftiName]
+                    del names_dict[self.SeriesList[closest_mt].NiftiName]
                     self.SeriesList[closest_mt].NiftiName = self.SeriesList[closest_mt].NiftiName + '-MTON'
 
             # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
