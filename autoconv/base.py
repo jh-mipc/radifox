@@ -286,13 +286,12 @@ class BaseInfo:
 
         niidir = os.path.join(os.path.dirname(os.path.dirname(self.SourcePath)), 'nii')
         mkdir_p(niidir)
-        if os.path.exists(os.path.join(niidir, self.NiftiName + '.nii.gz')):
-            count = 2
-            while os.path.exists(os.path.join(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz')):
-                count += 1
-            logging.debug('Adjusting name for %s: %s --> %s' % (self.SeriesUID, self.NiftiName,
-                                                                add_acq_num(self.NiftiName, count)))
-            self.NiftiName = add_acq_num(self.NiftiName, count)
+        count = 1
+        while os.path.exists(os.path.join(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz')):
+            count += 1
+        logging.debug('Adjusting name for %s: %s --> %s' % (self.SeriesUID, self.NiftiName,
+                                                            add_acq_num(self.NiftiName, count)))
+        self.NiftiName = add_acq_num(self.NiftiName, count)
 
         success = True
         dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
