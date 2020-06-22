@@ -28,7 +28,7 @@ class Metadata:
                 tp_num = int(re.findall(r'\d+', key)[0])
                 time_id = str(83 + tp_num) if tp_num > 6 else META_TIME_CODES[tp_num]
                 break
-        out_cls = cls('treatms', patient_id, time_id, site_id, 'TMS')
+        out_cls = cls('treatms', patient_id, time_id, site_id)
         out_cls.TMSMetaFile = metadata_file
         out_cls._metafile_obj = metadata_obj
         return out_cls
