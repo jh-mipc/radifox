@@ -15,7 +15,7 @@ class Metadata:
         self.SiteID = site_id
         self.ProjectShortName = self.ProjectID.upper() if project_shortname is None else project_shortname
         self.TMSMetaFile = None
-        self._metafile_obj = None
+        self._RawMetaFileObj = None
 
     @classmethod
     def from_tms_metadata(cls, metadata_file):
@@ -30,20 +30,20 @@ class Metadata:
                 break
         out_cls = cls('treatms', patient_id, time_id, site_id)
         out_cls.TMSMetaFile = metadata_file
-        out_cls._metafile_obj = metadata_obj
+        out_cls._RawMetaFileObj = {re.sub(r'\([0-9]*\)', '', k): v for k, v in metadata_obj.items()}
         return out_cls
 
     def __repr_json__(self):
         skip_keys = []
         if self.TMSMetaFile is None:
-            skip_keys += ['TMSMetaFile', '_metafile_obj']
+            skip_keys += ['TMSMetaFile', '_RawMetaFileObj']
         return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
 
     def check_metadata(self):
-        if self._metafile_obj is not None and self.SiteID != self._metafile_obj['site_id']:
+        if self._RawMetaFileObj is not None and self.SiteID != self._RawMetaFileObj['site_id']:
             logging.warning('Site ID (%s) does not match site portion of Patient ID (%s). '
                             'Using %s as Site ID.' %
-                            (self._metafile_obj['site_id'], self.SiteID, self.SiteID))
+                            (self._RawMetaFileObj['site_id'], self.SiteID, self.SiteID))
 
     def prefix_to_str(self):
         if self.SiteID is None:
