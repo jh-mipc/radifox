@@ -95,7 +95,7 @@ def main(args=None):
 
         if parsed_args.parrec:
             img_set = ParrecSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file,
-                                parsed_args.institution, parsed_args.field_strength, parsed_args.manual_args)
+                                parsed_args.institution, parsed_args.field_strength, parsed_args.manual_arg)
         else:
             img_set = DicomSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file)
         img_set.create_all_nii()
