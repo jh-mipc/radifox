@@ -135,7 +135,7 @@ def parse_manual_args(argstr_list, template):
         arg_arr = argstr.split(':')
         if len(arg_arr) not in [2, 3]:
             raise ValueError('Manual argument is improperly formatted (%s).' % argstr)
-        if arg_arr[0] not in template:
+        if arg_arr[0] not in template.__dict__:
             raise ValueError('Manual argument does not match an info argument (%s)' % argstr)
         if len(arg_arr) == 3:
             out_args[arg_arr[0]] = arg_converter.get(arg_arr[2], str)(arg_arr[1])
