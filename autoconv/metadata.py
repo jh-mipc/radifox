@@ -8,7 +8,8 @@ META_TIME_CODES = {1: '00', 2: '06', 3: '12', 4: '24', 5: '36', 6: '48'}
 
 
 class Metadata:
-    def __init__(self, project_id, patient_id, time_id, site_id=None, project_shortname=None):
+    def __init__(self, project_id, patient_id, time_id, site_id=None, project_shortname=None,
+                 no_project_subdir=False):
         self.ProjectID = project_id
         self.PatientID = patient_id
         self.TimeID = time_id
@@ -16,9 +17,10 @@ class Metadata:
         self.ProjectShortName = self.ProjectID.upper() if project_shortname is None else project_shortname
         self.TMSMetaFile = None
         self._RawMetaFileObj = None
+        self._NoProjectSubdir = no_project_subdir
 
     @classmethod
-    def from_tms_metadata(cls, metadata_file):
+    def from_tms_metadata(cls, metadata_file, no_project_subdir=False):
         with open(metadata_file) as fp:
             metadata_obj = json.load(fp)['metadataFieldsToValues']
         site_id, patient_id = metadata_obj['patient_id'].split('-')
@@ -28,7 +30,7 @@ class Metadata:
                 tp_num = int(re.findall(r'\d+', key)[0])
                 time_id = str(83 + tp_num) if tp_num > 6 else META_TIME_CODES[tp_num]
                 break
-        out_cls = cls('treatms', patient_id, time_id, site_id)
+        out_cls = cls('treatms', patient_id, time_id, site_id, no_project_subdir=no_project_subdir)
         out_cls.TMSMetaFile = metadata_file
         out_cls._RawMetaFileObj = {re.sub(r'\([0-9]*\)', '', k): v for k, v in metadata_obj.items()}
         return out_cls
@@ -53,8 +55,9 @@ class Metadata:
                    self.PatientID + '_' + self.TimeID
 
     def dir_to_str(self):
-        if self.SiteID is None:
-            return os.path.join(self.ProjectID, self.ProjectShortName + '-' + self.PatientID, self.TimeID)
-        else:
-            return os.path.join(self.ProjectID, self.ProjectShortName + '-'
-                                + self.SiteID + '-' + self.PatientID, self.TimeID)
+        patient_id = self.ProjectShortName + '-' + self.PatientID if self.SiteID is None \
+            else self.ProjectShortName + '-' + self.SiteID + '-' + self.PatientID
+        output_dir = os.path.join(patient_id, self.TimeID)
+        if not self._NoProjectSubdir:
+            output_dir = os.path.join(self.ProjectID, output_dir)
+        return output_dir

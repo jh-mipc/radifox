@@ -25,7 +25,7 @@ COMPLEX_IMAGE_TYPES = {0: 'MAGNITUDE', 1: 'REAL', 2: 'IMAGINARY', 3: 'PHASE'}
 
 class ParrecInfo(BaseInfo):
 
-    def __init__(self, par_file, institution_name=None, magnetic_field_strength=3):
+    def __init__(self, par_file, institution_name=None, magnetic_field_strength=3, extra_args=None):
         super().__init__(par_file)
         file_map = PARRECImage.filespec_to_file_map(par_file)
         with file_map['header'].get_prepare_fileobj('rt') as hdr_fobj:
@@ -75,9 +75,17 @@ class ParrecInfo(BaseInfo):
         self.ReconResolution = [int(image_defs.pixel_spacing[0][0]), int(image_defs.pixel_spacing[0][1])]
         self.FieldOfView = [res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
         self.AcquiredResolution = [fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
-
-        self.BodyPartExamined = ''
-        self.ScannerModelName = None
+        self.NumberOfAverages = int(image_defs.number_of_averages[0])
+        if extra_args is not None:
+            arg_converter = {'int': int, 'float': float, 'str': str}
+            for argstr in extra_args:
+                arg_arr = argstr.split(':')
+                if len(arg_arr) == 3:
+                    setattr(self, arg_arr[0], arg_converter.get(arg_arr[2], str)(arg_arr[1]))
+                elif len(arg_arr) == 2:
+                    setattr(self, arg_arr[0], str(arg_arr[1]))
+                else:
+                    raise ValueError('Extra argument is improperly formatted (%s).' % argstr)
 
         if self.Truncated:
             logging.warning('PAR header shows truncated information for image (%s).' % self.SourcePath)

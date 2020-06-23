@@ -35,7 +35,13 @@ DCM_HEADER_ATTRS = [
     'BodyPartExamined',
     'StudyDescription',
     'SequenceVariant',
-    ('PixelSpacing', 'ReconResolution')
+    ('PixelSpacing', 'ReconResolution'),
+    'SoftwareVersions',
+    'NumberOfAverages',
+    'PercentSampling',
+    'ReceiveCoilName',
+    'PixelBandwidth',
+    ('VariableFlipAngleFlag', 'VariableFlipAngle'),
 ]
 
 

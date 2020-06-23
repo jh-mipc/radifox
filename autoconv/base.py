@@ -64,6 +64,12 @@ class BaseInfo:
         self.ImageOrientationPatient = None
         self.ImagePositionPatient = None
         self.SliceOrientation = None
+        self.SoftwareVersions = None
+        self.NumberOfAverages = None
+        self.PercentSampling = None
+        self.ReceiveCoilName = None
+        self.PixelBandwidth = None
+        self.VariableFlipAngle = None
 
         self.ConvertImage = False
         self.NiftiCreated = False

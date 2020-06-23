@@ -29,9 +29,11 @@ def main(args=None):
     parser.add_argument('--force', action='store_true', default=False)
     parser.add_argument('--rerun', action='store_true', default=False)
     parser.add_argument('--no-zip', action='store_true', default=False)
+    parser.add_argument('--no-project-subdir', action='store_true', default=False)
     parser.add_argument('--parrec', action='store_true', default=False)
     parser.add_argument('--institution', type=str, default=None)
     parser.add_argument('--field_strength', type=int, default=3)
+    parser.add_argument('--extra-args', type=str, action='append', default=None)
     parsed_args = parser.parse_args(args)
 
     parsed_args.output_root = os.path.realpath(os.path.expanduser(parsed_args.output_root))
@@ -40,7 +42,7 @@ def main(args=None):
     parsed_args.source = os.path.realpath(os.path.expanduser(parsed_args.source))
 
     if parsed_args.tms_metafile:
-        metadata = Metadata.from_tms_metadata(parsed_args.tms_metafile)
+        metadata = Metadata.from_tms_metadata(parsed_args.tms_metafile, parsed_args.no_project_subdir)
         mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
         for arg in ['patient_id', 'time_id', 'site_id']:
             if getattr(parsed_args, arg, None) is not None:
@@ -49,7 +51,7 @@ def main(args=None):
         if any([getattr(parsed_args, item) is None for item in ['project_id', 'patient_id', 'time_id']]):
             raise ValueError('Project ID, Patient ID and Time ID are all required arguments.')
         metadata = Metadata(parsed_args.project_id, parsed_args.patient_id, parsed_args.time_id,
-                            parsed_args.site_id, parsed_args.project_shortname)
+                            parsed_args.site_id, parsed_args.project_shortname, parsed_args.no_project_subdir)
 
     if len(glob(os.path.join(parsed_args.output_root, metadata.dir_to_str(), '*'))) > 0 and not parsed_args.rerun:
         if parsed_args.force:
@@ -93,7 +95,7 @@ def main(args=None):
 
         if parsed_args.parrec:
             img_set = ParrecSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file,
-                                parsed_args.institution, parsed_args.field_strength)
+                                parsed_args.institution, parsed_args.field_strength, parsed_args.extra_args)
         else:
             img_set = DicomSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file)
         img_set.create_all_nii()
