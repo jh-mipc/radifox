@@ -94,12 +94,12 @@ class ParrecInfo(BaseInfo):
 class ParrecSet(BaseSet):
 
     def __init__(self, source, output_root, metadata_obj, lut_file, institution_name=None,
-                 magnetic_field_strength=3):
+                 magnetic_field_strength=3, extra_args=None):
         super().__init__(source, output_root, metadata_obj, lut_file)
 
         for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-parrec', '*.par'))):
             logging.info('Processing %s' % parfile)
-            self.SeriesList.append(ParrecInfo(parfile, institution_name, magnetic_field_strength))
+            self.SeriesList.append(ParrecInfo(parfile, institution_name, magnetic_field_strength, extra_args))
 
         for di in self.SeriesList:
             if di.should_convert():
