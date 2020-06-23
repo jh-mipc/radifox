@@ -33,7 +33,7 @@ def main(args=None):
     parser.add_argument('--parrec', action='store_true', default=False)
     parser.add_argument('--institution', type=str, default=None)
     parser.add_argument('--field_strength', type=int, default=3)
-    parser.add_argument('--manual-args', type=str, action='append', default=None)
+    parser.add_argument('--manual-arg', type=str, action='append', default=None)
     parsed_args = parser.parse_args(args)
 
     parsed_args.output_root = os.path.realpath(os.path.expanduser(parsed_args.output_root))
