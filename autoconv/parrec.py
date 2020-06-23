@@ -25,7 +25,7 @@ COMPLEX_IMAGE_TYPES = {0: 'MAGNITUDE', 1: 'REAL', 2: 'IMAGINARY', 3: 'PHASE'}
 
 class ParrecInfo(BaseInfo):
 
-    def __init__(self, par_file, institution_name=None, magnetic_field_strength=3, extra_args=None):
+    def __init__(self, par_file, manual_args=None):
         super().__init__(par_file)
         file_map = PARRECImage.filespec_to_file_map(par_file)
         with file_map['header'].get_prepare_fileobj('rt') as hdr_fobj:
@@ -38,8 +38,6 @@ class ParrecInfo(BaseInfo):
 
         self.SeriesUID = os.path.basename(par_file[:-4])
         self.StudyUID = '.'.join(self.SeriesUID.split('.')[:3])
-        self.InstitutionName = institution_name
-        self.MagneticFieldStrength = magnetic_field_strength
         self.Manufacturer = 'philips'
         for key, value in GENERAL_INFO_FIELDS.items():
             setattr(self, key, hdr.general_info[value])
@@ -76,16 +74,9 @@ class ParrecInfo(BaseInfo):
         self.FieldOfView = [res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
         self.AcquiredResolution = [fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
         self.NumberOfAverages = int(image_defs.number_of_averages[0])
-        if extra_args is not None:
-            arg_converter = {'int': int, 'float': float, 'str': str}
-            for argstr in extra_args:
-                arg_arr = argstr.split(':')
-                if len(arg_arr) == 3:
-                    setattr(self, arg_arr[0], arg_converter.get(arg_arr[2], str)(arg_arr[1]))
-                elif len(arg_arr) == 2:
-                    setattr(self, arg_arr[0], str(arg_arr[1]))
-                else:
-                    raise ValueError('Extra argument is improperly formatted (%s).' % argstr)
+        if manual_args is not None:
+            for key, value in manual_args.items():
+                setattr(self, key, value)
 
         if self.Truncated:
             logging.warning('PAR header shows truncated information for image (%s).' % self.SourcePath)
@@ -94,12 +85,15 @@ class ParrecInfo(BaseInfo):
 class ParrecSet(BaseSet):
 
     def __init__(self, source, output_root, metadata_obj, lut_file, institution_name=None,
-                 magnetic_field_strength=3, extra_args=None):
+                 magnetic_field_strength=3, manual_args=None):
         super().__init__(source, output_root, metadata_obj, lut_file)
+        self.ManualArgs = parse_manual_args(manual_args, BaseInfo('')) if manual_args is not None else {}
+        self.ManualArgs['MagneticFieldStrength'] = magnetic_field_strength
+        self.ManualArgs['InstitutionName'] = institution_name
 
         for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-parrec', '*.par'))):
             logging.info('Processing %s' % parfile)
-            self.SeriesList.append(ParrecInfo(parfile, institution_name, magnetic_field_strength, extra_args))
+            self.SeriesList.append(ParrecInfo(parfile, self.ManualArgs))
 
         for di in self.SeriesList:
             if di.should_convert():
@@ -132,3 +126,19 @@ def sort_parrecs(parrec_dir):
             else:
                 os.remove(os.path.join(parrec_dir, name))
     logging.info('Sorting complete')
+
+
+def parse_manual_args(argstr_list, template):
+    arg_converter = {'int': int, 'float': float, 'str': str}
+    out_args = {}
+    for argstr in argstr_list:
+        arg_arr = argstr.split(':')
+        if len(arg_arr) not in [2, 3]:
+            raise ValueError('Manual argument is improperly formatted (%s).' % argstr)
+        if arg_arr[0] not in template:
+            raise ValueError('Manual argument does not match an info argument (%s)' % argstr)
+        if len(arg_arr) == 3:
+            out_args[arg_arr[0]] = arg_converter.get(arg_arr[2], str)(arg_arr[1])
+        elif len(arg_arr) == 2:
+            out_args[arg_arr[0]] = str(arg_arr[1])
+    return out_args

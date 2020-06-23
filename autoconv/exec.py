@@ -33,7 +33,7 @@ def main(args=None):
     parser.add_argument('--parrec', action='store_true', default=False)
     parser.add_argument('--institution', type=str, default=None)
     parser.add_argument('--field_strength', type=int, default=3)
-    parser.add_argument('--extra-args', type=str, action='append', default=None)
+    parser.add_argument('--manual-args', type=str, action='append', default=None)
     parsed_args = parser.parse_args(args)
 
     parsed_args.output_root = os.path.realpath(os.path.expanduser(parsed_args.output_root))
@@ -95,7 +95,7 @@ def main(args=None):
 
         if parsed_args.parrec:
             img_set = ParrecSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file,
-                                parsed_args.institution, parsed_args.field_strength, parsed_args.extra_args)
+                                parsed_args.institution, parsed_args.field_strength, parsed_args.manual_args)
         else:
             img_set = DicomSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file)
         img_set.create_all_nii()
