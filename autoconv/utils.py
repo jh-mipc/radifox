@@ -93,7 +93,7 @@ def reorient(input_file, orientation):
             return False
 
 
-def allowed_archive_extensions():
+def allowed_archives():
     allowed_exts = []
     allowed_names = []
     for names, extensions, _ in shutil.get_archive_formats():
