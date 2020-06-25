@@ -10,7 +10,7 @@ from .info import __version__
 from .logging import create_loggers
 from .metadata import Metadata
 from .parrec import ParrecSet, sort_parrecs
-from .utils import silentremove, mkdir_p, unzip, recursive_chmod, DIR_OCTAL
+from .utils import silentremove, mkdir_p, extract_archive, allowed_archives, recursive_chmod, DIR_OCTAL
 
 
 def main(args=None):
@@ -28,7 +28,6 @@ def main(args=None):
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--force', action='store_true', default=False)
     parser.add_argument('--rerun', action='store_true', default=False)
-    parser.add_argument('--no-zip', action='store_true', default=False)
     parser.add_argument('--no-project-subdir', action='store_true', default=False)
     parser.add_argument('--parrec', action='store_true', default=False)
     parser.add_argument('--institution', type=str, default=None)
@@ -81,14 +80,18 @@ def main(args=None):
         type_folder = 'mr-' + ('parrec' if parsed_args.parrec else 'dcm')
         sort_func = sort_parrecs if parsed_args.parrec else sort_dicoms
         if not parsed_args.rerun:
-            if parsed_args.no_zip:
+            if os.path.isdir(parsed_args.source):
                 logging.info('Copying files from source to %s folder' % type_folder)
                 shutil.copytree(parsed_args.source,
                                 os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder),
                                 copy_function=shutil.copyfile)
                 logging.info('Copying complete')
+            elif any([parsed_args.source.endswith(ext) for ext in allowed_archives()[1]]):
+                extract_archive(parsed_args.source, os.path.join(parsed_args.output_root,
+                                                                 metadata.dir_to_str(), type_folder))
             else:
-                unzip(parsed_args.source, os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
+                raise ValueError('Source is not a directory, but does not match one of '
+                                 'the available archive formats (%s)' % ', '.join(allowed_archives()[0]))
             recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
             sort_func(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
             recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))

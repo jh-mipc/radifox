@@ -6,7 +6,7 @@ import hashlib
 import logging
 import os
 import re
-import zipfile
+import shutil
 
 import nibabel as nib
 from pydicom.multival import MultiValue
@@ -93,13 +93,20 @@ def reorient(input_file, orientation):
             return False
 
 
-def unzip(input_zipfile, output_dir):
-    logging.info('Unzipping zipfile')
+def allowed_archive_extensions():
+    allowed_exts = []
+    allowed_names = []
+    for names, extensions, _ in shutil.get_archive_formats():
+        allowed_exts.extend(extensions)
+        allowed_names.extend(names)
+    return allowed_names, allowed_exts
+
+
+def extract_archive(input_zipfile, output_dir):
+    logging.info('Extracting archive')
     mkdir_p(output_dir)
-    zip_ref = zipfile.ZipFile(input_zipfile, 'r')
-    zip_ref.extractall(output_dir)
-    zip_ref.close()
-    logging.info('Unzipping complete')
+    shutil.unpack_archive(input_zipfile, output_dir)
+    logging.info('Extraction complete')
 
 
 def make_tuple(item):
