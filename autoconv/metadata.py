@@ -3,6 +3,8 @@ import logging
 import os
 import re
 
+from .utils import sha1_file_dir
+
 
 META_TIME_CODES = {1: '00', 2: '06', 3: '12', 4: '24', 5: '36', 6: '48'}
 
@@ -16,6 +18,7 @@ class Metadata:
         self.SiteID = site_id
         self.ProjectShortName = self.ProjectID.upper() if project_shortname is None else project_shortname
         self.TMSMetaFile = None
+        self.TMSMetaFileHash = None
         self._RawMetaFileObj = None
         self._NoProjectSubdir = no_project_subdir
 
@@ -32,13 +35,14 @@ class Metadata:
                 break
         out_cls = cls('treatms', patient_id, time_id, site_id, no_project_subdir=no_project_subdir)
         out_cls.TMSMetaFile = metadata_file
+        out_cls.TMSMetaFileHash = sha1_file_dir(metadata_file)
         out_cls._RawMetaFileObj = {re.sub(r'\([0-9]*\)', '', k): v for k, v in metadata_obj.items()}
         return out_cls
 
     def __repr_json__(self):
         skip_keys = []
         if self.TMSMetaFile is None:
-            skip_keys += ['TMSMetaFile', '_RawMetaFileObj']
+            skip_keys += ['TMSMetaFile', 'TMSMetaFileHash', '_RawMetaFileObj']
         return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
 
     def check_metadata(self):
