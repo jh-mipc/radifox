@@ -8,6 +8,7 @@ import sys
 from .dicom import DicomSet, sort_dicoms
 from .info import __version__
 from .logging import create_loggers
+from .lut import LookupTable
 from .metadata import Metadata
 from .parrec import ParrecSet, sort_parrecs
 from .utils import silentremove, mkdir_p, extract_archive, allowed_archives, recursive_chmod, DIR_OCTAL
@@ -51,6 +52,8 @@ def main(args=None):
             raise ValueError('Project ID, Patient ID and Time ID are all required arguments.')
         metadata = Metadata(parsed_args.project_id, parsed_args.patient_id, parsed_args.time_id,
                             parsed_args.site_id, parsed_args.project_shortname, parsed_args.no_project_subdir)
+
+    lut = LookupTable(parsed_args.lut_file, metadata.ProjectID, metadata.SiteID)
 
     if len(glob(os.path.join(parsed_args.output_root, metadata.dir_to_str(), '*'))) > 0 and not parsed_args.rerun:
         if parsed_args.force:
@@ -97,10 +100,10 @@ def main(args=None):
             recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), type_folder))
 
         if parsed_args.parrec:
-            img_set = ParrecSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file,
+            img_set = ParrecSet(parsed_args.source, parsed_args.output_root, metadata, lut,
                                 parsed_args.institution, parsed_args.field_strength, parsed_args.manual_arg)
         else:
-            img_set = DicomSet(parsed_args.source, parsed_args.output_root, metadata, parsed_args.lut_file)
+            img_set = DicomSet(parsed_args.source, parsed_args.output_root, metadata, lut)
         img_set.create_all_nii()
         recursive_chmod(os.path.join(parsed_args.output_root, metadata.dir_to_str(), 'nii'))
         img_set.generate_unconverted_info()

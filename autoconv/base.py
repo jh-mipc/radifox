@@ -12,7 +12,6 @@ import numpy as np
 from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
 # from .logging import WARNING_DEBUG
-from .lut import LookupTable
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
                     add_acq_num, find_closest, FILE_OCTAL)
 
@@ -353,11 +352,11 @@ class BaseInfo:
 
 
 class BaseSet:
-    def __init__(self, source, output_root, metadata_obj, lut_file):
+    def __init__(self, source, output_root, metadata_obj, lut_obj):
         self.AutoConvVersion = __version__
         self.InputSource = source
         self.Metadata = metadata_obj
-        self.LookupTable = LookupTable(lut_file, self.Metadata.ProjectID, self.Metadata.SiteID)
+        self.LookupTable = lut_obj
         self.OutputRoot = output_root
         self.SeriesList = []
 

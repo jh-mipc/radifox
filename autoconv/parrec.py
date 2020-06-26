@@ -84,9 +84,9 @@ class ParrecInfo(BaseInfo):
 
 class ParrecSet(BaseSet):
 
-    def __init__(self, source, output_root, metadata_obj, lut_file, institution_name=None,
+    def __init__(self, source, output_root, metadata_obj, lut_obj, institution_name=None,
                  magnetic_field_strength=3, manual_args=None):
-        super().__init__(source, output_root, metadata_obj, lut_file)
+        super().__init__(source, output_root, metadata_obj, lut_obj)
         self.ManualArgs = parse_manual_args(manual_args, BaseInfo('')) if manual_args is not None else {}
         self.ManualArgs['MagneticFieldStrength'] = magnetic_field_strength
         self.ManualArgs['InstitutionName'] = institution_name
