@@ -86,7 +86,10 @@ setup(
     packages=find_packages(),
     keywords="mri conversion",
     entry_points={
-      'console_scripts': ['autoconv=autoconv.exec:main']
+      'console_scripts': [
+          'autoconv-convert=autoconv.exec:main',
+          'autoconv-update=autoconv.exec:update'
+      ]
     },
     install_requires=[
       'nibabel',

@@ -39,6 +39,15 @@ class Metadata:
         out_cls._RawMetaFileObj = {re.sub(r'\([0-9]*\)', '', k): v for k, v in metadata_obj.items()}
         return out_cls
 
+    @classmethod
+    def from_dict(cls, dict_obj):
+        out_cls = cls(dict_obj['ProjectID'], dict_obj['PatientID'], dict_obj['TimeID'],
+                      dict_obj['SiteID'], dict_obj['ProjectShortName'], dict_obj['_NoProjectSubdir'])
+        if 'TMSMetaFile' in dict_obj:
+            out_cls.TMSMetaFile = dict_obj['TMSMetaFile']
+            out_cls._RawMetaFileObj = dict_obj['_RawMetaFileObj']
+        return out_cls
+
     def __repr_json__(self):
         skip_keys = []
         if self.TMSMetaFile is None:

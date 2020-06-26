@@ -84,12 +84,9 @@ class ParrecInfo(BaseInfo):
 
 class ParrecSet(BaseSet):
 
-    def __init__(self, source, output_root, metadata_obj, lut_obj, institution_name=None,
-                 magnetic_field_strength=3, manual_args=None):
+    def __init__(self, source, output_root, metadata_obj, lut_obj, manual_args):
         super().__init__(source, output_root, metadata_obj, lut_obj)
-        self.ManualArgs = parse_manual_args(manual_args, BaseInfo('')) if manual_args is not None else {}
-        self.ManualArgs['MagneticFieldStrength'] = magnetic_field_strength
-        self.ManualArgs['InstitutionName'] = institution_name
+        self.ManualArgs = manual_args
 
         for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-parrec', '*.par'))):
             logging.info('Processing %s' % parfile)
