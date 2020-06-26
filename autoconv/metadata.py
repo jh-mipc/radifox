@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from pathlib import Path
 import re
 
 from .utils import sha1_file_dir
@@ -23,8 +24,9 @@ class Metadata:
         self._NoProjectSubdir = no_project_subdir
 
     @classmethod
-    def from_tms_metadata(cls, metadata_file, no_project_subdir=False):
-        with open(metadata_file) as fp:
+    def from_tms_metadata(cls, metadata_file: Path, no_project_subdir=False):
+        # noinspection PyTypeChecker
+        with open(metadata_file, 'r') as fp:
             metadata_obj = json.load(fp)['metadataFieldsToValues']
         site_id, patient_id = metadata_obj['patient_id'].split('-')
         time_id = None

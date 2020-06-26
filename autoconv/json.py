@@ -1,4 +1,5 @@
 import json
+from pathlib import PurePath
 import uuid
 
 
@@ -19,6 +20,8 @@ class JSONObjectEncoder(json.JSONEncoder):
             key = uuid.uuid4().hex
             self._replacement_map[key] = json.dumps(o.value, **self.kwargs, cls=JSONObjectEncoder)
             return "@@%s@@" % (key,)
+        elif isinstance(o, PurePath):
+            return str(o)
         elif hasattr(o, '__repr_json__') and callable(o.__repr_json__):
             return o.__repr_json__()
         else:

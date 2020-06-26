@@ -87,14 +87,14 @@ setup(
     keywords="mri conversion",
     entry_points={
       'console_scripts': [
-          'autoconv-convert=autoconv.exec:main',
-          'autoconv-update=autoconv.exec:update'
+          'autoconv=autoconv.exec:cli'
       ]
     },
     install_requires=[
       'nibabel',
       'pydicom',
-      'numpy'
+      'numpy',
+      'click',
     ],
     package_data={'autoconv': ['parrec_templates/*.txt']},
     cmdclass={'build_py': BuildWithCommitInfoCommand},

@@ -1,3 +1,4 @@
 nibabel~=3.1.0
 numpy~=1.18.4
 pydicom~=1.4.2
+click~=7.1.2

@@ -125,8 +125,8 @@ def parse_dcm2niix_filenames(stdout):
     filenames = []
     for line in stdout.split("\n"):
         if line.startswith("Convert "):  # output
-            fname = str(re.search(r"\S+/\S+", line).group(0))
-            filenames.append(os.path.abspath(fname))
+            fname = Path(str(re.search(r"\S+/\S+", line).group(0)))
+            filenames.append(fname.resolve())
     return filenames
 
 
@@ -142,11 +142,12 @@ FILE_OCTAL = 0o660
 DIR_OCTAL = 0o2770
 
 
-def recursive_chmod(directory, dir_octal=DIR_OCTAL, file_octal=FILE_OCTAL):
-    for dirpath, dirnames, filenames in os.walk(directory):
-        os.chmod(dirpath, dir_octal)
-        for filename in filenames:
-            os.chmod(os.path.join(dirpath, filename), file_octal)
+def recursive_chmod(directory: Path, dir_octal=DIR_OCTAL, file_octal=FILE_OCTAL):
+    for item in directory.rglob('*'):
+        if item.is_dir:
+            item.chmod(dir_octal)
+        elif item.is_file:
+            item.chmod(file_octal)
 
 
 def find_closest(target, to_check):

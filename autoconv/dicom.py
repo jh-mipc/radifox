@@ -1,7 +1,6 @@
 from datetime import datetime
-from glob import glob
 import logging
-import os
+from pathlib import Path
 import shutil
 from subprocess import run
 
@@ -10,6 +9,8 @@ from pydicom.errors import InvalidDicomError
 from pydicom.dicomdir import DicomDir
 
 from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue, MATCHING_ITEMS
+from .lut import LookupTable
+from .metadata import Metadata
 from .utils import mkdir_p, convert_type, make_tuple
 
 
@@ -47,12 +48,12 @@ DCM_HEADER_ATTRS = [
 
 class DicomInfo(BaseInfo):
 
-    def __init__(self, dcmdir):
+    def __init__(self, dcmdir: Path):
         super().__init__(dcmdir)
-        ds = dicom.read_file(sorted(glob(os.path.join(dcmdir, '*')))[0], stop_before_pixels=True)
-        self.SeriesUID = os.path.basename(dcmdir)
+        ds = dicom.dcmread(sorted(dcmdir.glob('*'))[0], stop_before_pixels=True)
+        self.SeriesUID = dcmdir.name
         self.StudyUID = getattr(ds, 'StudyInstanceUID', None)
-        self.NumFiles = len(glob(os.path.join(dcmdir, '*')))
+        self.NumFiles = len(list(dcmdir.glob('*')))
         for item in DCM_HEADER_ATTRS:
             get_item, set_item = item if isinstance(item, tuple) else (item, item)
             setattr(self, set_item, convert_type(getattr(ds, get_item, None)))
@@ -90,10 +91,10 @@ class DicomInfo(BaseInfo):
 
 
 class DicomSet(BaseSet):
-    def __init__(self, source, output_root, metadata_obj, lut_obj):
+    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable):
         super().__init__(source, output_root, metadata_obj, lut_obj)
 
-        for dcmdir in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-dcm', '*'))):
+        for dcmdir in sorted(Path(output_root, self.Metadata.dir_to_str(), 'mr-dcm').glob('*')):
             logging.info('Processing %s' % dcmdir)
             di = DicomInfo(dcmdir)
             if di.should_convert():
@@ -104,24 +105,24 @@ class DicomSet(BaseSet):
         self.generate_unique_names()
 
 
-def convert_emf(dcmpath):
-    run([shutil.which('emf2sf'), '--out-dir', os.path.dirname(dcmpath), dcmpath])
-    os.remove(dcmpath)
-    return sorted(glob(dcmpath + '-*'))
+def convert_emf(dcmpath: Path):
+    run([shutil.which('emf2sf'), '--out-dir', str(dcmpath.parent), str(dcmpath)])
+    dcmpath.unlink()
+    return sorted(dcmpath.parent.glob(dcmpath.name + '-*'))
 
 
-def decompress_jpeg(dcm_filename):
-    run([shutil.which('dcmdjpeg'), dcm_filename, dcm_filename + '.decompress'])
-    os.rename(dcm_filename + '.decompress', dcm_filename)
+def decompress_jpeg(dcm_filename: Path):
+    run([shutil.which('dcmdjpeg'), str(dcm_filename), str(dcm_filename) + '.decompress'])
+    Path(str(dcm_filename) + '.decompress').rename(dcm_filename)
 
 
-def sort_dicoms(dcm_dir):
+def sort_dicoms(dcm_dir: Path):
     logging.info('Sorting DICOMs')
     valid_dcms = []
     mf_count = 0
-    for path, subdirs, files in os.walk(dcm_dir):
-        for name in files:
-            curr_dcm_img = os.path.join(path, name)
+    for item in dcm_dir.rglob('*'):
+        if item.is_file():
+            curr_dcm_img = item
             try:
                 ds = dicom.dcmread(curr_dcm_img, stop_before_pixels=True)
             except InvalidDicomError:
@@ -163,38 +164,38 @@ def sort_dicoms(dcm_dir):
         unique_lists[scan[0]].append(scan)
         unique_change[scan] = scan[0] + ('.%02d' % len(unique_lists[scan[0]]))
     for new_dcm_dir in unique_change.values():
-        mkdir_p(os.path.join(dcm_dir, new_dcm_dir))
+        mkdir_p(Path(dcm_dir, new_dcm_dir))
     inst_nums = {}
     for dcm_tuple in valid_dcms:
-        output_dir = os.path.join(dcm_dir, unique_change[(dcm_tuple[1], dcm_tuple[3])])
-        os.rename(dcm_tuple[0], os.path.join(output_dir, os.path.basename(dcm_tuple[0])))
+        output_dir = Path(dcm_dir, unique_change[(dcm_tuple[1], dcm_tuple[3])])
+        dcm_tuple[0].rename(Path(output_dir, dcm_tuple[0].name))
         if not unique_change[(dcm_tuple[1], dcm_tuple[3])] in inst_nums:
             inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]] = {}
         if not dcm_tuple[2] in inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]]:
             inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]][dcm_tuple[2]] = []
         inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]][dcm_tuple[2]].\
-            append(os.path.join(output_dir, os.path.basename(dcm_tuple[0])))
+            append(Path(output_dir, dcm_tuple[0].name))
 
     new_dirs = list(unique_change.values())
-    for name in os.listdir(dcm_dir):
-        if name not in new_dirs:
-            if os.path.isdir(os.path.join(dcm_dir, name)):
-                shutil.rmtree(os.path.join(dcm_dir, name))
-            else:
-                os.remove(os.path.join(dcm_dir, name))
+    for item in dcm_dir.glob('*'):
+        if str(item) not in new_dirs:
+            if item.is_dir():
+                shutil.rmtree(item)
+            elif item.is_file():
+                item.unlink()
 
     logging.info('Checking for duplicate DICOM files')
     for uid in inst_nums:
         if any([len(inst_nums[uid][num]) > 1 for num in inst_nums[uid]]):
             logging.info('Possible duplicates found for %s' % uid)
-            remove_duplicates(os.path.join(dcm_dir, uid))
+            remove_duplicates(Path(dcm_dir, uid))
 
     logging.info('Sorting complete')
 
 
-def remove_duplicates(dcmdir):
+def remove_duplicates(dcmdir: Path):
     inst_nums = {}
-    for dcmfile in glob(os.path.join(dcmdir, '*')):
+    for dcmfile in dcmdir.glob('*'):
         ds = dicom.dcmread(dcmfile, stop_before_pixels=True)
         if ds.InstanceNumber not in inst_nums:
             inst_nums[ds.InstanceNumber] = []
@@ -217,7 +218,7 @@ def remove_duplicates(dcmdir):
                             dicom.dcmread(inst_nums[num][i][0]).PixelData):
                         logging.debug('Found duplicate of %s' % inst_nums[num][j][0])
                         logging.debug('Removing duplicate file %s' % inst_nums[num][i][0])
-                        os.remove(inst_nums[num][i][0])
+                        inst_nums[num][i][0].unlink()
                         count += 1
                         break
     if count > 0:

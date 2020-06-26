@@ -1,12 +1,13 @@
 import os
+from pathlib import Path
 
 from .utils import read_csv, is_intstr
 
 
 class LookupTable:
 
-    def __init__(self, lut_file, project_id, site_id):
-        self.FileName = os.path.realpath(os.path.expanduser(lut_file))
+    def __init__(self, lut_file: Path, project_id, site_id):
+        self.FileName = lut_file.resolve().expanduser()
         lut, self.FileHash = read_csv(self.FileName)
         if site_id is None:
             site_id = ''

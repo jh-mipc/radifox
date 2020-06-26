@@ -3,6 +3,7 @@ from glob import glob
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
 from subprocess import run
@@ -27,7 +28,7 @@ PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
 class BaseInfo:
 
-    def __init__(self, path):
+    def __init__(self, path: Path):
         self.SourcePath = path
         self.SeriesUID = None
         self.StudyUID = None
@@ -292,7 +293,7 @@ class BaseInfo:
         if not self.ConvertImage:
             return
 
-        niidir = os.path.join(os.path.dirname(os.path.dirname(self.SourcePath)), 'nii')
+        niidir = Path(self.SourcePath.parent.parent, 'nii')
         mkdir_p(niidir)
         count = 1
         while os.path.exists(os.path.join(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz')):
@@ -352,7 +353,7 @@ class BaseInfo:
 
 
 class BaseSet:
-    def __init__(self, source, output_root, metadata_obj, lut_obj):
+    def __init__(self, source: Path, output_root: Path, metadata_obj, lut_obj):
         self.AutoConvVersion = __version__
         self.InputSource = source
         logging.info('Hashing source file(s) for record keeping.')
@@ -516,13 +517,13 @@ class BaseSet:
     def generate_unconverted_info(self):
         logging.info('Writing unconverted info file to ' + self.Metadata.prefix_to_str() +
                      '_MR-UnconvertedInfo.json')
-        with open(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
-                               self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), 'w') as json_fp:
+        with open(Path(self.OutputRoot, self.Metadata.dir_to_str(),
+                       self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), 'w') as json_fp:
             out_dict = deepcopy(self.__dict__)
             out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
             json_fp.write(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
-        os.chmod(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
-                              self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), FILE_OCTAL)
+        Path(self.OutputRoot, self.Metadata.dir_to_str(),
+             self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json').chmod(FILE_OCTAL)
 
 
 class TruncatedImageValue:
