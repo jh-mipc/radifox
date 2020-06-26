@@ -13,7 +13,7 @@ from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
-                    add_acq_num, find_closest, FILE_OCTAL)
+                    add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir)
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
@@ -355,6 +355,9 @@ class BaseSet:
     def __init__(self, source, output_root, metadata_obj, lut_obj):
         self.AutoConvVersion = __version__
         self.InputSource = source
+        logging.info('Hashing source file(s) for record keeping.')
+        self.InputHash = sha1_file_dir(self.InputSource)
+        logging.info('Hashing complete.')
         self.Metadata = metadata_obj
         self.LookupTable = lut_obj
         self.OutputRoot = output_root

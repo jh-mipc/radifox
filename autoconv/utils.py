@@ -5,6 +5,7 @@ from glob import glob
 import hashlib
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
 
@@ -159,3 +160,40 @@ def find_closest(target, to_check):
     min_dist = min([abs(val[0]) for val in signed_dists])
     candidates = [val[1] for val in signed_dists if abs(val[0]) == min_dist]
     return candidates[0] if len(candidates) == 1 else min(candidates)
+
+
+def hash_update_from_file(filename, hash_obj):
+    with open(str(filename), "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_obj.update(chunk)
+    return hash_obj
+
+
+def hash_file(filename, hash_obj=None):
+    if hash_obj is None:
+        hash_obj = hashlib.md5()
+    return str(hash_update_from_file(filename, hash_obj).hexdigest())
+
+
+def hash_update_from_dir(directory, hash_obj):
+    for path in sorted(Path(directory).iterdir(), key=lambda p: str(p).lower()):
+        hash_obj.update(path.name.encode())
+        if path.is_file():
+            hash_obj = hash_update_from_file(path, hash_obj)
+        elif path.is_dir():
+            hash_obj = hash_update_from_dir(path, hash_obj)
+    return hash_obj
+
+
+def hash_dir(directory, hash_obj=None):
+    if hash_obj is None:
+        hash_obj = hashlib.md5()
+    return str(hash_update_from_dir(directory, hash_obj).hexdigest())
+
+
+def sha1_file_dir(file_dir):
+    file_dir_obj = Path(file_dir)
+    if file_dir_obj.is_file():
+        return hash_file(file_dir, hashlib.sha1())
+    elif file_dir_obj.is_dir():
+        return hash_dir(file_dir, hashlib.sha1())
