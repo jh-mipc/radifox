@@ -514,10 +514,9 @@ class BaseSet:
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
     def generate_unconverted_info(self) -> None:
-        logging.info('Writing unconverted info file to ' + self.Metadata.prefix_to_str() +
-                     '_MR-UnconvertedInfo.json')
         info_file = self.OutputRoot / self.Metadata.dir_to_str() / (self.Metadata.prefix_to_str() +
                                                                     '_MR-UnconvertedInfo.json')
+        logging.info('Writing unconverted info file to %s' % info_file)
         out_dict = deepcopy(self.__dict__)
         out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
         info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
