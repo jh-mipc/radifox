@@ -1,19 +1,22 @@
+from __future__ import annotations
 from copy import deepcopy
-from glob import glob
 import json
 import logging
-import os
+from pathlib import Path
 import re
 import shutil
 from subprocess import run
+from typing import List, Tuple, Union, Any, Optional
 
 import numpy as np
 
 from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
+from .lut import LookupTable
+from .metadata import Metadata
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
-                    add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir)
+                    add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir, p_add)
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
@@ -27,7 +30,7 @@ PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
 class BaseInfo:
 
-    def __init__(self, path):
+    def __init__(self, path: Path) -> None:
         self.SourcePath = path
         self.SeriesUID = None
         self.StudyUID = None
@@ -76,10 +79,10 @@ class BaseInfo:
         self.PredictedName = None
         self.NiftiName = None
 
-    def __repr_json__(self):
+    def __repr_json__(self) -> dict:
         return {k: NoIndent(v) for k, v in self.__dict__.items()}
 
-    def should_convert(self):
+    def should_convert(self) -> bool:
         type_str = ' '.join(self.ImageType[:2]).lower()
         series_desc = self.SeriesDescription.lower()
         type_status = ('derived' not in type_str) or \
@@ -101,7 +104,7 @@ class BaseInfo:
             logging.info('This series is localizer, derived or processed image. Skipping.')
         return self.ConvertImage
 
-    def create_image_name(self, scan_str, lut_obj):
+    def create_image_name(self, scan_str: str, lut_obj: LookupTable) -> None:
         autogen = False
         pred_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
         if pred_list is False:
@@ -288,14 +291,14 @@ class BaseInfo:
         logging.debug('Predicted name: %s' % self.NiftiName)
         self.NiftiName = '_'.join([scan_str, '-'.join(pred_list)])
 
-    def create_nii(self):
+    def create_nii(self) -> None:
         if not self.ConvertImage:
             return
 
-        niidir = os.path.join(os.path.dirname(os.path.dirname(self.SourcePath)), 'nii')
+        niidir = Path(self.SourcePath.parent.parent, 'nii')
         mkdir_p(niidir)
         count = 1
-        while os.path.exists(os.path.join(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz')):
+        while Path(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz').exists():
             count += 1
         logging.debug('Adjusting name for %s: %s --> %s' % (self.SeriesUID, self.NiftiName,
                                                             add_acq_num(self.NiftiName, count)))
@@ -309,6 +312,8 @@ class BaseInfo:
         if result.returncode != 0:
             logging.warning('dcm2niix failed for %s' % self.SourcePath)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
+            logging.warning('dcm2niix return code: %d' % result.returncode)
+            logging.warning('dcm2niix output:' % result.returncode)
             logging.warning('\n' + result.stdout)
             for filename in parse_dcm2niix_filenames(result.stdout):
                 remove_created_files(filename)
@@ -318,55 +323,62 @@ class BaseInfo:
         for filename in parse_dcm2niix_filenames(result.stdout):
             if not success:
                 remove_created_files(filename)
-            if len(glob(filename + '_Eq*.nii.gz')) > 0:
+            if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
                 remove_created_files(filename)
                 logging.warning('Slices missing for DICOM UID %s, not converted.' % self.SeriesUID)
                 logging.warning('Nifti creation failed.')
                 success = False
                 continue
-            reo_result = reorient(filename + '.nii.gz', self.SliceOrientation)
+            reo_result = reorient(p_add(filename, '.nii.gz'), self.SliceOrientation)
             if not reo_result:
                 remove_created_files(filename)
                 success = False
                 continue
-            if 'DIFF' in filename and os.path.exists(filename + '_ADC.nii.gz'):
+            if 'DIFF' in filename.name and p_add(filename, '_ADC.nii.gz').exists():
                 logging.info('Additional ADC images produced by dcm2niix. Removing.')
-                os.remove(filename + '_ADC.nii.gz')
-            while re.search(r'_(e[0-9]+|ph)$', filename):
-                os.rename(filename + '.nii.gz', re.sub(r'_(e[0-9]+|ph)$', '', filename) + '.nii.gz')
-                filename = re.sub(r'_(e[0-9]+|ph)$', '', filename)
+                p_add(filename, '_ADC.nii.gz').unlink()
+            while re.search(r'_(e[0-9]+|ph)$', filename.name):
+                new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph)$', '', filename.name))
+                p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
+                filename = new_path
         if success:
-            if os.path.exists(os.path.join(niidir, self.NiftiName + '.nii.gz')):
+            if (niidir / (self.NiftiName + '.nii.gz')).exists():
                 self.NiftiCreated = True
-                logging.info('Nifti created successfully at %s' %
-                             (os.path.join(niidir, self.NiftiName + '.nii.gz')))
+                logging.info('Nifti created successfully at %s' % (niidir / (self.NiftiName + '.nii.gz')))
                 if '-ACQ3' in self.NiftiName:
                     logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
                                     'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
             else:
                 self.NiftiCreated = False
-                logging.warning('dcm2niix failed for %s' % self.SourcePath)
+                logging.warning('Nifti creation failed for %s' % self.SourcePath)
                 logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
+                logging.warning('dcm2niix return code: %d' % result.returncode)
+                logging.warning('dcm2niix output:' % result.returncode)
                 logging.warning('\n' + result.stdout)
                 logging.warning('Nifti creation failed.')
 
 
 class BaseSet:
-    def __init__(self, source, output_root, metadata_obj, lut_obj):
+    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
+                 input_hash: Optional[str] = None) -> None:
         self.AutoConvVersion = __version__
         self.InputSource = source
-        logging.info('Hashing source file(s) for record keeping.')
-        self.InputHash = sha1_file_dir(self.InputSource)
-        logging.info('Hashing complete.')
+        if input_hash is None:
+            logging.info('Hashing source file(s) for record keeping.')
+            self.InputHash = sha1_file_dir(self.InputSource)
+            logging.info('Hashing complete.')
+        else:
+            logging.info('Using existing source hash for record keeping.')
+            self.InputHash = input_hash
         self.Metadata = metadata_obj
         self.LookupTable = lut_obj
         self.OutputRoot = output_root
         self.SeriesList = []
 
-    def __repr_json__(self):
+    def __repr_json__(self) -> dict:
         return self.__dict__
 
-    def generate_unique_names(self):
+    def generate_unique_names(self) -> None:
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: x.ConvertImage, reverse=True)
         names_set = set([di.NiftiName for di in self.SeriesList])
@@ -494,7 +506,7 @@ class BaseSet:
                     di.NiftiName = None
                     di.ConvertImage = False
 
-    def create_all_nii(self):
+    def create_all_nii(self) -> None:
         for di in self.SeriesList:
             if di.ConvertImage:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
@@ -503,60 +515,56 @@ class BaseSet:
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: x.ConvertImage, reverse=True)
 
-    def generate_sidecar(self, di_obj):
-        logging.info('Writing image sidecar file to ' +
-                     os.path.join(os.path.dirname(os.path.dirname(di_obj.SourcePath)),
-                                  'nii', di_obj.NiftiName + '.json'))
-        with open(os.path.join(os.path.dirname(os.path.dirname(di_obj.SourcePath)),
-                               'nii', di_obj.NiftiName + '.json'), 'w') as json_fp:
-            out_dict = {k: v for k, v in self.__dict__.items() if k != 'SeriesList'}
-            out_dict['SeriesInfo'] = di_obj
-            json_fp.write(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+    def generate_sidecar(self, di_obj: BaseInfo) -> None:
+        sidecar_file = di_obj.SourcePath.parent.parent / 'nii' / (di_obj.NiftiName + '.json')
+        logging.info('Writing image sidecar file to %s' % sidecar_file)
+        out_dict = {k: v for k, v in self.__dict__.items() if k != 'SeriesList'}
+        out_dict['SeriesInfo'] = di_obj
+        sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
-    def generate_unconverted_info(self):
-        logging.info('Writing unconverted info file to ' + self.Metadata.prefix_to_str() +
-                     '_MR-UnconvertedInfo.json')
-        with open(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
-                               self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), 'w') as json_fp:
-            out_dict = deepcopy(self.__dict__)
-            out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
-            json_fp.write(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
-        os.chmod(os.path.join(self.OutputRoot, self.Metadata.dir_to_str(),
-                              self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'), FILE_OCTAL)
+    def generate_unconverted_info(self) -> None:
+        info_file = self.OutputRoot / self.Metadata.dir_to_str() / (self.Metadata.prefix_to_str() +
+                                                                    '_MR-UnconvertedInfo.json')
+        logging.info('Writing unconverted info file to %s' % info_file)
+        out_dict = deepcopy(self.__dict__)
+        out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
+        info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+        info_file.chmod(FILE_OCTAL)
 
 
 class TruncatedImageValue:
 
-    def __init__(self, value, precision=1e-4):
+    def __init__(self, value: Optional[Union[List[float], Tuple[float], np.ndarray]],
+                 precision: float = 1e-4) -> None:
         self.value = value
         self.precision = precision
 
-    def __eq__(self, other):
-        if isinstance(other, TruncatedImageValue) \
-                and self.value is not None \
-                and other.value is not None:
+    def __eq__(self, other: Union[Any, TruncatedImageValue]) -> bool:
+        if isinstance(other, TruncatedImageValue):
+            if self.value is None or other.value is None:
+                return False
             return all([abs(self.value[i]-other.value[i]) <= self.precision
                         for i in range(len(self.value))])
         else:
             return super().__eq__(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(tuple(self.truncate()))
 
-    def __getitem__(self, item):
-        return self.value[item]
+    def __getitem__(self, item) -> Optional[float]:
+        return self.value[item] if self.value is not None else None
 
-    def __repr_json__(self):
+    def __repr_json__(self) -> Optional[List[float]]:
         return self.truncate()
 
-    def truncate(self):
-        return [np.around(int(num/self.precision)*self.precision,
-                          int(abs(np.log10(self.precision))+1))
-                for num in self.value]
+    def truncate(self) -> Optional[List[float]]:
+        return [float(np.around(int(num/self.precision)*self.precision,
+                                int(abs(np.log10(self.precision))+1)))
+                for num in self.value] if self.value is not None else None
 
 
 class ImageOrientation(TruncatedImageValue):
-    def get_plane(self):
+    def get_plane(self) -> Optional[str]:
         if self.value is None:
             return None
         if len(self.value) == 6:  # Direction Cosines

@@ -1,13 +1,15 @@
 from datetime import datetime
-from glob import glob
 import logging
-import os
+from pathlib import Path
 import secrets
 import shutil
+from typing import Optional
 
 import numpy as np
 
 from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue
+from .lut import LookupTable
+from .metadata import Metadata
 from .nib_parrec_fork import PARRECHeader, PARRECImage, TruncatedPARRECError
 from .parrec_writer import split_fix_parrec
 from .utils import silentremove
@@ -25,9 +27,9 @@ COMPLEX_IMAGE_TYPES = {0: 'MAGNITUDE', 1: 'REAL', 2: 'IMAGINARY', 3: 'PHASE'}
 
 class ParrecInfo(BaseInfo):
 
-    def __init__(self, par_file, manual_args=None):
+    def __init__(self, par_file: Path, manual_args: Optional[dict] = None) -> None:
         super().__init__(par_file)
-        file_map = PARRECImage.filespec_to_file_map(par_file)
+        file_map = PARRECImage.filespec_to_file_map(str(par_file))
         with file_map['header'].get_prepare_fileobj('rt') as hdr_fobj:
             try:
                 hdr = PARRECHeader.from_fileobj(hdr_fobj, permit_truncated=False)
@@ -36,7 +38,7 @@ class ParrecInfo(BaseInfo):
                 hdr = PARRECHeader.from_fileobj(hdr_fobj, permit_truncated=True)
                 self.Truncated = True
 
-        self.SeriesUID = os.path.basename(par_file[:-4])
+        self.SeriesUID = par_file.name[:-4]
         self.StudyUID = '.'.join(self.SeriesUID.split('.')[:3])
         self.Manufacturer = 'philips'
         for key, value in GENERAL_INFO_FIELDS.items():
@@ -84,11 +86,12 @@ class ParrecInfo(BaseInfo):
 
 class ParrecSet(BaseSet):
 
-    def __init__(self, source, output_root, metadata_obj, lut_obj, manual_args):
-        super().__init__(source, output_root, metadata_obj, lut_obj)
+    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
+                 manual_args: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
+        super().__init__(source, output_root, metadata_obj, lut_obj, input_hash)
         self.ManualArgs = manual_args
 
-        for parfile in sorted(glob(os.path.join(output_root, self.Metadata.dir_to_str(), 'mr-parrec', '*.par'))):
+        for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):
             logging.info('Processing %s' % parfile)
             self.SeriesList.append(ParrecInfo(parfile, self.ManualArgs))
 
@@ -108,34 +111,18 @@ class ParrecSet(BaseSet):
         self.generate_unique_names()
 
 
-def sort_parrecs(parrec_dir):
+def sort_parrecs(parrec_dir: Path) -> None:
     logging.info('Sorting PARRECs')
     new_files = []
     study_uid = '2.25.' + str(int(str(secrets.randbits(96))))
-    for parfile in sorted(glob(os.path.join(parrec_dir, '*.par'))):
+    for parfile in sorted(parrec_dir.rglob('*.par')):
         new_files.extend(split_fix_parrec(parfile, study_uid, parrec_dir))
         silentremove(parfile)
-        silentremove(parfile[:-4] + '.rec')
-    for name in os.listdir(parrec_dir):
-        if name not in new_files:
-            if os.path.isdir(os.path.join(parrec_dir, name)):
-                shutil.rmtree(os.path.join(parrec_dir, name))
+        silentremove(parfile.with_suffix('.rec'))
+    for path in parrec_dir.glob('*'):
+        if path.name not in new_files:
+            if path.is_dir():
+                shutil.rmtree(path)
             else:
-                os.remove(os.path.join(parrec_dir, name))
+                path.unlink()
     logging.info('Sorting complete')
-
-
-def parse_manual_args(argstr_list, template):
-    arg_converter = {'int': int, 'float': float, 'str': str}
-    out_args = {}
-    for argstr in argstr_list:
-        arg_arr = argstr.split(':')
-        if len(arg_arr) not in [2, 3]:
-            raise ValueError('Manual argument is improperly formatted (%s).' % argstr)
-        if arg_arr[0] not in template.__dict__:
-            raise ValueError('Manual argument does not match an info argument (%s)' % argstr)
-        if len(arg_arr) == 3:
-            out_args[arg_arr[0]] = arg_converter.get(arg_arr[2], str)(arg_arr[1])
-        elif len(arg_arr) == 2:
-            out_args[arg_arr[0]] = str(arg_arr[1])
-    return out_args

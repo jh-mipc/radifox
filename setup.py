@@ -1,19 +1,22 @@
-import os
+from pathlib import Path
 from setuptools import setup, find_packages
+from shutil import which
 
 # Code from Nipype (modified by Blake Dewey) #####
 # Commit hash writing, and dependency checking
 from setuptools.command.build_py import build_py
 
-pkg_path = os.path.dirname(__file__)
+__package_name__ = 'autoconv'
+
+
+pkg_path = Path(__file__).parent
 # Python 3: use a locals dictionary
 # http://stackoverflow.com/a/1463370/6820620
 ldict = locals()
 # Get version and release info, which is all stored in nipype/info.py
-ver_file = os.path.join(pkg_path, 'autoconv', 'info.py')
-commit_file = os.path.join(pkg_path, 'COMMIT_INFO.txt')
-with open(ver_file) as infofile:
-    exec(infofile.read(), globals(), ldict)
+ver_file = Path(pkg_path, __package_name__, 'info.py')
+with ver_file.open() as info_fp:
+    exec(info_fp.read(), globals(), ldict)
 __version__ = ldict['__version__']
 
 
@@ -45,29 +48,29 @@ class BuildWithCommitInfoCommand(build_py):
     package for an example.
     """
     def run(self):
-        import subprocess
-        # noinspection PyCompatibility
+        from subprocess import check_output, CalledProcessError
         import configparser
 
         build_py.run(self)
-        proc = subprocess.Popen('git rev-parse --short HEAD',
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                shell=True)
-        repo_commit, _ = proc.communicate()
-        repo_commit = repo_commit.decode()
+        repo_commit = b''
+        if which('git'):
+            try:
+                repo_commit = check_output(['git', 'rev-parse', '--short', 'HEAD'])
+            except CalledProcessError:
+                pass
 
         # We write the installation commit even if it's empty
         cfg_parser = configparser.RawConfigParser()
-        cfg_parser.read(os.path.join(pkg_path, 'COMMIT_INFO.txt'))
-        cfg_parser.set('commit hash', 'install_hash', repo_commit.strip())
-        out_pth = os.path.join(self.build_lib, 'autoconv', 'COMMIT_INFO.txt')
-        cfg_parser.write(open(out_pth, 'wt'))
+        cfg_parser.read(pkg_path / 'COMMIT_INFO.txt')
+        cfg_parser.set('commit hash', 'install_hash', repo_commit.decode().strip())
+        out_pth = Path(self.build_lib) / 'autoconv' / 'COMMIT_INFO.txt'
+        with out_pth.open('wt') as out_fp:
+            cfg_parser.write(out_fp)
 # End code from Nipype #####
 
 
 setup(
-    name='autoconv',
+    name=__package_name__,
     version=__version__,
     description="Automatic conversion process for MRI data",
     long_description="Automatic conversion process for MRI data",
@@ -87,14 +90,14 @@ setup(
     keywords="mri conversion",
     entry_points={
       'console_scripts': [
-          'autoconv-convert=autoconv.exec:main',
-          'autoconv-update=autoconv.exec:update'
+          'autoconv=autoconv.cli:cli'
       ]
     },
     install_requires=[
       'nibabel',
       'pydicom',
-      'numpy'
+      'numpy',
+      'click',
     ],
     package_data={'autoconv': ['parrec_templates/*.txt']},
     cmdclass={'build_py': BuildWithCommitInfoCommand},

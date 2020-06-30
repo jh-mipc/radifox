@@ -1,12 +1,14 @@
 import os
+from pathlib import Path
+from typing import Union, List
 
 from .utils import read_csv, is_intstr
 
 
 class LookupTable:
 
-    def __init__(self, lut_file, project_id, site_id):
-        self.FileName = os.path.realpath(os.path.expanduser(lut_file))
+    def __init__(self, lut_file: Path, project_id: str, site_id: str) -> None:
+        self.FileName = lut_file.resolve().expanduser()
         lut, self.FileHash = read_csv(self.FileName)
         if site_id is None:
             site_id = ''
@@ -25,10 +27,10 @@ class LookupTable:
                 self.LookupDict[lut['InstitutionName'][row]][lut['SeriesDescription'][row]] = \
                     lut['OutputFilename'][row]
 
-    def __repr_json__(self):
+    def __repr_json__(self) -> dict:
         return self.__dict__
 
-    def check(self, inst_name, series_desc):
+    def check(self, inst_name: str, series_desc: str) -> Union[List[str], bool, None]:
         # Deal with extras from PARRECs
         if series_desc.startswith('WIP '):
             series_desc = series_desc[4:]
