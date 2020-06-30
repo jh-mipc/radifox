@@ -75,6 +75,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
 
     if len(list((output_root / metadata.dir_to_str()).glob('*'))) > 0:
         if force:
+            # TODO: Add checks from update that check input integrity before deleting
             shutil.rmtree(output_root / metadata.dir_to_str())
         else:
             raise RuntimeError('Output directory exists, run with --force to remove outputs and re-run.')
@@ -102,6 +103,7 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
     json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
+    # TODO: Add checks to see if data has moved (warn and update? error?)
     if force or reckless:
         if not Path(json_obj['InputSource']).exists():
             raise ValueError('Cannot use --force option, as input source (%s) does not exist.' %
@@ -118,17 +120,16 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
             if sha1_file_dir(json_obj['InputSource']) != json_obj['InputHash']:
                 raise ValueError('Source file(s) have changed since last conversion, '
                                  'run with --reckless to ignore this error.')
-        shutil.rmtree(json_obj['OutputRoot'] / metadata.dir_to_str())
+        shutil.rmtree(directory)
     else:
-        if parrec and not (json_obj['OutputRoot'] / metadata.dir_to_str() / 'mr-parrec').exists():
+        if parrec and not (directory / 'mr-parrec').exists():
             raise ValueError('Update source was specified as PARREC, but mr-parrec source directory does not exist.')
-        elif not parrec and not (json_obj['OutputRoot'] / metadata.dir_to_str() / 'mr-dcm').exists():
+        elif not parrec and not (directory / 'mr-dcm').exists():
             raise ValueError('Update source was specified as DICOM, but mr-dcm source directory does not exist.')
 
-        silentremove(json_obj['OutputRoot'] / metadata.dir_to_str() / 'nii')
-        silentremove(json_obj['OutputRoot'] / metadata.dir_to_str() /
-                     metadata.prefix_to_str() + '_MR-UnconvertedInfo.json')
-        for filepath in (json_obj['OutputRoot'] / metadata.dir_to_str() / 'logs').glob('autoconv-*.log'):
+        silentremove(directory / 'nii')
+        silentremove(directory / (metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'))
+        for filepath in (directory / 'logs').glob('autoconv-*.log'):
             silentremove(filepath)
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
