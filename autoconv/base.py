@@ -16,7 +16,7 @@ from .lut import LookupTable
 from .metadata import Metadata
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
-                    add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir, append_to_pathname)
+                    add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir, p_add)
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
@@ -327,22 +327,22 @@ class BaseInfo:
                 logging.warning('Nifti creation failed.')
                 success = False
                 continue
-            reo_result = reorient(append_to_pathname(filename, '.nii.gz'), self.SliceOrientation)
+            reo_result = reorient(p_add(filename, '.nii.gz'), self.SliceOrientation)
             if not reo_result:
                 remove_created_files(filename)
                 success = False
                 continue
-            if 'DIFF' in filename and append_to_pathname(filename, '_ADC.nii.gz').exists():
+            if 'DIFF' in filename and p_add(filename, '_ADC.nii.gz').exists():
                 logging.info('Additional ADC images produced by dcm2niix. Removing.')
-                append_to_pathname(filename, '_ADC.nii.gz').unlink()
+                p_add(filename, '_ADC.nii.gz').unlink()
             while re.search(r'_(e[0-9]+|ph)$', filename):
-                new_path = Path(filename.parent, re.sub(r'_(e[0-9]+|ph)$', '', filename.name) + '.nii.gz')
-                append_to_pathname(filename, '.nii.gz').rename(new_path)
+                new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph)$', '', filename.name) + '.nii.gz')
+                p_add(filename, '.nii.gz').rename(new_path)
                 filename = new_path
         if success:
-            if Path(niidir, self.NiftiName + '.nii.gz').exists():
+            if (niidir / (self.NiftiName + '.nii.gz')).exists():
                 self.NiftiCreated = True
-                logging.info('Nifti created successfully at %s' % Path(niidir, self.NiftiName + '.nii.gz'))
+                logging.info('Nifti created successfully at %s' % (niidir / (self.NiftiName + '.nii.gz')))
                 if '-ACQ3' in self.NiftiName:
                     logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
                                     'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
@@ -507,8 +507,8 @@ class BaseSet:
                                  key=lambda x: x.ConvertImage, reverse=True)
 
     def generate_sidecar(self, di_obj: BaseInfo) -> None:
-        sidecar_file = Path(di_obj.SourcePath.parent.parent, 'nii', di_obj.NiftiName + '.json')
-        logging.info('Writing image sidecar file to %s' + sidecar_file)
+        sidecar_file = di_obj.SourcePath.parent.parent / 'nii' / (di_obj.NiftiName + '.json')
+        logging.info('Writing image sidecar file to %s' % sidecar_file)
         out_dict = {k: v for k, v in self.__dict__.items() if k != 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
@@ -516,8 +516,8 @@ class BaseSet:
     def generate_unconverted_info(self) -> None:
         logging.info('Writing unconverted info file to ' + self.Metadata.prefix_to_str() +
                      '_MR-UnconvertedInfo.json')
-        info_file = Path(self.OutputRoot, self.Metadata.dir_to_str(),
-                         self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json')
+        info_file = self.OutputRoot / self.Metadata.dir_to_str() / (self.Metadata.prefix_to_str() +
+                                                                    '_MR-UnconvertedInfo.json')
         out_dict = deepcopy(self.__dict__)
         out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
         info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))

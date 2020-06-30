@@ -116,10 +116,10 @@ image_def_types = {
     'contrast_bolus_ingredient_concentration': ('{:.6f}', 0.0)
 }
 
-parrec_templates = Path(Path(__file__).parent, 'parrec_templates')
+parrec_templates = Path(__file__).parent / 'parrec_templates'
 
-top_header_template = Template(open(Path(parrec_templates, 'top_header.txt')).read())
-gen_info_template = Template(open(Path(parrec_templates, 'gen_info.txt')).read())
+top_header_template = Template((parrec_templates / 'top_header.txt').read_text())
+gen_info_template = Template((parrec_templates / 'gen_info.txt').read_text())
 image_def_template = Template('  '.join(['$' + k for k in image_def_types]) + '\n')
 
 
@@ -127,7 +127,7 @@ def generate_par_file(dataset_name: str, header: PARRECHeader, filename: Path) -
     with filename.open('w') as fp:
         fp.write(top_header_template.substitute({'dataset_name': dataset_name}))
         fp.write(gen_info_template.substitute(gen_dict_strings(gen_info_types, header.general_info)))
-        fp.write(open(Path(parrec_templates, 'pixel_values.txt')).read())
+        fp.write((parrec_templates / 'pixel_values.txt').read_text())
         image_defs = header.image_defs.view(np.recarray)
         for i in range(len(image_defs)):
             fp.write(image_def_template.substitute(gen_dict_strings(image_def_types, image_defs[i])))
@@ -155,15 +155,14 @@ def split_fix_parrec(in_filename: Path, study_uid, outdir) -> List[str]:
         this_hdr = deepcopy(hdr)
         this_hdr.image_defs = idefs[np.in1d(slice_vols, vol_nums)]
         this_hdr.image_defs['echo_number'] = [1] * len(this_hdr.image_defs['echo_number'])
-        generate_par_file(str(in_filename), this_hdr,
-                          Path(outdir, series_uid + ('.%02d' % (i+1)) + '.par'))
+        generate_par_file(str(in_filename), this_hdr, outdir / (series_uid + ('.%02d' % (i+1)) + '.par'))
     if len(split_vols) == 1:
-        Path(file_map['image'].filename).rename(Path(outdir, series_uid + '.01.rec'))
+        Path(file_map['image'].filename).rename(outdir / (series_uid + '.01.rec'))
     else:
         rec_fobj = file_map['image'].get_prepare_fileobj()
         data = PARRECArrayProxy(rec_fobj, hdr).get_unscaled()
         for i, vol_nums in enumerate(sorted(split_vols.values())):
-            with ImageOpener(Path(outdir, series_uid + ('.%02d' % (i+1)) + '.rec'), mode='wb') as fileobj:
+            with ImageOpener(outdir / (series_uid + ('.%02d' % (i+1)) + '.rec'), mode='wb') as fileobj:
                 array_to_file(data[..., np.in1d(range(data.shape[-1]), vol_nums)],
                               fileobj, hdr.get_data_dtype(), order='F')
 

@@ -91,7 +91,7 @@ class ParrecSet(BaseSet):
         super().__init__(source, output_root, metadata_obj, lut_obj)
         self.ManualArgs = manual_args
 
-        for parfile in sorted(Path(output_root, self.Metadata.dir_to_str(), 'mr-parrec').rglob('*.par')):
+        for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):
             logging.info('Processing %s' % parfile)
             self.SeriesList.append(ParrecInfo(parfile, self.ManualArgs))
 
@@ -115,14 +115,14 @@ def sort_parrecs(parrec_dir: Path) -> None:
     logging.info('Sorting PARRECs')
     new_files = []
     study_uid = '2.25.' + str(int(str(secrets.randbits(96))))
-    for parfile in sorted(Path(parrec_dir).rglob('*.par')):
+    for parfile in sorted(parrec_dir.rglob('*.par')):
         new_files.extend(split_fix_parrec(parfile, study_uid, parrec_dir))
         silentremove(parfile)
         silentremove(parfile[:-4] + '.rec')
     for name in parrec_dir.rglob('*'):
         if name not in new_files:
-            if Path(parrec_dir, name).is_dir():
-                shutil.rmtree(Path(parrec_dir, name))
+            if (parrec_dir / name).is_dir():
+                shutil.rmtree(parrec_dir / name)
             else:
-                Path(parrec_dir, name).unlink()
+                (parrec_dir / name).unlink()
     logging.info('Sorting complete')

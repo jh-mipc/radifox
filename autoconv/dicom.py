@@ -95,7 +95,7 @@ class DicomSet(BaseSet):
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable) -> None:
         super().__init__(source, output_root, metadata_obj, lut_obj)
 
-        for dcmdir in sorted(Path(output_root, self.Metadata.dir_to_str(), 'mr-dcm').glob('*')):
+        for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
             logging.info('Processing %s' % dcmdir)
             di = DicomInfo(dcmdir)
             if di.should_convert():
@@ -165,17 +165,16 @@ def sort_dicoms(dcm_dir: Path) -> None:
         unique_lists[scan[0]].append(scan)
         unique_change[scan] = scan[0] + ('.%02d' % len(unique_lists[scan[0]]))
     for new_dcm_dir in unique_change.values():
-        mkdir_p(Path(dcm_dir, new_dcm_dir))
+        mkdir_p(dcm_dir / new_dcm_dir)
     inst_nums = {}
     for dcm_tuple in valid_dcms:
-        output_dir = Path(dcm_dir, unique_change[(dcm_tuple[1], dcm_tuple[3])])
-        dcm_tuple[0].rename(Path(output_dir, dcm_tuple[0].name))
+        output_dir = dcm_dir / unique_change[(dcm_tuple[1], dcm_tuple[3])]
+        dcm_tuple[0].rename(output_dir / dcm_tuple[0].name)
         if not unique_change[(dcm_tuple[1], dcm_tuple[3])] in inst_nums:
             inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]] = {}
         if not dcm_tuple[2] in inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]]:
             inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]][dcm_tuple[2]] = []
-        inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]][dcm_tuple[2]].\
-            append(Path(output_dir, dcm_tuple[0].name))
+        inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]][dcm_tuple[2]].append(output_dir / dcm_tuple[0].name)
 
     new_dirs = list(unique_change.values())
     for item in dcm_dir.glob('*'):
@@ -189,13 +188,13 @@ def sort_dicoms(dcm_dir: Path) -> None:
     for uid in inst_nums:
         if any([len(inst_nums[uid][num]) > 1 for num in inst_nums[uid]]):
             logging.info('Possible duplicates found for %s' % uid)
-            remove_duplicates(Path(dcm_dir, uid))
+            remove_duplicates(dcm_dir / uid)
 
     logging.info('Sorting complete')
 
 
 def remove_duplicates(dcmdir: Path) -> None:
-    inst_nums = {}
+    inst_nums = {}  # type: dict
     for dcmfile in dcmdir.glob('*'):
         ds = dicom.dcmread(dcmfile, stop_before_pixels=True)
         if ds.InstanceNumber not in inst_nums:

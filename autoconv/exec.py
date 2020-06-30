@@ -13,7 +13,7 @@ from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, 
 
 def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: LookupTable,
                  verbose: bool, parrec: bool, manual_args: dict, rerun: bool) -> None:
-    session_path = Path(output_root, metadata.dir_to_str())
+    session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
     session_path.parent.chmod(mode=DIR_OCTAL)
@@ -26,32 +26,32 @@ def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: Looku
         if parrec:
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
                          (manual_args['institution'], manual_args['field_strength']))
-        type_folder = 'mr-' + ('parrec' if parrec else 'dcm')
+        type_folder = session_path / ('mr-' + ('parrec' if parrec else 'dcm'))
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
             if source.is_dir():
-                logging.info('Copying files from source to %s folder' % type_folder)
+                logging.info('Copying files from source to %s folder' % type_folder.name)
                 # noinspection PyTypeChecker
-                shutil.copytree(source, Path(session_path, type_folder), copy_function=shutil.copyfile)
+                shutil.copytree(source, type_folder, copy_function=shutil.copyfile)
                 logging.info('Copying complete')
             elif any([''.join(source.suffixes) == ext for ext in allowed_archives()[1]]):
-                extract_archive(source, Path(session_path, type_folder))
+                extract_archive(source, type_folder)
             else:
                 raise ValueError('Source is not a directory, but does not match one of '
                                  'the available archive formats (%s)' % ', '.join(allowed_archives()[0]))
-        recursive_chmod(Path(session_path, type_folder))
-        sort_func(Path(session_path, type_folder))
-        recursive_chmod(Path(session_path, type_folder))
+        recursive_chmod(type_folder)
+        sort_func(type_folder)
+        recursive_chmod(type_folder)
 
         if parrec:
             img_set = ParrecSet(source, output_root, metadata, lut, manual_args)
         else:
             img_set = DicomSet(source, output_root, metadata, lut)
         img_set.create_all_nii()
-        recursive_chmod(Path(session_path, 'nii'))
+        recursive_chmod(session_path / 'nii')
         img_set.generate_unconverted_info()
 
-        recursive_chmod(Path(output_root, metadata.dir_to_str(), 'logs'))
+        recursive_chmod(session_path / 'logs')
     except KeyboardInterrupt:
         raise
     except:

@@ -33,7 +33,7 @@ def pkg_commit_hash(pkg_path: Path):
        short form of hash
     """
     # Try and get commit from written commit text file
-    pth = Path(pkg_path, COMMIT_INFO_FNAME)
+    pth = pkg_path / COMMIT_INFO_FNAME
     if not pth.is_file():
         raise IOError('Missing commit info file %s' % pth)
     cfg_parser = configparser.RawConfigParser()

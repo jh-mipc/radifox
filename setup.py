@@ -6,13 +6,15 @@ from shutil import which
 # Commit hash writing, and dependency checking
 from setuptools.command.build_py import build_py
 
+__package_name__ = 'autoconv'
+
+
 pkg_path = Path(__file__).parent
 # Python 3: use a locals dictionary
 # http://stackoverflow.com/a/1463370/6820620
 ldict = locals()
 # Get version and release info, which is all stored in nipype/info.py
-ver_file = Path(pkg_path, 'autoconv', 'info.py')
-commit_file = Path(pkg_path, 'COMMIT_INFO.txt')
+ver_file = Path(pkg_path, __package_name__, 'info.py')
 with ver_file.open() as info_fp:
     exec(info_fp.read(), globals(), ldict)
 __version__ = ldict['__version__']
@@ -47,7 +49,6 @@ class BuildWithCommitInfoCommand(build_py):
     """
     def run(self):
         from subprocess import check_output, CalledProcessError
-        # noinspection PyCompatibility
         import configparser
 
         build_py.run(self)
@@ -60,16 +61,16 @@ class BuildWithCommitInfoCommand(build_py):
 
         # We write the installation commit even if it's empty
         cfg_parser = configparser.RawConfigParser()
-        cfg_parser.read(Path(pkg_path, 'COMMIT_INFO.txt'))
+        cfg_parser.read(pkg_path / 'COMMIT_INFO.txt')
         cfg_parser.set('commit hash', 'install_hash', repo_commit.decode().strip())
-        out_pth = Path(self.build_lib, 'autoconv', 'COMMIT_INFO.txt')
+        out_pth = Path(self.build_lib) / 'autoconv' / 'COMMIT_INFO.txt'
         with out_pth.open('wt') as out_fp:
             cfg_parser.write(out_fp)
 # End code from Nipype #####
 
 
 setup(
-    name='autoconv',
+    name=__package_name__,
     version=__version__,
     description="Automatic conversion process for MRI data",
     long_description="Automatic conversion process for MRI data",

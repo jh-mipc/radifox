@@ -180,7 +180,7 @@ def hash_file(filename: Path, hash_obj: Optional[Any] = None) -> str:
 
 
 def hash_update_from_dir(directory: Path, hash_obj: Any) -> Any:
-    for path in sorted(Path(directory).iterdir(), key=lambda p: str(p).lower()):
+    for path in sorted(directory.iterdir(), key=lambda p: str(p).lower()):
         hash_obj.update(path.name.encode())
         if path.is_file():
             hash_obj = hash_update_from_file(path, hash_obj)
@@ -202,5 +202,5 @@ def sha1_file_dir(file_dir: Path) -> str:
         return hash_dir(file_dir, hashlib.sha1())
 
 
-def append_to_pathname(path: Path, extra: str) -> Path:
-    return Path(path.parent, path.name + extra)
+def p_add(path: Path, extra: str) -> Path:
+    return path.parent / (path.name + extra)
