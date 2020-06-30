@@ -141,4 +141,5 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
             silentremove(filepath)
 
     run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose,
-                 parrec, True, json_obj.get('ManualArgs', {}), None if reckless else json_obj['InputHash'])
+                 parrec, not (force or reckless), json_obj.get('ManualArgs', {}),
+                 None if reckless else json_obj['InputHash'])
