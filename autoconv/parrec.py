@@ -118,7 +118,7 @@ def sort_parrecs(parrec_dir: Path) -> None:
     for parfile in sorted(parrec_dir.rglob('*.par')):
         new_files.extend(split_fix_parrec(parfile, study_uid, parrec_dir))
         silentremove(parfile)
-        silentremove(parfile[:-4] + '.rec')
+        silentremove(parfile.with_suffix('.rec'))
     for name in parrec_dir.rglob('*'):
         if name not in new_files:
             if (parrec_dir / name).is_dir():
