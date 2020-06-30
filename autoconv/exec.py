@@ -27,7 +27,7 @@ def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: Looku
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
         if parrec:
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
-                         (manual_args['institution'], manual_args['field_strength']))
+                         (manual_args['InstitutionName'], manual_args['MagneticFieldStrength']))
         type_folder = session_path / ('mr-' + ('parrec' if parrec else 'dcm'))
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
