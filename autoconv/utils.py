@@ -1,10 +1,7 @@
-from __future__ import annotations
 from codecs import BOM_UTF8
 from collections.abc import Sequence
 import csv
 import hashlib
-# noinspection PyProtectedMember
-from hashlib import _Hash as Hash
 import logging
 import os
 from pathlib import Path
@@ -169,20 +166,20 @@ def find_closest(target: int, to_check: List[int]) -> Optional[int]:
     return candidates[0] if len(candidates) == 1 else min(candidates)
 
 
-def hash_update_from_file(filename: Path, hash_obj: Hash) -> Hash:
+def hash_update_from_file(filename: Path, hash_obj: Any) -> Any:
     with filename.open('rb') as fp:
         for chunk in iter(lambda: fp.read(4096), b""):
             hash_obj.update(chunk)
     return hash_obj
 
 
-def hash_file(filename: Path, hash_obj: Optional[Hash] = None) -> str:
+def hash_file(filename: Path, hash_obj: Optional[Any] = None) -> str:
     if hash_obj is None:
         hash_obj = hashlib.md5()
     return str(hash_update_from_file(filename, hash_obj).hexdigest())
 
 
-def hash_update_from_dir(directory: Path, hash_obj: Hash) -> Hash:
+def hash_update_from_dir(directory: Path, hash_obj: Any) -> Any:
     for path in sorted(Path(directory).iterdir(), key=lambda p: str(p).lower()):
         hash_obj.update(path.name.encode())
         if path.is_file():
@@ -192,7 +189,7 @@ def hash_update_from_dir(directory: Path, hash_obj: Hash) -> Hash:
     return hash_obj
 
 
-def hash_dir(directory, hash_obj: Optional[Hash] = None) -> str:
+def hash_dir(directory, hash_obj: Optional[Any] = None) -> str:
     if hash_obj is None:
         hash_obj = hashlib.md5()
     return str(hash_update_from_dir(directory, hash_obj).hexdigest())
