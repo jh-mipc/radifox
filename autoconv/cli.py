@@ -103,6 +103,12 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
     json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
+
+    lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
+    if json_obj['AutoConvVersion'] == __version__ and json_obj['LookupTable']['FileHash'] == lut.FileHash:
+        print('No action required. Software version and LUT file hash match for %s.' % directory)
+        return
+
     # TODO: Add checks to see if data has moved (warn and update? error?)
     if force or reckless:
         if not Path(json_obj['InputSource']).exists():
@@ -131,11 +137,6 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
         silentremove(directory / (metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'))
         for filepath in (directory / 'logs').glob('autoconv-*.log'):
             silentremove(filepath)
-
-    lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
-    if json_obj['AutoConvVersion'] == __version__ and json_obj['LookupTable']['FileHash'] == lut.FileHash:
-        print('No action required. Version and LUT file hash match for %s.' % directory)
-        return
 
     run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose,
                  parrec, True, json_obj.get('ManualArgs', {}), None if reckless else json_obj['InputHash'])
