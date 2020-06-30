@@ -18,7 +18,7 @@ def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: Looku
     session_path.chmod(DIR_OCTAL)
     session_path.parent.chmod(mode=DIR_OCTAL)
 
-    create_loggers(output_root, metadata.dir_to_str(), verbose)
+    create_loggers(output_root / metadata.dir_to_str(), verbose)
     metadata.check_metadata()
 
     try:
