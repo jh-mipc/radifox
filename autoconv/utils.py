@@ -146,10 +146,11 @@ DIR_OCTAL = 0o2770
 
 def recursive_chmod(directory: Path, dir_octal: int = DIR_OCTAL,
                     file_octal: int = FILE_OCTAL) -> None:
+    directory.chmod(dir_octal)
     for item in directory.rglob('*'):
-        if item.is_dir:
+        if item.is_dir():
             item.chmod(dir_octal)
-        elif item.is_file:
+        elif item.is_file():
             item.chmod(file_octal)
 
 
