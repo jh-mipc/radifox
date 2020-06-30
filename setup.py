@@ -89,7 +89,7 @@ setup(
     keywords="mri conversion",
     entry_points={
       'console_scripts': [
-          'autoconv=autoconv.exec:cli'
+          'autoconv=autoconv.cli:cli'
       ]
     },
     install_requires=[
