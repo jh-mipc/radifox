@@ -115,3 +115,5 @@ ENV PATH ${SOFTDIR}/dcm2niix/bin:${SOFTDIR}/dcm4che/bin:${SOFTDIR}/dcmtk/bin:${P
 COPY . ${SOFTDIR}/autoconv-src/
 RUN pip install ${SOFTDIR}/autoconv-src/ && \
     rm -rf ${SOFTDIR}/autoconv-src/
+
+ENTRYPOINT 'autoconv'
