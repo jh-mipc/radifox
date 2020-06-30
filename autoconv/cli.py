@@ -1,4 +1,3 @@
-from glob import glob
 import json
 from pathlib import Path
 import shutil
@@ -74,9 +73,9 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
-    if len(glob(Path(output_root, metadata.dir_to_str(), '*'))) > 0:
+    if len(list((output_root / metadata.dir_to_str()).glob('*'))) > 0:
         if force:
-            shutil.rmtree(Path(output_root, metadata.dir_to_str()))
+            shutil.rmtree(output_root / metadata.dir_to_str())
         else:
             raise RuntimeError('Output directory exists, run with --force to remove outputs and re-run.')
 
@@ -97,10 +96,10 @@ def update(source: Path, lut_file: Path, parrec: bool, force: bool, reckless: bo
     session_id = source.name
     subj_id = source.parent.name
 
-    json_file = Path(source, '_'.join([subj_id, session_id, '_MR-UnconvertedInfo.json']))
+    json_file = source / '_'.join([subj_id, session_id, '_MR-UnconvertedInfo.json'])
     if not json_file.exists():
         raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
-    json_obj = json.load(open(json_file))
+    json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
     if force or reckless:
@@ -119,17 +118,17 @@ def update(source: Path, lut_file: Path, parrec: bool, force: bool, reckless: bo
             if sha1_file_dir(json_obj['InputSource']) != json_obj['InputHash']:
                 raise ValueError('Source file(s) have changed since last conversion, '
                                  'run with --reckless to ignore this error.')
-        shutil.rmtree(Path(json_obj['OutputRoot'], metadata.dir_to_str()))
+        shutil.rmtree(json_obj['OutputRoot'] / metadata.dir_to_str())
     else:
-        if parrec and not Path(json_obj['OutputRoot'], metadata.dir_to_str(), 'mr-parrec').exists():
+        if parrec and not (json_obj['OutputRoot'] / metadata.dir_to_str() / 'mr-parrec').exists():
             raise ValueError('Update source was specified as PARREC, but mr-parrec source directory does not exist.')
-        elif not parrec and Path(json_obj['OutputRoot'], metadata.dir_to_str(), 'mr-dcm').exists():
+        elif not parrec and (json_obj['OutputRoot'] / metadata.dir_to_str() / 'mr-dcm').exists():
             raise ValueError('Update source was specified as DICOM, but mr-parrec source directory does not exist.')
 
-        silentremove(Path(json_obj['OutputRoot'], metadata.dir_to_str(), 'nii'))
-        silentremove(Path(json_obj['OutputRoot'], metadata.dir_to_str(),
-                          metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'))
-        for filepath in glob(Path(json_obj['OutputRoot'], metadata.dir_to_str(), 'logs', 'autoconv-*.log')):
+        silentremove(json_obj['OutputRoot'] / metadata.dir_to_str() / 'nii')
+        silentremove(json_obj['OutputRoot'] / metadata.dir_to_str() /
+                     metadata.prefix_to_str() + '_MR-UnconvertedInfo.json')
+        for filepath in (json_obj['OutputRoot'] / metadata.dir_to_str() / 'logs').glob('autoconv-*.log'):
             silentremove(filepath)
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
