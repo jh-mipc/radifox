@@ -122,8 +122,8 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
     else:
         if parrec and not (json_obj['OutputRoot'] / metadata.dir_to_str() / 'mr-parrec').exists():
             raise ValueError('Update source was specified as PARREC, but mr-parrec source directory does not exist.')
-        elif not parrec and (json_obj['OutputRoot'] / metadata.dir_to_str() / 'mr-dcm').exists():
-            raise ValueError('Update source was specified as DICOM, but mr-parrec source directory does not exist.')
+        elif not parrec and not (json_obj['OutputRoot'] / metadata.dir_to_str() / 'mr-dcm').exists():
+            raise ValueError('Update source was specified as DICOM, but mr-dcm source directory does not exist.')
 
         silentremove(json_obj['OutputRoot'] / metadata.dir_to_str() / 'nii')
         silentremove(json_obj['OutputRoot'] / metadata.dir_to_str() /
