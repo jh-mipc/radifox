@@ -13,8 +13,8 @@ from .metadata import Metadata
 from .utils import sha1_file_dir, silentremove
 
 
-def abs_path(ctx, param, value: Path) -> Path:
-    return value.expanduser().resolve()
+def abs_path(ctx, param, value) -> Path:
+    return Path(value).expanduser().resolve()
 
 
 def parse_manual_args(ctx, param, value: str) -> dict:
