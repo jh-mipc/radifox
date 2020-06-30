@@ -96,7 +96,7 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
     session_id = directory.name
     subj_id = directory.parent.name
 
-    json_file = directory / '_'.join([subj_id, session_id, '_MR-UnconvertedInfo.json'])
+    json_file = directory / '_'.join([subj_id, session_id, 'MR-UnconvertedInfo.json'])
     if not json_file.exists():
         raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
     json_obj = json.loads(json_file.read_text())
