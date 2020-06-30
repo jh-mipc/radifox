@@ -5,11 +5,14 @@ import shutil
 from .dicom import DicomSet, sort_dicoms
 from .info import __version__
 from .logging import create_loggers
+from .metadata import Metadata
+from .lut import LookupTable
 from .parrec import ParrecSet, sort_parrecs
 from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, DIR_OCTAL
 
 
-def run_autoconv(source, output_root, metadata, lut, verbose, parrec, manual_args, rerun):
+def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: LookupTable,
+                 verbose: bool, parrec: bool, manual_args: dict, rerun: bool) -> None:
     session_path = Path(output_root, metadata.dir_to_str())
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
@@ -28,6 +31,7 @@ def run_autoconv(source, output_root, metadata, lut, verbose, parrec, manual_arg
         if not rerun:
             if source.is_dir():
                 logging.info('Copying files from source to %s folder' % type_folder)
+                # noinspection PyTypeChecker
                 shutil.copytree(source, Path(session_path, type_folder), copy_function=shutil.copyfile)
                 logging.info('Copying complete')
             elif any([''.join(source.suffixes) == ext for ext in allowed_archives()[1]]):

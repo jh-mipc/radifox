@@ -10,15 +10,15 @@ WARNING_DEBUG = 25
 
 class LogFilter(logging.Filter):
 
-    def __init__(self, level):
+    def __init__(self, level: int) -> None:
         super().__init__()
         self.level = level
 
-    def filter(self, record):
+    def filter(self, record: logging.LogRecord) -> bool:
         return record.levelno <= self.level
 
 
-def create_loggers(output_root, scan_dir, verbose=False):
+def create_loggers(output_root: Path, scan_dir: Path, verbose: bool = False) -> None:
     mkdir_p(Path(output_root, scan_dir, 'logs'))
     log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
     log_stream = logging.StreamHandler(sys.stdout)

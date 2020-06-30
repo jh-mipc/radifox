@@ -3,10 +3,13 @@ import logging
 from pathlib import Path
 import secrets
 import shutil
+from typing import Optional
 
 import numpy as np
 
 from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue
+from .lut import LookupTable
+from .metadata import Metadata
 from .nib_parrec_fork import PARRECHeader, PARRECImage, TruncatedPARRECError
 from .parrec_writer import split_fix_parrec
 from .utils import silentremove
@@ -24,7 +27,7 @@ COMPLEX_IMAGE_TYPES = {0: 'MAGNITUDE', 1: 'REAL', 2: 'IMAGINARY', 3: 'PHASE'}
 
 class ParrecInfo(BaseInfo):
 
-    def __init__(self, par_file: Path, manual_args=None):
+    def __init__(self, par_file: Path, manual_args: Optional[dict] = None) -> None:
         super().__init__(par_file)
         file_map = PARRECImage.filespec_to_file_map(str(par_file))
         with file_map['header'].get_prepare_fileobj('rt') as hdr_fobj:
@@ -83,7 +86,8 @@ class ParrecInfo(BaseInfo):
 
 class ParrecSet(BaseSet):
 
-    def __init__(self, source: Path, output_root: Path, metadata_obj, lut_obj, manual_args):
+    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
+                 manual_args: Optional[dict] = None) -> None:
         super().__init__(source, output_root, metadata_obj, lut_obj)
         self.ManualArgs = manual_args
 
@@ -107,7 +111,7 @@ class ParrecSet(BaseSet):
         self.generate_unique_names()
 
 
-def sort_parrecs(parrec_dir: Path):
+def sort_parrecs(parrec_dir: Path) -> None:
     logging.info('Sorting PARRECs')
     new_files = []
     study_uid = '2.25.' + str(int(str(secrets.randbits(96))))

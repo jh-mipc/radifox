@@ -2,6 +2,7 @@ from copy import deepcopy
 from pathlib import Path
 from string import Template
 import secrets
+from typing import List
 
 import numpy as np
 from nibabel.volumeutils import array_to_file
@@ -122,9 +123,8 @@ gen_info_template = Template(open(Path(parrec_templates, 'gen_info.txt')).read()
 image_def_template = Template('  '.join(['$' + k for k in image_def_types]) + '\n')
 
 
-def generate_par_file(dataset_name, header, filename: Path):
-    # noinspection PyTypeChecker
-    with open(filename, 'w') as fp:
+def generate_par_file(dataset_name: str, header: PARRECHeader, filename: Path) -> None:
+    with filename.open('w') as fp:
         fp.write(top_header_template.substitute({'dataset_name': dataset_name}))
         fp.write(gen_info_template.substitute(gen_dict_strings(gen_info_types, header.general_info)))
         fp.write(open(Path(parrec_templates, 'pixel_values.txt')).read())
@@ -134,7 +134,7 @@ def generate_par_file(dataset_name, header, filename: Path):
         fp.write('\n# === END OF DATA DESCRIPTION FILE ===============================================\n')
 
 
-def split_fix_parrec(in_filename: Path, study_uid, outdir):
+def split_fix_parrec(in_filename: Path, study_uid, outdir) -> List[str]:
     file_map = PARRECImage.filespec_to_file_map(str(in_filename))
     with file_map['header'].get_prepare_fileobj('rt') as hdr_fobj:
         hdr = PARRECHeader.from_fileobj(hdr_fobj, permit_truncated=False, strict_sort=False)
@@ -155,7 +155,7 @@ def split_fix_parrec(in_filename: Path, study_uid, outdir):
         this_hdr = deepcopy(hdr)
         this_hdr.image_defs = idefs[np.in1d(slice_vols, vol_nums)]
         this_hdr.image_defs['echo_number'] = [1] * len(this_hdr.image_defs['echo_number'])
-        generate_par_file(in_filename, this_hdr,
+        generate_par_file(str(in_filename), this_hdr,
                           Path(outdir, series_uid + ('.%02d' % (i+1)) + '.par'))
     if len(split_vols) == 1:
         Path(file_map['image'].filename).rename(Path(outdir, series_uid + '.01.rec'))

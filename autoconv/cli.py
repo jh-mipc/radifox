@@ -13,11 +13,11 @@ from .metadata import Metadata
 from .utils import sha1_file_dir, silentremove
 
 
-def abs_path(ctx, param, value):
+def abs_path(ctx, param, value: Path) -> Path:
     return value.expanduser().resolve()
 
 
-def parse_manual_args(ctx, param, value):
+def parse_manual_args(ctx, param, value: str) -> dict:
     arg_converter = {'int': int, 'float': float, 'str': str}
     template = BaseInfo(Path('/'))
     out_args = {}
@@ -57,8 +57,9 @@ def cli():
 @click.option('--institution', type=str)
 @click.option('--field-strength', type=int, default=3)
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
-def convert(source, output_root, lut_file, project_id, patient_id, site_id, time_id, project_shortname,
-            tms_metafile, verbose, force, no_project_subdir, parrec, institution, field_strength, manual_arg):
+def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
+            time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool,
+            no_project_subdir: bool, parrec: bool, institution: str, field_strength: int, manual_arg: dict) -> None:
 
     if tms_metafile:
         metadata = Metadata.from_tms_metadata(tms_metafile, no_project_subdir)
@@ -92,7 +93,7 @@ def convert(source, output_root, lut_file, project_id, patient_id, site_id, time
 @click.option('--force', is_flag=True)
 @click.option('--reckless', is_flag=True)
 @click.option('-v', '--verbose', is_flag=True)
-def update(source: Path, lut_file: Path, parrec: bool, force: bool, reckless: bool, verbose: bool):
+def update(source: Path, lut_file: Path, parrec: bool, force: bool, reckless: bool, verbose: bool) -> None:
     session_id = source.name
     subj_id = source.parent.name
 

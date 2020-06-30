@@ -1,8 +1,9 @@
+from __future__ import annotations
 import json
 import logging
-import os
 from pathlib import Path
 import re
+from typing import Optional
 
 from .utils import sha1_file_dir
 
@@ -11,8 +12,8 @@ META_TIME_CODES = {1: '00', 2: '06', 3: '12', 4: '24', 5: '36', 6: '48'}
 
 
 class Metadata:
-    def __init__(self, project_id, patient_id, time_id, site_id=None, project_shortname=None,
-                 no_project_subdir=False):
+    def __init__(self, project_id: str, patient_id: str, time_id: str, site_id: Optional[str] = None,
+                 project_shortname: Optional[str] = None, no_project_subdir: bool = False) -> None:
         self.ProjectID = project_id
         self.PatientID = patient_id
         self.TimeID = time_id
@@ -24,10 +25,8 @@ class Metadata:
         self._NoProjectSubdir = no_project_subdir
 
     @classmethod
-    def from_tms_metadata(cls, metadata_file: Path, no_project_subdir=False):
-        # noinspection PyTypeChecker
-        with open(metadata_file, 'r') as fp:
-            metadata_obj = json.load(fp)['metadataFieldsToValues']
+    def from_tms_metadata(cls, metadata_file: Path, no_project_subdir: bool = False) -> Metadata:
+        metadata_obj = json.loads(metadata_file.read_text())['metadataFieldsToValues']
         site_id, patient_id = metadata_obj['patient_id'].split('-')
         time_id = None
         for key in metadata_obj.keys():
@@ -42,7 +41,7 @@ class Metadata:
         return out_cls
 
     @classmethod
-    def from_dict(cls, dict_obj):
+    def from_dict(cls, dict_obj: dict) -> Metadata:
         out_cls = cls(dict_obj['ProjectID'], dict_obj['PatientID'], dict_obj['TimeID'],
                       dict_obj['SiteID'], dict_obj['ProjectShortName'], dict_obj['_NoProjectSubdir'])
         if 'TMSMetaFile' in dict_obj:
@@ -50,29 +49,29 @@ class Metadata:
             out_cls._RawMetaFileObj = dict_obj['_RawMetaFileObj']
         return out_cls
 
-    def __repr_json__(self):
+    def __repr_json__(self) -> dict:
         skip_keys = []
         if self.TMSMetaFile is None:
             skip_keys += ['TMSMetaFile', 'TMSMetaFileHash', '_RawMetaFileObj']
         return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
 
-    def check_metadata(self):
+    def check_metadata(self) -> None:
         if self._RawMetaFileObj is not None and self.SiteID != self._RawMetaFileObj['site_id']:
             logging.warning('Site ID (%s) does not match site portion of Patient ID (%s). '
                             'Using %s as Site ID.' %
                             (self._RawMetaFileObj['site_id'], self.SiteID, self.SiteID))
 
-    def prefix_to_str(self):
+    def prefix_to_str(self) -> str:
         if self.SiteID is None:
             return self.ProjectShortName + '-' + self.PatientID + '_' + self.TimeID
         else:
             return self.ProjectShortName + '-' + self.SiteID + '-' + \
                    self.PatientID + '_' + self.TimeID
 
-    def dir_to_str(self):
+    def dir_to_str(self) -> Path:
         patient_id = self.ProjectShortName + '-' + self.PatientID if self.SiteID is None \
             else self.ProjectShortName + '-' + self.SiteID + '-' + self.PatientID
-        output_dir = os.path.join(patient_id, self.TimeID)
+        output_dir = Path(patient_id, self.TimeID)
         if not self._NoProjectSubdir:
-            output_dir = os.path.join(self.ProjectID, output_dir)
+            output_dir = Path(self.ProjectID, output_dir)
         return output_dir

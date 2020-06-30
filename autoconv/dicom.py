@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 import shutil
 from subprocess import run
+from typing import List
 
 import pydicom as dicom
 from pydicom.errors import InvalidDicomError
@@ -48,7 +49,7 @@ DCM_HEADER_ATTRS = [
 
 class DicomInfo(BaseInfo):
 
-    def __init__(self, dcmdir: Path):
+    def __init__(self, dcmdir: Path) -> None:
         super().__init__(dcmdir)
         ds = dicom.dcmread(sorted(dcmdir.glob('*'))[0], stop_before_pixels=True)
         self.SeriesUID = dcmdir.name
@@ -91,7 +92,7 @@ class DicomInfo(BaseInfo):
 
 
 class DicomSet(BaseSet):
-    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable):
+    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable) -> None:
         super().__init__(source, output_root, metadata_obj, lut_obj)
 
         for dcmdir in sorted(Path(output_root, self.Metadata.dir_to_str(), 'mr-dcm').glob('*')):
@@ -105,18 +106,18 @@ class DicomSet(BaseSet):
         self.generate_unique_names()
 
 
-def convert_emf(dcmpath: Path):
+def convert_emf(dcmpath: Path) -> List[Path]:
     run([shutil.which('emf2sf'), '--out-dir', str(dcmpath.parent), str(dcmpath)])
     dcmpath.unlink()
     return sorted(dcmpath.parent.glob(dcmpath.name + '-*'))
 
 
-def decompress_jpeg(dcm_filename: Path):
+def decompress_jpeg(dcm_filename: Path) -> None:
     run([shutil.which('dcmdjpeg'), str(dcm_filename), str(dcm_filename) + '.decompress'])
     Path(str(dcm_filename) + '.decompress').rename(dcm_filename)
 
 
-def sort_dicoms(dcm_dir: Path):
+def sort_dicoms(dcm_dir: Path) -> None:
     logging.info('Sorting DICOMs')
     valid_dcms = []
     mf_count = 0
@@ -193,7 +194,7 @@ def sort_dicoms(dcm_dir: Path):
     logging.info('Sorting complete')
 
 
-def remove_duplicates(dcmdir: Path):
+def remove_duplicates(dcmdir: Path) -> None:
     inst_nums = {}
     for dcmfile in dcmdir.glob('*'):
         ds = dicom.dcmread(dcmfile, stop_before_pixels=True)
