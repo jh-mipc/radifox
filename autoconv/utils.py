@@ -97,7 +97,7 @@ def reorient(input_file: Path, orientation: str) -> bool:
 def allowed_archives() -> (List[str], List[str]):
     allowed_exts = []
     allowed_names = []
-    for names, extensions, _ in shutil.get_archive_formats():
+    for names, extensions, _ in shutil.get_unpack_formats():
         allowed_exts.extend(extensions)
         allowed_names.extend(names)
     return allowed_names, allowed_exts
