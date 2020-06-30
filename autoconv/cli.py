@@ -83,7 +83,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['MagneticFieldStrength'] = field_strength
     manual_arg['InstitutionName'] = institution
 
-    run_autoconv(source, output_root, metadata, lut, verbose, parrec, manual_arg, False)
+    run_autoconv(source, output_root, metadata, lut, verbose, parrec, False, manual_arg, None)
 
 
 @cli.command()
@@ -137,5 +137,5 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
         print('No action required. Version and LUT file hash match for %s.' % directory)
         return
 
-    run_autoconv(json_obj['InputSource'], json_obj['OutputRoot'], metadata, lut, verbose,
-                 parrec, json_obj.get('ManualArgs', None), True)
+    run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose,
+                 parrec, True, json_obj.get('ManualArgs', {}), None if reckless else json_obj['InputHash'])

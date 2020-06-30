@@ -87,8 +87,8 @@ class ParrecInfo(BaseInfo):
 class ParrecSet(BaseSet):
 
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
-                 manual_args: Optional[dict] = None) -> None:
-        super().__init__(source, output_root, metadata_obj, lut_obj)
+                 manual_args: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
+        super().__init__(source, output_root, metadata_obj, lut_obj, input_hash)
         self.ManualArgs = manual_args
 
         for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):

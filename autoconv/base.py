@@ -355,12 +355,17 @@ class BaseInfo:
 
 
 class BaseSet:
-    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable) -> None:
+    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
+                 input_hash: Optional[str] = None) -> None:
         self.AutoConvVersion = __version__
         self.InputSource = source
-        logging.info('Hashing source file(s) for record keeping.')
-        self.InputHash = sha1_file_dir(self.InputSource)
-        logging.info('Hashing complete.')
+        if input_hash is None:
+            logging.info('Hashing source file(s) for record keeping.')
+            self.InputHash = sha1_file_dir(self.InputSource)
+            logging.info('Hashing complete.')
+        else:
+            logging.info('Using existing source hash for record keeping.')
+            self.InputHash = input_hash
         self.Metadata = metadata_obj
         self.LookupTable = lut_obj
         self.OutputRoot = output_root

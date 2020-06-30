@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import shutil
 from subprocess import run
-from typing import List
+from typing import List, Optional
 
 import pydicom as dicom
 from pydicom.errors import InvalidDicomError
@@ -92,8 +92,9 @@ class DicomInfo(BaseInfo):
 
 
 class DicomSet(BaseSet):
-    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable) -> None:
-        super().__init__(source, output_root, metadata_obj, lut_obj)
+    def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
+                 input_hash: Optional[str] = None) -> None:
+        super().__init__(source, output_root, metadata_obj, lut_obj, input_hash)
 
         for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
             logging.info('Processing %s' % dcmdir)

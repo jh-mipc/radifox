@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 import shutil
+from typing import Optional
 
 from .dicom import DicomSet, sort_dicoms
 from .info import __version__
@@ -12,7 +13,8 @@ from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, 
 
 
 def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: LookupTable,
-                 verbose: bool, parrec: bool, manual_args: dict, rerun: bool) -> None:
+                 verbose: bool, parrec: bool, rerun: bool, manual_args: dict,
+                 input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
@@ -39,14 +41,14 @@ def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: Looku
             else:
                 raise ValueError('Source is not a directory, but does not match one of '
                                  'the available archive formats (%s)' % ', '.join(allowed_archives()[0]))
-        recursive_chmod(type_folder)
-        sort_func(type_folder)
-        recursive_chmod(type_folder)
+            recursive_chmod(type_folder)
+            sort_func(type_folder)
+            recursive_chmod(type_folder)
 
         if parrec:
-            img_set = ParrecSet(source, output_root, metadata, lut, manual_args)
+            img_set = ParrecSet(source, output_root, metadata, lut, input_hash=input_hash, manual_args=manual_args)
         else:
-            img_set = DicomSet(source, output_root, metadata, lut)
+            img_set = DicomSet(source, output_root, metadata, lut, input_hash=input_hash)
         img_set.create_all_nii()
         recursive_chmod(session_path / 'nii')
         img_set.generate_unconverted_info()
