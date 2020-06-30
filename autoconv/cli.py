@@ -61,15 +61,16 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
             time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool,
             no_project_subdir: bool, parrec: bool, institution: str, field_strength: int, manual_arg: dict) -> None:
 
+    mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
     if tms_metafile:
         metadata = Metadata.from_tms_metadata(tms_metafile, no_project_subdir)
-        mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
         for arg in ['patient_id', 'time_id', 'site_id']:
             if locals().get(arg) is not None:
                 setattr(metadata, mapping[arg], getattr(locals(), arg))
     else:
-        if any([locals().get(item) is None for item in ['project_id', 'patient_id', 'time_id']]):
-            raise ValueError('Project ID, Patient ID and Time ID are all required arguments.')
+        for item in ['project_id', 'patient_id', 'time_id']:
+            if locals().get(item) is None:
+                raise ValueError('%s is a required argument when no metadata file is provided.' % mapping[item])
         metadata = Metadata(project_id, patient_id, time_id, site_id, project_shortname, no_project_subdir)
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
