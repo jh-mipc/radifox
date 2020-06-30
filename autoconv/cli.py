@@ -86,17 +86,17 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
 
 
 @cli.command()
-@click.argument('source', type=click.Path(exists=True))
-@click.option('-l', '--lut-file', type=str, required=True)
+@click.argument('directory', type=click.Path(exists=True), callback=abs_path)
+@click.option('-l', '--lut-file', type=click.Path(exists=True), required=True, callback=abs_path)
 @click.option('--parrec', is_flag=True)
 @click.option('--force', is_flag=True)
 @click.option('--reckless', is_flag=True)
 @click.option('-v', '--verbose', is_flag=True)
-def update(source: Path, lut_file: Path, parrec: bool, force: bool, reckless: bool, verbose: bool) -> None:
-    session_id = source.name
-    subj_id = source.parent.name
+def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless: bool, verbose: bool) -> None:
+    session_id = directory.name
+    subj_id = directory.parent.name
 
-    json_file = source / '_'.join([subj_id, session_id, '_MR-UnconvertedInfo.json'])
+    json_file = directory / '_'.join([subj_id, session_id, '_MR-UnconvertedInfo.json'])
     if not json_file.exists():
         raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
     json_obj = json.loads(json_file.read_text())
@@ -133,7 +133,7 @@ def update(source: Path, lut_file: Path, parrec: bool, force: bool, reckless: bo
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
     if json_obj['AutoConvVersion'] == __version__ and json_obj['LookupTable']['FileHash'] == lut.FileHash:
-        print('No action required. Version and LUT file hash match for %s.' % source)
+        print('No action required. Version and LUT file hash match for %s.' % directory)
         return
 
     run_autoconv(json_obj['InputSource'], json_obj['OutputRoot'], metadata, lut, verbose,
