@@ -65,10 +65,10 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
         metadata = Metadata.from_tms_metadata(tms_metafile, no_project_subdir)
         mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
         for arg in ['patient_id', 'time_id', 'site_id']:
-            if getattr(locals(), arg, None) is not None:
+            if locals().get(arg) is not None:
                 setattr(metadata, mapping[arg], getattr(locals(), arg))
     else:
-        if any([getattr(locals(), item) is None for item in ['project_id', 'patient_id', 'time_id']]):
+        if any([locals().get(item) is None for item in ['project_id', 'patient_id', 'time_id']]):
             raise ValueError('Project ID, Patient ID and Time ID are all required arguments.')
         metadata = Metadata(project_id, patient_id, time_id, site_id, project_shortname, no_project_subdir)
 
