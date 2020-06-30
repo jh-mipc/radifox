@@ -119,10 +119,10 @@ def sort_parrecs(parrec_dir: Path) -> None:
         new_files.extend(split_fix_parrec(parfile, study_uid, parrec_dir))
         silentremove(parfile)
         silentremove(parfile.with_suffix('.rec'))
-    for name in parrec_dir.rglob('*'):
-        if name not in new_files:
-            if (parrec_dir / name).is_dir():
-                shutil.rmtree(parrec_dir / name)
+    for path in parrec_dir.glob('*'):
+        if path.name not in new_files:
+            if path.is_dir():
+                shutil.rmtree(path)
             else:
-                (parrec_dir / name).unlink()
+                path.unlink()
     logging.info('Sorting complete')
