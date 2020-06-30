@@ -179,7 +179,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
 
     new_dirs = list(unique_change.values())
     for item in dcm_dir.glob('*'):
-        if str(item) not in new_dirs:
+        if item.name not in new_dirs:
             if item.is_dir():
                 shutil.rmtree(item)
             elif item.is_file():
