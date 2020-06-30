@@ -1,3 +1,4 @@
+from __future__ import annotations
 from codecs import BOM_UTF8
 from collections.abc import Sequence
 import csv
