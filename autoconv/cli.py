@@ -13,10 +13,11 @@ from .utils import sha1_file_dir, silentremove
 
 
 def abs_path(ctx, param, value) -> Path:
-    return Path(value).expanduser().resolve()
+    if value is not None:
+        return Path(value).expanduser().resolve()
 
 
-def parse_manual_args(ctx, param, value: str) -> dict:
+def parse_manual_args(ctx, param, value) -> dict:
     arg_converter = {'int': int, 'float': float, 'str': str}
     template = BaseInfo(Path('/'))
     out_args = {}
