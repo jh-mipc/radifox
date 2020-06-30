@@ -107,6 +107,7 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
     metadata = Metadata.from_dict(json_obj['Metadata'])
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
+    # TODO: Simple update if LUT hash is different but dictionary is the same (updated for another project)
     if json_obj['AutoConvVersion'] == __version__ and json_obj['LookupTable']['FileHash'] == lut.FileHash:
         print('No action required. Software version and LUT file hash match for %s.' % directory)
         return
