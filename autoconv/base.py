@@ -312,6 +312,8 @@ class BaseInfo:
         if result.returncode != 0:
             logging.warning('dcm2niix failed for %s' % self.SourcePath)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
+            logging.warning('dcm2niix return code: %d' % result.returncode)
+            logging.warning('dcm2niix output:' % result.returncode)
             logging.warning('\n' + result.stdout)
             for filename in parse_dcm2niix_filenames(result.stdout):
                 remove_created_files(filename)
@@ -348,8 +350,10 @@ class BaseInfo:
                                     'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
             else:
                 self.NiftiCreated = False
-                logging.warning('dcm2niix failed for %s' % self.SourcePath)
+                logging.warning('Nifti creation failed for %s' % self.SourcePath)
                 logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
+                logging.warning('dcm2niix return code: %d' % result.returncode)
+                logging.warning('dcm2niix output:' % result.returncode)
                 logging.warning('\n' + result.stdout)
                 logging.warning('Nifti creation failed.')
 
