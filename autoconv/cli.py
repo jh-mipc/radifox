@@ -52,13 +52,14 @@ def cli():
 @click.option('-m', '--tms-metafile', type=click.Path(exists=True), callback=abs_path)
 @click.option('-v', '--verbose', is_flag=True)
 @click.option('--force', is_flag=True)
+@click.option('--reckless', is_flag=True)
 @click.option('--no-project-subdir', is_flag=True)
 @click.option('--parrec', is_flag=True)
 @click.option('--institution', type=str)
 @click.option('--field-strength', type=int, default=3)
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
 def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
-            time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool,
+            time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
             no_project_subdir: bool, parrec: bool, institution: str, field_strength: int, manual_arg: dict) -> None:
 
     mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
@@ -76,8 +77,29 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
     if len(list((output_root / metadata.dir_to_str()).glob('*'))) > 0:
-        if force:
-            # TODO: Add checks from update that check input integrity before deleting
+        # TODO: Add checks to see if data has moved (warn and update? error?)
+        if force or reckless:
+            if not reckless:
+                json_file = output_root / metadata.dir_to_str() / (metadata.prefix_to_str() +
+                                                                   '_MR-UnconvertedInfo.json')
+                if not json_file.exists():
+                    raise ValueError('Unconverted info file (%s) does not exist for consistency checking.'
+                                     'Cannot use --force, use --reckless instead.' % json_file)
+                json_obj = json.loads(json_file.read_text())
+                if json_obj['TMSMetaFile'] is not None:
+                    if metadata.TMSMetaFile is None:
+                        raise ValueError('Previous conversion did not use a TMS metadata file, '
+                                         'run with --reckless to ignore this error.')
+                    check_metadata = Metadata.from_tms_metadata(json_obj['TMSMetaFile'])
+                    if check_metadata.TMSMetaFileHash != metadata.TMSMetaFileHash:
+                        raise ValueError('TMS meta data file has changed since last conversion, '
+                                         'run with --reckless to ignore this error.')
+                elif json_obj['TMSMetaFile'] is None and metadata.TMSMetaFile is not None:
+                    raise ValueError('Previous conversion used a TMS metadata file, '
+                                     'run with --reckless to ignore this error.')
+                if sha1_file_dir(source) != json_obj['InputHash']:
+                    raise ValueError('Source file(s) have changed since last conversion, '
+                                     'run with --reckless to ignore this error.')
             shutil.rmtree(output_root / metadata.dir_to_str())
         else:
             raise RuntimeError('Output directory exists, run with --force to remove outputs and re-run.')
@@ -92,10 +114,8 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
 @click.argument('directory', type=click.Path(exists=True), callback=abs_path)
 @click.option('-l', '--lut-file', type=click.Path(exists=True), required=True, callback=abs_path)
 @click.option('--parrec', is_flag=True)
-@click.option('--force', is_flag=True)
-@click.option('--reckless', is_flag=True)
 @click.option('-v', '--verbose', is_flag=True)
-def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless: bool, verbose: bool) -> None:
+def update(directory: Path, lut_file: Path, parrec: bool, verbose: bool) -> None:
     session_id = directory.name
     subj_id = directory.parent.name
 
@@ -112,35 +132,15 @@ def update(directory: Path, lut_file: Path, parrec: bool, force: bool, reckless:
         print('No action required. Software version and LUT file hash match for %s.' % directory)
         return
 
-    # TODO: Add checks to see if data has moved (warn and update? error?)
-    if force or reckless:
-        if not Path(json_obj['InputSource']).exists():
-            raise ValueError('Cannot use --force option, as input source (%s) does not exist.' %
-                             json_obj['InputSource'])
-        if json_obj['TMSMetaFile'] is not None and not Path(json_obj['TMSMetaFile']).exists():
-            raise ValueError('Cannot use --force option, as TMS metadata file (%s) does not exist.' %
-                             json_obj['TMSMetaFile'])
-        if not reckless:
-            if json_obj['TMSMetaFile'] is not None:
-                check_metadata = Metadata.from_tms_metadata(json_obj['TMSMetaFile'])
-                if check_metadata.TMSMetaFileHash != metadata.TMSMetaFileHash:
-                    raise ValueError('TMS meta data file has changed since last conversion, '
-                                     'run with --reckless to ignore this error.')
-            if sha1_file_dir(json_obj['InputSource']) != json_obj['InputHash']:
-                raise ValueError('Source file(s) have changed since last conversion, '
-                                 'run with --reckless to ignore this error.')
-        shutil.rmtree(directory)
-    else:
-        if parrec and not (directory / 'mr-parrec').exists():
-            raise ValueError('Update source was specified as PARREC, but mr-parrec source directory does not exist.')
-        elif not parrec and not (directory / 'mr-dcm').exists():
-            raise ValueError('Update source was specified as DICOM, but mr-dcm source directory does not exist.')
+    if parrec and not (directory / 'mr-parrec').exists():
+        raise ValueError('Update source was specified as PARREC, but mr-parrec source directory does not exist.')
+    elif not parrec and not (directory / 'mr-dcm').exists():
+        raise ValueError('Update source was specified as DICOM, but mr-dcm source directory does not exist.')
 
-        silentremove(directory / 'nii')
-        silentremove(directory / (metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'))
-        for filepath in (directory / 'logs').glob('autoconv-*.log'):
-            silentremove(filepath)
+    silentremove(directory / 'nii')
+    silentremove(directory / (metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'))
+    for filepath in (directory / 'logs').glob('autoconv-*.log'):
+        silentremove(filepath)
 
     run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose,
-                 parrec, not (force or reckless), json_obj.get('ManualArgs', {}),
-                 None if reckless else json_obj['InputHash'])
+                 parrec, True, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
