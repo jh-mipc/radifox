@@ -51,7 +51,7 @@ class DicomInfo(BaseInfo):
 
     def __init__(self, dcmdir: Path) -> None:
         super().__init__(dcmdir)
-        ds = dicom.dcmread(sorted(dcmdir.glob('*'))[0], stop_before_pixels=True)
+        ds = dicom.dcmread(str(sorted(dcmdir.glob('*'))[0]), stop_before_pixels=True)
         self.SeriesUID = dcmdir.name
         self.StudyUID = getattr(ds, 'StudyInstanceUID', None)
         self.NumFiles = len(list(dcmdir.glob('*')))
@@ -125,7 +125,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
         if item.is_file():
             curr_dcm_img = item
             try:
-                ds = dicom.dcmread(curr_dcm_img, stop_before_pixels=True)
+                ds = dicom.dcmread(str(curr_dcm_img), stop_before_pixels=True)
             except InvalidDicomError:
                 continue
             if isinstance(ds, DicomDir):
@@ -137,7 +137,8 @@ def sort_dicoms(dcm_dir: Path) -> None:
                               'DICOM for consistent processing' % curr_dcm_img)
                 dcm_files = convert_emf(curr_dcm_img)
                 mf_count += 1
-                dcm_cand = [(dcm_file, dicom.dcmread(dcm_file, stop_before_pixels=True)) for dcm_file in dcm_files]
+                dcm_cand = [(dcm_file, dicom.dcmread(str(dcm_file), stop_before_pixels=True))
+                            for dcm_file in dcm_files]
             else:
                 dcm_cand = [(curr_dcm_img, ds)]
             decomp_count = 0
@@ -196,7 +197,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
 def remove_duplicates(dcmdir: Path) -> None:
     inst_nums = {}  # type: dict
     for dcmfile in dcmdir.glob('*'):
-        ds = dicom.dcmread(dcmfile, stop_before_pixels=True)
+        ds = dicom.dcmread(str(dcmfile), stop_before_pixels=True)
         if ds.InstanceNumber not in inst_nums:
             inst_nums[ds.InstanceNumber] = []
         inst_nums[ds.InstanceNumber].append((dcmfile, ds))
@@ -214,8 +215,8 @@ def remove_duplicates(dcmdir: Path) -> None:
                             key not in [(0x0008, 0x0013), (0x0008, 0x0018)]:
                         diff_keys.append(key)
                 if len(diff_keys) == 0:
-                    if (dicom.dcmread(inst_nums[num][i][0]).PixelData ==
-                            dicom.dcmread(inst_nums[num][i][0]).PixelData):
+                    if (dicom.dcmread(str(inst_nums[num][i][0])).PixelData ==
+                            dicom.dcmread(str(inst_nums[num][i][0])).PixelData):
                         logging.debug('Found duplicate of %s' % inst_nums[num][j][0])
                         logging.debug('Removing duplicate file %s' % inst_nums[num][i][0])
                         inst_nums[num][i][0].unlink()
