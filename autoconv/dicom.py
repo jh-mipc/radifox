@@ -31,6 +31,7 @@ DCM_HEADER_ATTRS = [
     'EchoTrainLength',
     'AcquisitionMatrix',
     ('ScanningSequence', 'SequenceType'),
+    'ScanOptions',
     'ImageType',
     'SeriesNumber',
     'ComplexImageComponent',

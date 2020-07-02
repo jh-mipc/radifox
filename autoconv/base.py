@@ -20,7 +20,7 @@ from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
-POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc']
+POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
                   'InversionTime', 'ComplexImageComponent']
@@ -61,6 +61,7 @@ class BaseInfo:
         self.BodyPartExamined = None
         self.StudyDescription = None
         self.SequenceVariant = tuple()
+        self.ScanOptions = tuple()
         self.SequenceName = None
         self.ExContrastAgent = None
         self.ImageOrientationPatient = None
@@ -123,6 +124,8 @@ class BaseInfo:
             resolution = self.AcquisitionDimension
             # 3) Ex-contrast
             excontrast = 'PRE'
+            if 'pre' in series_desc:
+                excontrast = 'PRE'
             if not (self.ExContrastAgent is None or self.ExContrastAgent == ''):
                 excontrast = 'POST'
             elif any([item in series_desc for item in POSTGAD_DESC]):
@@ -177,12 +180,13 @@ class BaseInfo:
             seq_name = '' if self.SequenceName is None else self.SequenceName.lower()
             seq_type = [seq.lower() for seq in self.SequenceType]
             seq_var = [variant.lower() for variant in self.SequenceVariant]
+            scan_opts = [opt.lower() for opt in self.ScanOptions]
             sequence = 'UNK'
             if any([seq == 'se' for seq in seq_type]):
                 sequence = 'SE'
             elif any([seq == 'gr' for seq in seq_type]):
                 sequence = 'GRE'
-            elif 't1ffe' in seq_name:
+            elif 't1ffe' in seq_name or "*fl3d1" in seq_name:
                 sequence = 'SPGR'
             elif self.FlipAngle >= 60:
                 sequence = 'SE'
@@ -194,7 +198,7 @@ class BaseInfo:
             if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
                                       any([variant == 'ss' for variant in seq_var])):
                 sequence = 'SPGR'
-            if sequence != 'EPI' and etl > 1:
+            if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts):
                 sequence = 'F' + sequence
             if sequence != 'EPI' and 'IR' not in sequence:
                 if self.InversionTime is not None and self.InversionTime > 50:
