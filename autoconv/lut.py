@@ -1,6 +1,5 @@
-import os
 from pathlib import Path
-from typing import Union, List, Optional
+from typing import Union, List
 
 from .utils import read_csv, is_intstr
 
