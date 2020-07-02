@@ -83,7 +83,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                 json_file = output_root / metadata.dir_to_str() / (metadata.prefix_to_str() +
                                                                    '_MR-UnconvertedInfo.json')
                 if not json_file.exists():
-                    raise ValueError('Unconverted info file (%s) does not exist for consistency checking.'
+                    raise ValueError('Unconverted info file (%s) does not exist for consistency checking. '
                                      'Cannot use --force, use --reckless instead.' % json_file)
                 json_obj = json.loads(json_file.read_text())
                 if json_obj['TMSMetaFile'] is not None:
@@ -98,7 +98,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                     raise ValueError('Previous conversion used a TMS metadata file, '
                                      'run with --reckless to ignore this error.')
                 if sha1_file_dir(source) != json_obj['InputHash']:
-                    raise ValueError('Source file(s) have changed since last conversion, '
+                    raise ValutyeError('Source file(s) have changed since last conversion, '
                                      'run with --reckless to ignore this error.')
             shutil.rmtree(output_root / metadata.dir_to_str())
         else:
