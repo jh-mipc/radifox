@@ -85,7 +85,7 @@ class BaseInfo:
 
     def should_convert(self) -> bool:
         type_str = ' '.join(self.ImageType[:2]).lower()
-        series_desc = '' if self.SeriesDescription is None else self.SeriesDescription.lower()
+        series_desc = self.SeriesDescription.lower()
         type_status = ('derived' not in type_str) or \
                       ('derived' in type_str and 'primary' in type_str)
         desc_ignore = any([item in series_desc for item in DESCRIPTION_IGNORE])
@@ -115,7 +115,7 @@ class BaseInfo:
             # Needs automatic naming
             logging.debug('Name lookup failed, using automatic name generation.')
             autogen = True
-            series_desc = '' if self.SeriesDescription is None else self.SeriesDescription.lower()
+            series_desc = self.SeriesDescription.lower()
             if series_desc.startswith('wip'):
                 series_desc = series_desc[3:].lstrip()
             # 1) Orientation

@@ -59,6 +59,7 @@ class DicomInfo(BaseInfo):
         for item in DCM_HEADER_ATTRS:
             get_item, set_item = item if isinstance(item, tuple) else (item, item)
             setattr(self, set_item, convert_type(getattr(ds, get_item, None)))
+        self.SeriesDescription = '' if self.SeriesDescription is None else self.SeriesDescription
         try:
             self.AcqDateTime = str(datetime.strptime(ds.SeriesDate + '-' +
                                                      ds.SeriesTime.split('.')[0].ljust(6, '0'),

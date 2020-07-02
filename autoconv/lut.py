@@ -30,9 +30,7 @@ class LookupTable:
     def __repr_json__(self) -> dict:
         return self.__dict__
 
-    def check(self, inst_name: str, series_desc: Optional[str]) -> Union[List[str], bool, None]:
-        if series_desc is None:
-            return None
+    def check(self, inst_name: str, series_desc: str) -> Union[List[str], bool, None]:
         # Deal with extras from PARRECs
         if series_desc.startswith('WIP '):
             series_desc = series_desc[4:]
