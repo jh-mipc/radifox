@@ -146,12 +146,17 @@ DIR_OCTAL = 0o2770
 
 def recursive_chmod(directory: Path, dir_octal: int = DIR_OCTAL,
                     file_octal: int = FILE_OCTAL) -> None:
-    directory.chmod(dir_octal)
-    for item in directory.rglob('*'):
-        if item.is_dir():
-            item.chmod(dir_octal)
-        elif item.is_file():
-            item.chmod(file_octal)
+    if not directory.exists():
+        return
+    elif directory.is_file():
+        directory.chmod(file_octal)
+    else:
+        directory.chmod(dir_octal)
+        for item in directory.rglob('*'):
+            if item.is_dir():
+                item.chmod(dir_octal)
+            elif item.is_file():
+                item.chmod(file_octal)
 
 
 def find_closest(target: int, to_check: List[int]) -> Optional[int]:
