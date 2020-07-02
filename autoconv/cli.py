@@ -98,7 +98,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                     raise ValueError('Previous conversion used a TMS metadata file, '
                                      'run with --reckless to ignore this error.')
                 if sha1_file_dir(source) != json_obj['InputHash']:
-                    raise ValutyeError('Source file(s) have changed since last conversion, '
+                    raise ValueError('Source file(s) have changed since last conversion, '
                                      'run with --reckless to ignore this error.')
             shutil.rmtree(output_root / metadata.dir_to_str())
         else:
