@@ -84,7 +84,7 @@ class BaseInfo:
 
     def should_convert(self) -> bool:
         type_str = ' '.join(self.ImageType[:2]).lower()
-        series_desc = self.SeriesDescription.lower()
+        series_desc = '' if self.SeriesDescription is None else self.SeriesDescription.lower()
         type_status = ('derived' not in type_str) or \
                       ('derived' in type_str and 'primary' in type_str)
         desc_ignore = any([item in series_desc for item in DESCRIPTION_IGNORE])
@@ -114,7 +114,7 @@ class BaseInfo:
             # Needs automatic naming
             logging.debug('Name lookup failed, using automatic name generation.')
             autogen = True
-            series_desc = self.SeriesDescription.lower()
+            series_desc = '' if self.SeriesDescription is None else self.SeriesDescription.lower()
             if series_desc.startswith('wip'):
                 series_desc = series_desc[3:].lstrip()
             # 1) Orientation
@@ -140,7 +140,8 @@ class BaseInfo:
                 desc_modalities.append('T2STAR')
             if 'stir' in series_desc:
                 desc_modalities.append('STIR')
-            if 'dti' in series_desc or 'diff' in series_desc or 'dw' in series_desc or 'b1000' in series_desc or \
+            if 'dti' in series_desc or 'diff' in series_desc or re.search(r'(?!p)dw', series_desc) or \
+                    'b1000' in series_desc or \
                     any([img_type.lower() == 'diffusion' for img_type in self.ImageType]):
                 desc_modalities.append('DIFF')
 
@@ -235,7 +236,7 @@ class BaseInfo:
                     'l-sp' in series_desc:
                 body_part = 'LSPINE'
             elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
-                    re.search(r'\sct(?:\s+|$)', self.SeriesDescription.lower()) or 'vibe' in series_desc or \
+                    re.search(r'\sct(?:\s+|$)', series_desc) or 'vibe' in series_desc or \
                     series_desc.startswith('sp_'):
                 body_part = 'SPINE'
             elif 'orbit' in series_desc or 'thin' in series_desc or series_desc.startswith('on_'):
@@ -313,8 +314,7 @@ class BaseInfo:
             logging.warning('dcm2niix failed for %s' % self.SourcePath)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
             logging.warning('dcm2niix return code: %d' % result.returncode)
-            logging.warning('dcm2niix output:' % result.returncode)
-            logging.warning('\n' + result.stdout)
+            logging.warning('dcm2niix output:\n' + result.stdout)
             for filename in parse_dcm2niix_filenames(result.stdout):
                 remove_created_files(filename)
             logging.warning('Nifti creation failed.')
@@ -353,8 +353,7 @@ class BaseInfo:
                 logging.warning('Nifti creation failed for %s' % self.SourcePath)
                 logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
                 logging.warning('dcm2niix return code: %d' % result.returncode)
-                logging.warning('dcm2niix output:' % result.returncode)
-                logging.warning('\n' + result.stdout)
+                logging.warning('dcm2niix output:\n' + result.stdout)
                 logging.warning('Nifti creation failed.')
 
 
