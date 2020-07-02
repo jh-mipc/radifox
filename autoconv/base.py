@@ -19,7 +19,7 @@ from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_
                     add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir, p_add)
 
 
-DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
+DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram']
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
