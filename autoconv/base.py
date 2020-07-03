@@ -540,6 +540,7 @@ class TruncatedImageValue:
                  precision: float = 1e-4) -> None:
         self.value = value
         self.precision = precision
+        self.length = int(abs(np.log10(self.precision)))
 
     def __eq__(self, other: Union[Any, TruncatedImageValue]) -> bool:
         if isinstance(other, TruncatedImageValue):
@@ -560,9 +561,8 @@ class TruncatedImageValue:
         return self.truncate()
 
     def truncate(self) -> Optional[List[float]]:
-        return [float(np.around(int(num/self.precision)*self.precision,
-                                int(abs(np.log10(self.precision))+1)))
-                for num in self.value] if self.value is not None else None
+        return [float(np.around(num/2, self.length)*2) for num in self.value] \
+            if self.value is not None else None
 
 
 class ImageOrientation(TruncatedImageValue):
