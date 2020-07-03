@@ -125,11 +125,9 @@ class BaseInfo:
             resolution = self.AcquisitionDimension
             # 3) Ex-contrast
             excontrast = 'PRE'
-            if 'pre' in series_desc:
-                excontrast = 'PRE'
             if not (self.ExContrastAgent is None or self.ExContrastAgent == ''):
                 excontrast = 'POST'
-            elif any([item in series_desc for item in POSTGAD_DESC]):
+            elif any([item in series_desc for item in POSTGAD_DESC]) and 'pre' not in series_desc:
                 excontrast = 'POST'
             # 4) Modality
             desc_modalities = []
