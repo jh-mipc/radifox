@@ -121,6 +121,7 @@ class BaseInfo:
             series_desc = self.SeriesDescription.lower()
             if series_desc.startswith('wip'):
                 series_desc = series_desc[3:].lstrip()
+            scan_opts = [opt.lower() for opt in self.ScanOptions]
             # 1) Orientation
             orientation = self.SliceOrientation.upper()
             # 2) Resolution
@@ -174,7 +175,7 @@ class BaseInfo:
                     re.search(r'tof(?!f)', series_desc) or 'angio' in series_desc:
                 modality = 'TOF'
             elif any(['mtc' in variant.lower() for variant in self.SequenceVariant]) or \
-                    getattr(self, 'MTContrast', 0) == 1:
+                    getattr(self, 'MTContrast', 0) == 1 or 'mt_gems' in scan_opts:
                 modality = 'MT'
             elif getattr(self, 'DiffusionFlag', 0) == 1:
                 modality = 'DIFF'
@@ -183,7 +184,6 @@ class BaseInfo:
             seq_name = '' if self.SequenceName is None else self.SequenceName.lower()
             seq_type = [seq.lower() for seq in self.SequenceType]
             seq_var = [variant.lower() for variant in self.SequenceVariant]
-            scan_opts = [opt.lower() for opt in self.ScanOptions]
             sequence = 'UNK'
             if any([seq == 'se' for seq in seq_type]):
                 sequence = 'SE'
