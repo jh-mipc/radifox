@@ -88,7 +88,7 @@ class DicomInfo(BaseInfo):
             self.ReconResolution = [round(res, 5) for res in self.ReconResolution]
         self.SequenceName = getattr(ds, 'SequenceName', getattr(ds, 'PulseSequenceName', None))
         if self.SequenceName is None and (0x0019, 0x109c) in ds:
-            self.SequenceName = str(ds[(0x2005, 0x1444)].value)
+            self.SequenceName = str(ds[(0x0019, 0x109c)].value)
         self.ExContrastAgent = getattr(ds, 'ContrastBolusAgent', getattr(ds, 'ContrastBolusAgentSequence', None))
         self.ImageOrientationPatient = ImageOrientation(getattr(ds, 'ImageOrientationPatient', None))
         self.SliceOrientation = self.ImageOrientationPatient.get_plane()
