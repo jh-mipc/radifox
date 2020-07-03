@@ -72,6 +72,8 @@ class DicomInfo(BaseInfo):
         if (0x2005, 0x1444) in ds:
             turbo = int(ds[(0x2005, 0x1444)].value)
             self.EchoTrainLength = turbo if turbo > 0 else self.EchoTrainLength
+        if (0x2001, 0x1013) in ds:
+            self.EPIFactor = int(ds[(0x2001, 0x1013)].value)
         self.SequenceType = make_tuple(self.SequenceType)
         self.SequenceVariant = make_tuple(self.SequenceVariant)
         if self.AcquisitionMatrix is not None:

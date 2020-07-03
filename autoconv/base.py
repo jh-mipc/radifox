@@ -30,6 +30,7 @@ PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
 class BaseInfo:
 
+    # TODO: Type consistent defaults?
     def __init__(self, path: Path) -> None:
         self.SourcePath = path
         self.SeriesUID = None
@@ -49,6 +50,7 @@ class BaseInfo:
         self.EchoTime = None
         self.InversionTime = None
         self.EchoTrainLength = None
+        self.EPIFactor = None
         self.AcquisitionMatrix = []
         self.AcquiredResolution = None
         self.ReconMatrix = None
@@ -167,7 +169,7 @@ class BaseInfo:
                 modality = 'FLOW'
             elif any(['tof' in img_type.lower() for img_type in self.ImageType]) or \
                     any(['tof' in variant.lower() for variant in self.SequenceVariant]) or \
-                    'tof' in series_desc or 'angio' in series_desc:
+                    re.search(r'tof(?!f)', series_desc) or 'angio' in series_desc:
                 modality = 'TOF'
             elif any(['mtc' in variant.lower() for variant in self.SequenceVariant]) or \
                     getattr(self, 'MTContrast', 0) == 1:
@@ -187,10 +189,8 @@ class BaseInfo:
                 sequence = 'GRE'
             elif self.FlipAngle >= 60:
                 sequence = 'SE'
-            if any(['ep' == seq for seq in seq_type]) or \
-                    'epi' in seq_name or 'epi' in series_desc or \
-                    getattr(self, 'EPIFactor', 0) > 1 or \
-                    'feepi' in seq_name:
+            if any(['ep' == seq for seq in seq_type]) or 'epi' in seq_name or \
+                    (self.EPIFactor is not None and self.EPIFactor > 1):
                 sequence = 'EPI'
             if 't1ffe' in seq_name or 'fl3d1' in seq_name:
                 sequence = 'SPGR'
@@ -209,7 +209,7 @@ class BaseInfo:
             if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
                 sequence = sequence.replace('IR', 'IRF')
             if 'mprage' in series_desc or 'bravo' in series_desc or \
-                    self.Manufacturer == 'philips' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant:
+                    (self.Manufacturer == 'philips' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant):
                 sequence = 'IRFSPGR'
             if modality == 'UNK':
                 if sequence == 'IRFSPGR':
@@ -217,7 +217,7 @@ class BaseInfo:
                 elif sequence.endswith('SE'):
                     modality = 'T2'
                 elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
-                    modality = 'T1' if self.EchoTime < 15 and self.RepetitionTime < 60 else 'T2STAR'
+                    modality = 'T1' if self.EchoTime < 15 else 'T2STAR'
             if modality == 'T2' and sequence.startswith('IR'):
                 modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
             elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
