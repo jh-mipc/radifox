@@ -340,7 +340,7 @@ class BaseInfo:
             if 'DIFF' in filename.name and p_add(filename, '_ADC.nii.gz').exists():
                 logging.info('Additional ADC images produced by dcm2niix. Removing.')
                 p_add(filename, '_ADC.nii.gz').unlink()
-            while re.search(r'_(e[0-9]+|ph)$', filename.name):
+            while re.search(r'_(e[0-9]+|ph|real|imaginary)$', filename.name):
                 new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph)$', '', filename.name))
                 p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
                 filename = new_path

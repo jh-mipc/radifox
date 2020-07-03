@@ -89,8 +89,17 @@ class DicomInfo(BaseInfo):
         self.ImageOrientationPatient = ImageOrientation(getattr(ds, 'ImageOrientationPatient', None))
         self.SliceOrientation = self.ImageOrientationPatient.get_plane()
         self.ImagePositionPatient = TruncatedImageValue(getattr(ds, 'ImagePositionPatient', None))
-        if self.ComplexImageComponent is None and any([comp in self.ImageType for comp in ['M', 'P']]):
-            self.ComplexImageComponent = 'MAGNITUDE' if 'M' in self.ImageType else 'PHASE'
+        if self.ComplexImageComponent is None and any([comp in self.ImageType
+                                                       for comp in ['M', 'P', 'R', 'I',
+                                                                    'MAGNITUDE', 'PHASE', 'REAL', 'IMAGINARY']]):
+            if 'M' in self.ImageType or 'MAGNITUDE' in self.ImageType:
+                self.ComplexImageComponent = 'MAGNITUDE'
+            elif 'P' in self.ImageType or 'PHASE' in self.ImageType:
+                self.ComplexImageComponent = 'PHASE'
+            elif 'R' in self.ImageType or 'REAL' in self.ImageType:
+                self.ComplexImageComponent = 'REAL'
+            elif 'I' in self.ImageType or 'IMAGINARY' in self.ImageType:
+                self.ComplexImageComponent = 'IMAGINARY'
 
 
 class DicomSet(BaseSet):
