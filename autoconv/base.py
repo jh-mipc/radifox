@@ -125,6 +125,8 @@ class BaseInfo:
             orientation = self.SliceOrientation.upper()
             # 2) Resolution
             resolution = self.AcquisitionDimension
+            if resolution not in ['2D', '3D']:
+                resolution = '3D' if '3d' in series_desc else '2D'
             # 3) Ex-contrast
             excontrast = 'PRE'
             if not (self.ExContrastAgent is None or self.ExContrastAgent == ''):
