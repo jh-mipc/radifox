@@ -421,8 +421,8 @@ class BaseSet:
                                               and di.RepetitionTime == other_di.RepetitionTime])
                 if closest_mt is not None:
                     logging.debug('Adjusting name for %s: %s --> %s' %
-                                  (di.SeriesUID, di.NiftiName, di.NiftiName + '-MTOFF'))
-                    di.NiftiName = di.NiftiName + '-MTOFF'
+                                  (di.SeriesUID, di.NiftiName, di.NiftiName.replace('-T1-', '-MT-') + '-MTOFF'))
+                    di.NiftiName = di.NiftiName.replace('-T1-', '-MT-') + '-MTOFF'
                     logging.debug('Adjusting name for %s: %s --> %s' %
                                   (self.SeriesList[closest_mt].SeriesUID,
                                    self.SeriesList[closest_mt].NiftiName,
