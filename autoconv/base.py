@@ -8,6 +8,7 @@ import shutil
 from subprocess import run
 from typing import List, Tuple, Union, Any, Optional
 
+import nibabel as nib
 import numpy as np
 
 from .info import __version__
@@ -325,7 +326,14 @@ class BaseInfo:
             logging.warning('Nifti creation failed.')
             return
 
-        for filename in parse_dcm2niix_filenames(result.stdout):
+        filenames = parse_dcm2niix_filenames(result.stdout)
+        if len(filenames) > 1:
+            filename_check = re.compile(str(filenames[0]) + r'_t[0-9]+$')
+            if all([filename_check.match(str(item)) is not None for item in filenames[1:]]):
+                nib.concat_images([nib.load(str(item) + '.nii.gz') for item in filenames])\
+                    .to_filename(str(filenames[0]) + '.nii.gz')
+                filenames = [filenames[0]]
+        for filename in filenames:
             if not success:
                 remove_created_files(filename)
             if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
