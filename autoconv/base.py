@@ -185,7 +185,7 @@ class BaseInfo:
                 sequence = 'SE'
             elif any([seq == 'gr' for seq in seq_type]):
                 sequence = 'GRE'
-            elif 't1ffe' in seq_name or "*fl3d1" in seq_name:
+            elif 't1ffe' in seq_name or 'fl3d1' in seq_name:
                 sequence = 'SPGR'
             elif self.FlipAngle >= 60:
                 sequence = 'SE'
