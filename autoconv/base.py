@@ -144,7 +144,7 @@ class BaseInfo:
                 desc_modalities.append('T2STAR')
             if 'stir' in series_desc:
                 desc_modalities.append('STIR')
-            if 'dti' in series_desc or 'diff' in series_desc or re.search(r'(?!p)dw', series_desc) or \
+            if 'dti' in series_desc or 'diff' in series_desc or re.search(r'(?<!p)dw', series_desc) or \
                     'b1000' in series_desc or \
                     any([img_type.lower() == 'diffusion' for img_type in self.ImageType]):
                 desc_modalities.append('DIFF')
