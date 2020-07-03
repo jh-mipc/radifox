@@ -185,8 +185,6 @@ class BaseInfo:
                 sequence = 'SE'
             elif any([seq == 'gr' for seq in seq_type]):
                 sequence = 'GRE'
-            elif 't1ffe' in seq_name or 'fl3d1' in seq_name:
-                sequence = 'SPGR'
             elif self.FlipAngle >= 60:
                 sequence = 'SE'
             if any(['ep' == seq for seq in seq_type]) or \
@@ -194,6 +192,8 @@ class BaseInfo:
                     getattr(self, 'EPIFactor', 0) > 1 or \
                     'feepi' in seq_name:
                 sequence = 'EPI'
+            if 't1ffe' in seq_name or 'fl3d1' in seq_name:
+                sequence = 'SPGR'
             if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
                                       any([variant == 'ss' for variant in seq_var])):
                 sequence = 'SPGR'
