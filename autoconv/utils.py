@@ -40,8 +40,6 @@ def silentremove(filename: Path) -> None:
 
 def read_csv(csv_filename: Path) -> (dict, str):
     data = csv_filename.read_bytes()
-    hasher = hashlib.sha1()
-    hasher.update(data)
     codec = 'UTF-8-SIG' if data.startswith(BOM_UTF8) else 'UTF-8'
     data = data.decode(codec)
     line_sep = '\r\n' if '\r\n' in data else '\n'
@@ -50,7 +48,7 @@ def read_csv(csv_filename: Path) -> (dict, str):
     for row in csv.DictReader(data):
         for key in out_dict.keys():
             out_dict[key].append(row[key])
-    return out_dict, hasher.hexdigest()
+    return out_dict
 
 
 def convert_type(val: Union[MultiValue, DSfloat, IS, Any]) -> Union[list, float, int, Any]:

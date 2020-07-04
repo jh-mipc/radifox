@@ -8,7 +8,7 @@ class LookupTable:
 
     def __init__(self, lut_file: Path, project_id: str, site_id: str) -> None:
         self.FileName = lut_file.resolve().expanduser()
-        lut, self.FileHash = read_csv(self.FileName)
+        lut = read_csv(self.FileName)
         if site_id is None:
             site_id = ''
         self.LookupDict = {}
