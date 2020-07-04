@@ -332,6 +332,8 @@ class BaseInfo:
             if all([filename_check.match(str(item)) is not None for item in filenames[1:]]):
                 nib.concat_images([nib.load(str(item) + '.nii.gz') for item in filenames])\
                     .to_filename(str(filenames[0]) + '.nii.gz')
+                for filename in filenames[1:]:
+                    p_add(filename, '.nii.gz').unlink()
                 filenames = [filenames[0]]
         for filename in filenames:
             if not success:
