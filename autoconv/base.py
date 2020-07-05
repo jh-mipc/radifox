@@ -124,7 +124,7 @@ class BaseInfo:
                 series_desc = series_desc[3:].lstrip()
             scan_opts = [opt.lower() for opt in self.ScanOptions]
             # 1) Orientation
-            orientation = self.SliceOrientation.upper()
+            orientation = self.SliceOrientation.upper() if self.SliceOrientation is not None else 'NONE'
             # 2) Resolution
             resolution = self.AcquisitionDimension
             if resolution not in ['2D', '3D']:
