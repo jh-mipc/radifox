@@ -150,7 +150,8 @@ def sort_dicoms(dcm_dir: Path) -> None:
                 continue
             if isinstance(ds, DicomDir):
                 continue
-            if ds.SOPClassUID not in ['1.2.840.10008.5.1.4.1.1.4', '1.2.840.10008.5.1.4.1.1.4.1']:
+            if ds.SOPClassUID not in ['1.2.840.10008.5.1.4.1.1.4', '1.2.840.10008.5.1.4.1.1.4.1',
+                                      '1.2.840.10008.5.1.4.1.1.7']:
                 continue
             if ds.SOPClassUID == '1.2.840.10008.5.1.4.1.1.4.1':
                 logging.debug('%s is an Enhanced DICOM file, converting to classic '
