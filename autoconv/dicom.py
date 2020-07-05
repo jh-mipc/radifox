@@ -60,12 +60,13 @@ class DicomInfo(BaseInfo):
             get_item, set_item = item if isinstance(item, tuple) else (item, item)
             setattr(self, set_item, convert_type(getattr(ds, get_item, None)))
         self.SeriesDescription = '' if self.SeriesDescription is None else self.SeriesDescription
+        series_date = ds.SeriesDate if ds.SeriesDate != '' else '19691231'
         try:
-            self.AcqDateTime = str(datetime.strptime(getattr(ds, 'SeriesDate', '19691231') + '-' +
+            self.AcqDateTime = str(datetime.strptime(series_date + '-' +
                                                      ds.SeriesTime.split('.')[0].ljust(6, '0'),
                                                      '%Y%m%d-%H%M%S'))
         except ValueError:
-            self.AcqDateTime = str(datetime.strptime(getattr(ds, 'SeriesDate', '19691231') + '-' +
+            self.AcqDateTime = str(datetime.strptime(series_date + '-' +
                                                      ds.SeriesTime.split('.')[0].ljust(6, '0'),
                                                      '%Y-%m-%d-%H%M%S'))
         self.Manufacturer = self.Manufacturer.lower().split(' ')[0]
