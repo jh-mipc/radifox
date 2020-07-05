@@ -556,15 +556,15 @@ class TruncatedImageValue:
 
     def __eq__(self, other: Union[Any, TruncatedImageValue]) -> bool:
         if isinstance(other, TruncatedImageValue):
-            if self.value is None or other.value is None:
-                return False
+            if self.value is None:
+                return other.value is None
             return all([abs(self.value[i]-other.value[i]) <= self.precision
                         for i in range(len(self.value))])
         else:
             return super().__eq__(other)
 
     def __hash__(self) -> int:
-        return hash(tuple(self.truncate()))
+        return hash(tuple(self.truncate())) if self.value is not None else hash(None)
 
     def __getitem__(self, item) -> Optional[float]:
         return self.value[item] if self.value is not None else None
