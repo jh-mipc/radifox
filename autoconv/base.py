@@ -582,8 +582,7 @@ class ImageOrientation(TruncatedImageValue):
         if self.value is None:
             return None
         if len(self.value) == 6:  # Direction Cosines
-            orient_orth = [round(x) for x in self.value]
-            plane = int(np.argmax([abs(x) for x in np.cross(orient_orth[0:3], orient_orth[3:6])]))
+            plane = int(np.argmax([abs(x) for x in np.cross(self.value[0:3], self.value[3:6])]))
             return DCM_ORIENT_PLANES.get(plane, None)
         if len(self.value) == 4:  # Angulation + Plane
             return PARREC_ORIENTATIONS.get(self.value[3], None)
