@@ -1,6 +1,7 @@
 from codecs import BOM_UTF8
 from collections.abc import Sequence
 import csv
+from datetime import datetime, date, time
 import hashlib
 import logging
 import os
@@ -10,9 +11,7 @@ import shutil
 from typing import Union, Any, List, Optional
 
 import nibabel as nib
-from pydicom.multival import MultiValue
-from pydicom.valuerep import DSfloat
-from pydicom.valuerep import IS
+from pydicom.dataset import FileDataset
 
 
 ORIENT_CODES = {'sagittal': 'PIL', 'coronal': 'LIP', 'axial': 'LPS'}
@@ -51,15 +50,57 @@ def read_csv(csv_filename: Path) -> (dict, str):
     return out_dict
 
 
-def convert_type(val: Union[MultiValue, DSfloat, IS, Any]) -> Union[list, float, int, Any]:
-    if isinstance(val, MultiValue):
-        return list(val)
-    elif isinstance(val, DSfloat):
-        return float(val)
-    elif isinstance(val, IS):
-        return int(val)
-    else:
-        return val
+def convert_dicom_date(date_str: str) -> date:
+    return datetime.strptime(date_str.replace('-', ''), '%Y%m%d').date()
+
+
+def convert_dicom_time(time_str: str) -> time:
+    return datetime.strptime(time_str.split('.')[0].ljust(6, '0'), '%H%M%S').time()
+
+
+def convert_dicom_datetime(dt_str: str) -> date:
+    return datetime.strptime(dt_str.replace('-', '').split('.')[0], '%Y%m%d%H%M%S')
+
+
+vr_corr = {
+    'CS': str,
+    'DA': convert_dicom_date,
+    'DS': float,
+    'DT': convert_dicom_datetime,
+    'FD': float,
+    'FL': float,
+    'IS': int,
+    'LO': str,
+    'LT': str,
+    'OB': bytes,
+    'PN': str,
+    'SH': str,
+    'SL': int,
+    'SS': int,
+    'ST': str,
+    'TM': convert_dicom_time,
+    'UI': str,
+    'UL': int,
+    'US': int
+}
+
+
+def extract_de(ds: FileDataset, label: str, series_uid, keep_list: bool = False) -> \
+        Union[None, tuple, float, int, str]:
+    if label not in ds:
+        return None
+    de = ds[label]
+    value = [de.value] if de.VM == 1 else de.value
+    try:
+        out_list = []
+        for item in value:
+            out_list.append(vr_corr[de.VR](item))
+        out_list = tuple(out_list)
+    except ValueError:
+        logging.warning('Data element (%s) will not conform to required type (%s) for %s.' %
+                        (de.description(), str(vr_corr[de.VR]), series_uid))
+        return None
+    return out_list[0] if (len(out_list) == 1 and not keep_list) else out_list
 
 
 def is_intstr(test_str: str) -> bool:

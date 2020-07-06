@@ -1,4 +1,3 @@
-from datetime import datetime
 import logging
 from pathlib import Path
 import shutil
@@ -12,7 +11,7 @@ from pydicom.dicomdir import DicomDir
 from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue, MATCHING_ITEMS
 from .lut import LookupTable
 from .metadata import Metadata
-from .utils import mkdir_p, convert_type, make_tuple
+from .utils import mkdir_p, extract_de, make_tuple
 
 
 DCM_HEADER_ATTRS = [
@@ -48,6 +47,17 @@ DCM_HEADER_ATTRS = [
 ]
 
 
+DCM_HEADER_LISTS = [
+    'ScanningSequence',
+    'SequenceVariant',
+    'ImageType',
+    'ScanOptions',
+    'AcquisitionMatrix',
+    'SoftwareVersions',
+    'PixelSpacing',
+]
+
+
 class DicomInfo(BaseInfo):
 
     def __init__(self, dcmdir: Path) -> None:
@@ -58,17 +68,12 @@ class DicomInfo(BaseInfo):
         self.NumFiles = len(list(dcmdir.glob('*')))
         for item in DCM_HEADER_ATTRS:
             get_item, set_item = item if isinstance(item, tuple) else (item, item)
-            setattr(self, set_item, convert_type(getattr(ds, get_item, None)))
+            setattr(self, set_item, extract_de(ds, get_item, self.SeriesUID, get_item in DCM_HEADER_LISTS))
         self.SeriesDescription = '' if self.SeriesDescription is None else self.SeriesDescription
-        series_date = ds.SeriesDate if ds.SeriesDate != '' else '19691231'
-        try:
-            self.AcqDateTime = str(datetime.strptime(series_date + '-' +
-                                                     ds.SeriesTime.split('.')[0].ljust(6, '0'),
-                                                     '%Y%m%d-%H%M%S'))
-        except ValueError:
-            self.AcqDateTime = str(datetime.strptime(series_date + '-' +
-                                                     ds.SeriesTime.split('.')[0].ljust(6, '0'),
-                                                     '%Y-%m-%d-%H%M%S'))
+        series_date = extract_de(ds, 'SeriesDate', self.SeriesUID, False)
+        series_time = extract_de(ds, 'SeriesTime', self.SeriesUID, False)
+        self.AcqDateTime = ' '.join([str(series_date) if series_date is None else '0000-00-00',
+                                     str(series_time) if series_date is None else '00:00:00'])
         self.Manufacturer = self.Manufacturer.lower().split(' ')[0]
         if (0x2005, 0x1444) in ds:
             turbo = int(ds[(0x2005, 0x1444)].value)
