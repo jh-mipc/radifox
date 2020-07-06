@@ -11,7 +11,7 @@ from pydicom.dicomdir import DicomDir
 from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue, MATCHING_ITEMS
 from .lut import LookupTable
 from .metadata import Metadata
-from .utils import mkdir_p, extract_de, make_tuple
+from .utils import mkdir_p, extract_de
 
 
 DCM_HEADER_ATTRS = [
@@ -83,9 +83,6 @@ class DicomInfo(BaseInfo):
                 self.EPIFactor = int(ds[(0x2001, 0x1013)].value)
             except ValueError:
                 pass
-        self.SequenceType = make_tuple(self.SequenceType)
-        self.SequenceVariant = make_tuple(self.SequenceVariant)
-        self.ScanOptions = make_tuple(self.ScanOptions)
         if self.AcquisitionMatrix is not None:
             # noinspection PyUnresolvedReferences
             self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \

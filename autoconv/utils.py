@@ -90,6 +90,8 @@ def extract_de(ds: FileDataset, label: str, series_uid, keep_list: bool = False)
     if label not in ds:
         return None
     de = ds[label]
+    if de.VM == 0:
+        return None
     value = [de.value] if de.VM == 1 else de.value
     try:
         out_list = []
