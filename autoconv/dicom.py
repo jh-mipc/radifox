@@ -52,9 +52,7 @@ DCM_HEADER_LISTS = [
     'SequenceVariant',
     'ImageType',
     'ScanOptions',
-    'AcquisitionMatrix',
     'SoftwareVersions',
-    'PixelSpacing',
 ]
 
 
