@@ -88,10 +88,10 @@ vr_corr = {
 def extract_de(ds: FileDataset, label: str, series_uid, keep_list: bool = False) -> \
         Union[None, tuple, float, int, str]:
     if label not in ds:
-        return None
+        return tuple() if keep_list else None
     de = ds[label]
     if de.VM == 0:
-        return None
+        return tuple() if keep_list else None
     value = [de.value] if de.VM == 1 else de.value
     try:
         out_list = []
@@ -101,7 +101,7 @@ def extract_de(ds: FileDataset, label: str, series_uid, keep_list: bool = False)
     except ValueError:
         logging.warning('Data element (%s) will not conform to required type (%s) for %s.' %
                         (de.description(), str(vr_corr[de.VR]), series_uid))
-        return None
+        return tuple() if keep_list else None
     return out_list[0] if (len(out_list) == 1 and not keep_list) else out_list
 
 
