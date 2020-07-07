@@ -7,8 +7,8 @@ from .utils import read_csv, is_intstr
 class LookupTable:
 
     def __init__(self, lut_file: Path, project_id: str, site_id: str) -> None:
-        self.FileName = lut_file.resolve().expanduser()
-        lut = read_csv(self.FileName)
+        filename = lut_file.resolve().expanduser()
+        lut = read_csv(filename)
         if site_id is None:
             site_id = ''
         self.LookupDict = {}
