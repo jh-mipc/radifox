@@ -261,7 +261,7 @@ def p_add(path: Path, extra: str) -> Path:
 
 
 def get_software_versions():
-    dcm2niix_version = check_output([shutil.which('dcm2niix'), '--version']).decode().strip().split('\n')[-1].strip()
+    dcm2niix_version = check_output('dcm2niix --version; exit 0', shell=True).decode().strip().split('\n')[-1].strip()
     dcmdjpeg_version = check_output([shutil.which('dcmdjpeg'), '--version']).decode().strip().split('\n')[0].strip()
     emf2sf_version = check_output([shutil.which('emf2sf'), '--version']).decode().strip()
     return {'dcm2niix': dcm2niix_version, 'dcmdjpeg': dcmdjpeg_version, 'emf2sf': emf2sf_version}
