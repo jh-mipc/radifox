@@ -502,6 +502,7 @@ class BaseSet:
                     logging.debug('Adjusting name for %s: %s --> %s' % (di.SeriesUID, di.NiftiName, new_name))
                     di.NiftiName = new_name
             elif non_matching == ['EchoTime', 'ComplexImageComponent']:
+                switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
                 tes = list(set([di.EchoTime for di in sorted(di_list, key=lambda x: x.EchoTime)]))
                 for di in di_list:
                     comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
@@ -509,6 +510,10 @@ class BaseSet:
                     new_name = '-'.join(di.NiftiName.split('-')[:-1] + ['ECHO%d' % (echo_num + 1), comp])
                     logging.debug('Adjusting name for %s: %s --> %s' % (di.SeriesUID, di.NiftiName, new_name))
                     di.NiftiName = new_name
+                    if switch_t2star:
+                        new_name = di.NiftiName.replace('-T1-', '-T2STAR-')
+                        logging.debug('Adjusting name for %s: %s --> %s' % (di.SeriesUID, di.NiftiName, new_name))
+                        di.NiftiName = new_name
             elif non_matching == ['ImageOrientationPatient']:
                 for di in di_list:
                     new_name = '-'.join(di.NiftiName.split('-')[:-1])
