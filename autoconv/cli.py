@@ -161,12 +161,12 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     silentremove(directory / 'prev')
 
 
-@cli.command()
+@cli.command('name')
 @click.argument('directory', type=click.Path(exists=True), callback=abs_path)
 @click.argument('source', type=str)
 @click.argument('name', type=str)
 @click.option('--modality', type=str, default='mr')
-def name(directory: Path, source: str, name: str, modality: str):
+def set_manual_name(directory: Path, source: str, name: str, modality: str):
     session_id = directory.name
     subj_id = directory.parent.name
 
@@ -176,6 +176,6 @@ def name(directory: Path, source: str, name: str, modality: str):
     json_file = directory / '_'.join([subj_id, session_id, '%s-ManualNaming.json' % modality.upper()])
     json_obj = json.loads(json_file.read_text()) if json_file.exists() else {}
 
-    json_obj[source] = name
+    json_obj[source] = name.split('-')
 
     json_file.write_text(json.dumps(json_obj, indent=4, sort_keys=True))
