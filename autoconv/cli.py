@@ -1,7 +1,6 @@
 import json
 import logging
 from pathlib import Path
-import shutil
 
 import click
 
@@ -80,7 +79,8 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
-    if len(list((output_root / metadata.dir_to_str()).glob('*'))) > 0:
+    type_dir = output_root / metadata.dir_to_str() / (modality + '-' + 'parrec' if parrec else 'dcm')
+    if len(list(type_dir.glob('*'))) > 0:
         # TODO: Add checks to see if data has moved (warn and update? error?)
         if force or reckless:
             if not reckless:
@@ -104,7 +104,13 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                 if hash_file_dir(source) != json_obj['InputHash']:
                     raise ValueError('Source file(s) have changed since last conversion, '
                                      'run with --reckless to ignore this error.')
-            shutil.rmtree(output_root / metadata.dir_to_str())
+            silentremove(type_dir)
+            # TODO: Need a way to distinguish nii files created for this modality
+            silentremove(output_root / metadata.dir_to_str() / 'nii')
+            for filepath in (output_root / metadata.dir_to_str() / 'logs').glob('autoconv-*.log'):
+                silentremove(filepath)
+            for filepath in (output_root / metadata.dir_to_str()).glob('%s-*.json' % modality.upper()):
+                silentremove(filepath)
         else:
             raise RuntimeError('Output directory exists, run with --force to remove outputs and re-run.')
 
