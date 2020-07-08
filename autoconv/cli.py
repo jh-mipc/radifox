@@ -149,7 +149,6 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     json_file.rename(directory / 'prev' / json_file.name)
     for filepath in (directory / 'logs').glob('autoconv-*.log'):
         silentremove(filepath)
-
     try:
         run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose, modality,
                      parrec, True, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
@@ -159,8 +158,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         (directory / 'prev' / 'nii').rename(directory / 'nii')
         silentremove(json_file)
         (directory / 'prev' / json_file.name).rename(json_file)
-    else:
-        silentremove(directory / 'prev')
+    silentremove(directory / 'prev')
 
 
 @cli.command()
