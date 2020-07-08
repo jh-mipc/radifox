@@ -168,7 +168,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
 @click.argument('source', type=str)
 @click.argument('name', type=str)
 @click.option('--modality', type=str, default='mr')
-def set_manual_name(directory: Path, source: str, name: str, modality: str):
+def name(directory: Path, source: str, name: str, modality: str):
     session_id = directory.name
     subj_id = directory.parent.name
 
