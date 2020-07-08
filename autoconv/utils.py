@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+from subprocess import check_output
 from typing import Union, Any, List, Optional
 
 import nibabel as nib
@@ -213,41 +214,54 @@ def find_closest(target: int, to_check: List[int]) -> Optional[int]:
     return candidates[0] if len(candidates) == 1 else min(candidates)
 
 
-def hash_update_from_file(filename: Path, hash_obj: Any) -> Any:
+def hash_update_from_file(filename: Path, hash_func: Any = hashlib.md5, include_names: bool = True) -> str:
+    hash_obj = hash_func()
+    if include_names:
+        hash_obj.update(filename.name.encode())
     with filename.open('rb') as fp:
         for chunk in iter(lambda: fp.read(4096), b""):
             hash_obj.update(chunk)
-    return hash_obj
+    return str(hash_obj.hexdigest())
 
 
-def hash_file(filename: Path, hash_obj: Optional[Any] = None) -> str:
-    if hash_obj is None:
-        hash_obj = hashlib.md5()
-    return str(hash_update_from_file(filename, hash_obj).hexdigest())
+def hash_file(filename: Path, hash_type: Any = hashlib.md5, include_names: bool = True) -> str:
+    return hash_update_from_file(filename, hash_type, include_names)
 
 
-def hash_update_from_dir(directory: Path, hash_obj: Any) -> Any:
+def hash_update_from_dir(directory: Path, outer_hash_func: Any = hashlib.sha256,
+                         inner_hash_func: Any = hashlib.md5, include_names: bool = True) -> str:
+    hash_obj = outer_hash_func()
+    if include_names:
+        hash_obj.update(directory.name.encode())
+    hashes = []
     for path in sorted(directory.iterdir(), key=lambda p: str(p).lower()):
-        hash_obj.update(path.name.encode())
         if path.is_file():
-            hash_obj = hash_update_from_file(path, hash_obj)
+            hashes.append(hash_update_from_file(path, inner_hash_func, include_names))
         elif path.is_dir():
-            hash_obj = hash_update_from_dir(path, hash_obj)
-    return hash_obj
+            hashes.append(hash_update_from_dir(path, outer_hash_func, inner_hash_func, include_names))
+    for hash_digest in sorted(hashes):
+        hash_obj.update(hash_digest.encode())
+    return str(hash_obj.hexdigest())
 
 
-def hash_dir(directory, hash_obj: Optional[Any] = None) -> str:
-    if hash_obj is None:
-        hash_obj = hashlib.md5()
-    return str(hash_update_from_dir(directory, hash_obj).hexdigest())
+def hash_dir(directory, outer_hash_func: Any = hashlib.sha256,
+             inner_hash_func: Any = hashlib.md5, include_names: bool = True) -> str:
+    return hash_update_from_dir(directory, outer_hash_func, inner_hash_func, include_names)
 
 
-def sha1_file_dir(file_dir: Path) -> str:
+def hash_file_dir(file_dir: Path, include_names: bool = True) -> str:
     if file_dir.is_file():
-        return hash_file(file_dir, hashlib.sha1())
+        return hash_file(file_dir, hashlib.sha256, include_names=include_names)
     elif file_dir.is_dir():
-        return hash_dir(file_dir, hashlib.sha1())
+        return hash_dir(file_dir, include_names=include_names)
 
 
 def p_add(path: Path, extra: str) -> Path:
     return path.parent / (path.name + extra)
+
+
+def get_software_versions():
+    dcm2niix_version = check_output([shutil.which('dcm2niix'), '--version']).decode().strip().split('\n')[-1].strip()
+    dcmdjpeg_version = check_output([shutil.which('dcmdjpeg'), '--version']).decode().strip().split('\n')[0].strip()
+    emf2sf_version = check_output([shutil.which('emf2sf'), '--version']).decode().strip()
+    return {'dcm2niix': dcm2niix_version, 'dcmdjpeg': dcmdjpeg_version, 'emf2sf': emf2sf_version}

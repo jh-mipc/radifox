@@ -113,14 +113,14 @@ class DicomInfo(BaseInfo):
 
 class DicomSet(BaseSet):
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
-                 input_hash: Optional[str] = None) -> None:
-        super().__init__(source, output_root, metadata_obj, lut_obj, input_hash)
+                 manual_names: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
+        super().__init__(source, output_root, metadata_obj, lut_obj, manual_names, input_hash)
 
         for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
             logging.info('Processing %s' % dcmdir)
             di = DicomInfo(dcmdir)
             if di.should_convert():
-                di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable)
+                di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable, self.ManualNames)
             self.SeriesList.append(di)
 
         logging.info('Generating unique names')

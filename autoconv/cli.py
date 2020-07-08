@@ -1,15 +1,16 @@
 import json
+import logging
 from pathlib import Path
 import shutil
 
 import click
 
 from .base import BaseInfo
-from .exec import run_autoconv
+from .exec import run_autoconv, ExecError
 from .info import __version__
 from .lut import LookupTable
 from .metadata import Metadata
-from .utils import sha1_file_dir, silentremove
+from .utils import hash_file_dir, silentremove, mkdir_p
 
 
 def abs_path(ctx, param, value) -> Path:
@@ -57,10 +58,12 @@ def cli():
 @click.option('--parrec', is_flag=True)
 @click.option('--institution', type=str)
 @click.option('--field-strength', type=int, default=3)
+@click.option('--modality', type=str, default='mr')
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
 def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
             time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
-            no_project_subdir: bool, parrec: bool, institution: str, field_strength: int, manual_arg: dict) -> None:
+            no_project_subdir: bool, parrec: bool, institution: str, field_strength: int, modality: str,
+            manual_arg: dict) -> None:
 
     mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
     if tms_metafile:
@@ -81,7 +84,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
         if force or reckless:
             if not reckless:
                 json_file = output_root / metadata.dir_to_str() / (metadata.prefix_to_str() +
-                                                                   '_MR-UnconvertedInfo.json')
+                                                                   '_%s-UnconvertedInfo.json' % modality.upper())
                 if not json_file.exists():
                     raise ValueError('Unconverted info file (%s) does not exist for consistency checking. '
                                      'Cannot use --force, use --reckless instead.' % json_file)
@@ -97,7 +100,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                 elif json_obj['TMSMetaFile'] is None and metadata.TMSMetaFile is not None:
                     raise ValueError('Previous conversion used a TMS metadata file, '
                                      'run with --reckless to ignore this error.')
-                if sha1_file_dir(source) != json_obj['InputHash']:
+                if hash_file_dir(source) != json_obj['InputHash']:
                     raise ValueError('Source file(s) have changed since last conversion, '
                                      'run with --reckless to ignore this error.')
             shutil.rmtree(output_root / metadata.dir_to_str())
@@ -107,19 +110,21 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['MagneticFieldStrength'] = field_strength
     manual_arg['InstitutionName'] = institution
 
-    run_autoconv(source, output_root, metadata, lut, verbose, parrec, False, manual_arg, None)
+    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, manual_arg, None)
 
 
 @cli.command()
 @click.argument('directory', type=click.Path(exists=True), callback=abs_path)
 @click.option('-l', '--lut-file', type=click.Path(exists=True), required=True, callback=abs_path)
+@click.option('--force', is_flag=True)
 @click.option('--parrec', is_flag=True)
+@click.option('--modality', type=str, default='mr')
 @click.option('-v', '--verbose', is_flag=True)
-def update(directory: Path, lut_file: Path, parrec: bool, verbose: bool) -> None:
+def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality: str, verbose: bool) -> None:
     session_id = directory.name
     subj_id = directory.parent.name
 
-    json_file = directory / '_'.join([subj_id, session_id, 'MR-UnconvertedInfo.json'])
+    json_file = directory / '_'.join([subj_id, session_id, '%s-UnconvertedInfo.json' % modality])
     if not json_file.exists():
         raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
     json_obj = json.loads(json_file.read_text())
@@ -127,19 +132,52 @@ def update(directory: Path, lut_file: Path, parrec: bool, verbose: bool) -> None
     metadata = Metadata.from_dict(json_obj['Metadata'])
 
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
-    if json_obj['AutoConvVersion'] == __version__ and json_obj['LookupTable']['LookupDict'] == lut.LookupDict:
+    if not force and (json_obj['AutoConvVersion'] == __version__ and
+                      json_obj['LookupTable']['LookupDict'] == lut.LookupDict):
         print('No action required. Software version and LUT dictionary match for %s.' % directory)
         return
 
-    if parrec and not (directory / 'mr-parrec').exists():
-        raise ValueError('Update source was specified as PARREC, but mr-parrec source directory does not exist.')
-    elif not parrec and not (directory / 'mr-dcm').exists():
-        raise ValueError('Update source was specified as DICOM, but mr-dcm source directory does not exist.')
+    if parrec and not (directory / ('%s-parrec' % modality)).exists():
+        raise ValueError('Update source was specified as PARREC, but '
+                         '%s-parrec source directory does not exist.' % modality)
+    elif not parrec and not (directory / ('%s-dcm' % modality)).exists():
+        raise ValueError('Update source was specified as DICOM, but '
+                         '%s-dcm source directory does not exist.' % modality)
 
-    silentremove(directory / 'nii')
-    silentremove(directory / (metadata.prefix_to_str() + '_MR-UnconvertedInfo.json'))
+    mkdir_p(directory / 'prev')
+    (directory / 'nii').rename(directory / 'prev' / 'nii')
+    json_file.rename(directory / 'prev' / json_file.name)
     for filepath in (directory / 'logs').glob('autoconv-*.log'):
         silentremove(filepath)
 
-    run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose,
-                 parrec, True, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
+    try:
+        run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose, modality,
+                     parrec, True, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
+    except ExecError:
+        logging.info('Exception caught during update. Resetting to previous state.')
+        silentremove(directory / 'nii')
+        (directory / 'prev' / 'nii').rename(directory / 'nii')
+        silentremove(json_file)
+        (directory / 'prev' / json_file.name).rename(json_file)
+    else:
+        silentremove(directory / 'prev')
+
+
+@cli.command()
+@click.argument('directory', type=click.Path(exists=True), callback=abs_path)
+@click.argument('source', type=str)
+@click.argument('name', type=str)
+@click.option('--modality', type=str, default='mr')
+def set_manual_name(directory: Path, source: str, name: str, modality: str):
+    session_id = directory.name
+    subj_id = directory.parent.name
+
+    if not (directory / Path(source)).exists():
+        raise ValueError('Source directory/file does not exist.')
+
+    json_file = directory / '_'.join([subj_id, session_id, '%s-ManualNaming.json' % modality.upper()])
+    json_obj = json.loads(json_file.read_text()) if json_file.exists() else {}
+
+    json_obj[source] = name
+
+    json_file.write_text(json.dumps(json_obj, indent=4, sort_keys=True))

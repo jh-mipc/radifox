@@ -87,8 +87,9 @@ class ParrecInfo(BaseInfo):
 class ParrecSet(BaseSet):
 
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
-                 manual_args: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
-        super().__init__(source, output_root, metadata_obj, lut_obj, input_hash)
+                 manual_names: Optional[dict] = None, manual_args: Optional[dict] = None,
+                 input_hash: Optional[str] = None) -> None:
+        super().__init__(source, output_root, metadata_obj, lut_obj, manual_names, input_hash)
         self.ManualArgs = manual_args
 
         for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):
@@ -105,7 +106,7 @@ class ParrecSet(BaseSet):
                     elif not di.SeriesDescription.startswith('sWIP'):
                         di.ConvertImage = False
                 if di.ConvertImage:
-                    di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable)
+                    di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable, self.ManualNames)
 
         logging.info('Generating unique names')
         self.generate_unique_names()

@@ -17,7 +17,7 @@ from .lut import LookupTable
 from .metadata import Metadata
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
-                    add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir, p_add)
+                    add_acq_num, find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions)
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram']
@@ -34,6 +34,7 @@ class BaseInfo:
     # TODO: Type consistent defaults?
     def __init__(self, path: Path) -> None:
         self.SourcePath = path
+        self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
         self.SeriesUID = None
         self.StudyUID = None
         self.NumFiles = None
@@ -81,6 +82,7 @@ class BaseInfo:
         self.NiftiCreated = False
         self.LookupName = None
         self.PredictedName = None
+        self.ManualName = None
         self.NiftiName = None
 
     def __repr_json__(self) -> dict:
@@ -109,12 +111,18 @@ class BaseInfo:
             logging.info('This series is localizer, derived or processed image. Skipping.')
         return self.ConvertImage
 
-    def create_image_name(self, scan_str: str, lut_obj: LookupTable) -> None:
+    def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
         autogen = False
-        pred_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
-        if pred_list is False:
-            self.ConvertImage = False
-            return
+        manual_name = False
+        source_name = str(Path(self.SourcePath.parent.name) / self.SourcePath.name)
+        if source_name in manual_dict:
+            pred_list = manual_dict[source_name]
+            manual_name = True
+        else:
+            pred_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
+            if pred_list is False:
+                self.ConvertImage = False
+                return
         if pred_list is None:
             # Needs automatic naming
             logging.debug('Name lookup failed, using automatic name generation.')
@@ -294,9 +302,12 @@ class BaseInfo:
         if autogen:
             self.PredictedName = pred_list
         else:
-            self.LookupName = pred_list
-        logging.debug('Predicted name: %s' % self.NiftiName)
+            if manual_name:
+                self.ManualName = pred_list
+            else:
+                self.LookupName = pred_list
         self.NiftiName = '_'.join([scan_str, '-'.join(pred_list)])
+        logging.debug('Predicted name: %s' % self.NiftiName)
 
     def create_nii(self) -> None:
         if not self.ConvertImage:
@@ -356,6 +367,7 @@ class BaseInfo:
                 new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph|real|imaginary)$', '', filename.name))
                 p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
                 filename = new_path
+        # TODO: Add a hash check to see if any previous ACQ# match exactly and remove if so
         if success:
             if (niidir / (self.NiftiName + '.nii.gz')).exists():
                 self.NiftiCreated = True
@@ -374,16 +386,18 @@ class BaseInfo:
 
 class BaseSet:
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
-                 input_hash: Optional[str] = None) -> None:
+                 manual_names: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
         self.AutoConvVersion = __version__
+        self.ConversionSoftwareVersions = get_software_versions()
         self.InputSource = source
         if input_hash is None:
             logging.info('Hashing source file(s) for record keeping.')
-            self.InputHash = sha1_file_dir(self.InputSource)
+            self.InputHash = hash_file_dir(self.InputSource)
             logging.info('Hashing complete.')
         else:
             logging.info('Using existing source hash for record keeping.')
             self.InputHash = input_hash
+        self.ManualNames = manual_names if manual_names is not None else {}
         self.Metadata = metadata_obj
         self.LookupTable = lut_obj
         self.OutputRoot = output_root
