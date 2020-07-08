@@ -20,7 +20,7 @@ def abs_path(ctx, param, value) -> Path:
 
 def parse_manual_args(ctx, param, value) -> dict:
     arg_converter = {'int': int, 'float': float, 'str': str}
-    template = BaseInfo(Path('/'))
+    template = BaseInfo(Path('/dev/null'))
     out_args = {}
     for argstr in value:
         arg_arr = argstr.split(':')
