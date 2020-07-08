@@ -117,7 +117,7 @@ def sort_parrecs(parrec_dir: Path) -> None:
     logging.info('Sorting PARRECs')
     new_files = []
     study_uid = '2.25.' + str(int(str(secrets.randbits(96))))
-    pattern = re.compile(r'2\.25\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.par')
+    pattern = re.compile(r'2\.25\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.par')
     for parfile in sorted(parrec_dir.rglob('*.par')):
         if pattern.search(parfile.name) is None:
             new_files.extend(split_fix_parrec(parfile, study_uid, parrec_dir))
