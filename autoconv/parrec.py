@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 from pathlib import Path
+import re
 import secrets
 import shutil
 from typing import Optional
@@ -116,10 +117,15 @@ def sort_parrecs(parrec_dir: Path) -> None:
     logging.info('Sorting PARRECs')
     new_files = []
     study_uid = '2.25.' + str(int(str(secrets.randbits(96))))
+    pattern = re.compile(r'2\.25\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.par')
     for parfile in sorted(parrec_dir.rglob('*.par')):
-        new_files.extend(split_fix_parrec(parfile, study_uid, parrec_dir))
-        silentremove(parfile)
-        silentremove(parfile.with_suffix('.rec'))
+        if pattern.search(parfile.name) is None:
+            new_files.extend(split_fix_parrec(parfile, study_uid, parrec_dir))
+            silentremove(parfile)
+            silentremove(parfile.with_suffix('.rec'))
+        else:
+            new_files.append(parfile)
+            new_files.append(parfile.with_suffix('.rec'))
     for path in parrec_dir.glob('*'):
         if path.name not in new_files:
             if path.is_dir():
