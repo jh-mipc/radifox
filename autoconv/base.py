@@ -34,7 +34,7 @@ class BaseInfo:
     # TODO: Type consistent defaults?
     def __init__(self, path: Path) -> None:
         self.SourcePath = path
-        # self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
+        self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
         self.SeriesUID = None
         self.StudyUID = None
         self.NumFiles = None
@@ -84,6 +84,7 @@ class BaseInfo:
         self.PredictedName = None
         self.ManualName = None
         self.NiftiName = None
+        self.NiftiHash = None
 
     def __repr_json__(self) -> dict:
         return {k: NoIndent(v) for k, v in self.__dict__.items()}
@@ -371,6 +372,7 @@ class BaseInfo:
         if success:
             if (niidir / (self.NiftiName + '.nii.gz')).exists():
                 self.NiftiCreated = True
+                self.NiftiHash = hash_file_dir(niidir / (self.NiftiName + '.nii.gz'))
                 logging.info('Nifti created successfully at %s' % (niidir / (self.NiftiName + '.nii.gz')))
                 if '-ACQ3' in self.NiftiName:
                     logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
