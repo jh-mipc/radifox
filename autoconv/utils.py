@@ -228,25 +228,26 @@ def hash_file(filename: Path, hash_type: Any = hashlib.md5, include_names: bool 
     return hash_update_from_file(filename, hash_type, include_names)
 
 
-def hash_update_from_dir(directory: Path, outer_hash_func: Any = hashlib.sha256,
-                         inner_hash_func: Any = hashlib.md5, include_names: bool = True) -> str:
-    hash_obj = outer_hash_func()
+def hash_update_from_dir(directory: Path, hash_func: Any = hashlib.md5, include_names: bool = True,
+                         existing_hashes: Optional[list] = None) -> list:
+    if existing_hashes is None:
+        existing_hashes = []
     if include_names:
-        hash_obj.update(directory.name.encode())
-    hashes = []
+        existing_hashes.append(directory.name)
     for path in sorted(directory.iterdir(), key=lambda p: str(p).lower()):
         if path.is_file():
-            hashes.append(hash_update_from_file(path, inner_hash_func, include_names))
+            existing_hashes.append(hash_update_from_file(path, hash_func, include_names))
         elif path.is_dir():
-            hashes.append(hash_update_from_dir(path, outer_hash_func, inner_hash_func, include_names))
-    for hash_digest in sorted(hashes):
-        hash_obj.update(hash_digest.encode())
-    return str(hash_obj.hexdigest())
+            existing_hashes.extend(hash_update_from_dir(path, hash_func, include_names))
+    return existing_hashes
 
 
 def hash_dir(directory, outer_hash_func: Any = hashlib.sha256,
              inner_hash_func: Any = hashlib.md5, include_names: bool = True) -> str:
-    return hash_update_from_dir(directory, outer_hash_func, inner_hash_func, include_names)
+    hashobj = outer_hash_func()
+    for item in sorted(hash_update_from_dir(directory, inner_hash_func, include_names)):
+        hashobj.update(item.encode())
+    return str(hashobj.hexdigest())
 
 
 def hash_file_dir(file_dir: Path, include_names: bool = True) -> str:
