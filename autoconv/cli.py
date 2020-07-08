@@ -8,6 +8,7 @@ import click
 from .base import BaseInfo
 from .exec import run_autoconv, ExecError
 from .info import __version__
+from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
 from .utils import hash_file_dir, silentremove, mkdir_p
@@ -176,6 +177,14 @@ def set_manual_name(directory: Path, source: str, name: str, modality: str):
     json_file = directory / '_'.join([subj_id, session_id, '%s-ManualNaming.json' % modality.upper()])
     json_obj = json.loads(json_file.read_text()) if json_file.exists() else {}
 
+    if source in json_obj:
+        print('Updating manual name for %s (%s to %s)' % (source, '-'.join(json_obj[source]), name))
+    else:
+        print('Adding manual name for %s (%s)' % (source, name))
+
     json_obj[source] = name.split('-')
 
-    json_file.write_text(json.dumps(json_obj, indent=4, sort_keys=True))
+    for key in json_obj:
+        json_obj[key] = NoIndent(json_obj[key])
+
+    json_file.write_text(json.dumps(json_obj, indent=4, sort_keys=True, cls=JSONObjectEncoder))
