@@ -16,7 +16,7 @@ from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
 # from .logging import WARNING_DEBUG
-from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
+from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list,
                     add_acq_num, find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions)
 
 
@@ -34,7 +34,11 @@ class BaseInfo:
     # TODO: Type consistent defaults?
     def __init__(self, path: Path) -> None:
         self.SourcePath = path
-        self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
+        if self.SourcePath.suffix == '.par':
+            self.SourceHash = hash_file_list([self.SourcePath, self.SourcePath.with_suffix('.rec')],
+                                             include_names=False)
+        else:
+            self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
         self.SeriesUID = None
         self.StudyUID = None
         self.NumFiles = None
@@ -503,7 +507,7 @@ class BaseSet:
                     di.NiftiName = new_name
             elif non_matching == ['EchoTime', 'ComplexImageComponent']:
                 switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
-                tes = list(set([di.EchoTime for di in sorted(di_list, key=lambda x: x.EchoTime)]))
+                tes = sorted(list(set([di.EchoTime for di in di_list])))
                 for di in di_list:
                     comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
                     echo_num = tes.index(di.EchoTime)

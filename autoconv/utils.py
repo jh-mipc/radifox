@@ -257,6 +257,13 @@ def hash_file_dir(file_dir: Path, include_names: bool = True) -> str:
         return hash_dir(file_dir, include_names=include_names)
 
 
+def hash_file_list(file_list: List[Path], include_names: bool = True) -> str:
+    hash_obj = hashlib.sha256()
+    for path in file_list:
+        hash_obj.update(hash_file_dir(path, include_names).encode())
+    return str(hash_obj.hexdigest())
+
+
 def p_add(path: Path, extra: str) -> Path:
     return path.parent / (path.name + extra)
 
