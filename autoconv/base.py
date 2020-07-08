@@ -34,7 +34,7 @@ class BaseInfo:
     # TODO: Type consistent defaults?
     def __init__(self, path: Path) -> None:
         self.SourcePath = path
-        self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
+        # self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
         self.SeriesUID = None
         self.StudyUID = None
         self.NumFiles = None
@@ -392,7 +392,7 @@ class BaseSet:
         self.InputSource = source
         if input_hash is None:
             logging.info('Hashing source file(s) for record keeping.')
-            self.InputHash = hash_file_dir(self.InputSource)
+            self.InputHash = hash_file_dir(self.InputSource, False)
             logging.info('Hashing complete.')
         else:
             logging.info('Using existing source hash for record keeping.')
