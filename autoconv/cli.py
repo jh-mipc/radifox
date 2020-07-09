@@ -83,7 +83,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
     type_dir = output_root / metadata.dir_to_str() / (modality + '-' + 'parrec' if parrec else 'dcm')
-    if len(list(type_dir.glob('*'))) > 0:
+    if type_dir.exists():
         # TODO: Add checks to see if data has moved (warn and update? error?)
         if force or reckless:
             if not reckless:
