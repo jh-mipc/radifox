@@ -142,6 +142,8 @@ def allowed_archives() -> (List[str], List[str]):
     for names, extensions, _ in shutil.get_unpack_formats():
         allowed_exts.extend(extensions)
         allowed_names.append(names)
+    if '.zip' in allowed_exts:
+        allowed_exts.append('.zip.zip')
     return allowed_names, allowed_exts
 
 
