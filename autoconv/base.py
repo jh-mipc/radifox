@@ -255,7 +255,7 @@ class BaseInfo:
                     'l-sp' in series_desc:
                 body_part = 'LSPINE'
             elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
-                    re.search(r'\sct(?:\s+|$)', series_desc) or 'vibe' in series_desc or \
+                    re.search(r'\sct(?:\s+|$)', series_desc) or \
                     series_desc.startswith('sp_'):
                 body_part = 'SPINE'
             elif 'orbit' in series_desc or 'thin' in series_desc or series_desc.startswith('on_'):
