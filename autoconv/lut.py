@@ -35,9 +35,10 @@ class LookupTable:
             series_desc = series_desc[4:]
         if series_desc.endswith(' CLEAR') or series_desc.endswith(' SENSE'):
             series_desc = series_desc[:-6]
-        if inst_name in self.LookupDict:
-            if series_desc in self.LookupDict[inst_name]:
-                if self.LookupDict[inst_name][series_desc] == 'None':
-                    return False
-                return self.LookupDict[inst_name][series_desc].split('-')
+        for item in [inst_name, 'None']:
+            if item in self.LookupDict:
+                if series_desc in self.LookupDict[item]:
+                    if self.LookupDict[item][series_desc] == 'None':
+                        return False
+                    return self.LookupDict[item][series_desc].split('-')
         return None
