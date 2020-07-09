@@ -141,7 +141,7 @@ def allowed_archives() -> (List[str], List[str]):
     allowed_names = []
     for names, extensions, _ in shutil.get_unpack_formats():
         allowed_exts.extend(extensions)
-        allowed_names.extend(names)
+        allowed_names.append(names)
     return allowed_names, allowed_exts
 
 
