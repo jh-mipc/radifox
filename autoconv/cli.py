@@ -44,7 +44,7 @@ def cli():
 @cli.command()
 @click.argument('source', type=click.Path(exists=True), callback=abs_path)
 @click.option('-o', '--output-root', type=click.Path(), callback=abs_path, required=True)
-@click.option('-l', '--lut-file', type=click.Path(exists=True), callback=abs_path, required=True)
+@click.option('-l', '--lut-file', type=click.Path(exists=True), callback=abs_path)
 @click.option('-p', '--project-id', type=str)
 @click.option('-a', '--patient-id', type=str)
 @click.option('-s', '--site-id', type=str)
@@ -77,6 +77,9 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                 raise ValueError('%s is a required argument when no metadata file is provided.' % mapping[item])
         metadata = Metadata(project_id, patient_id, time_id, site_id, project_shortname, no_project_subdir)
 
+    if lut_file is None:
+        lut_file = (output_root / (project_id + '-lut.csv')) if no_project_subdir else \
+            (output_root / project_id / (project_id + '-lut.csv'))
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
     type_dir = output_root / metadata.dir_to_str() / (modality + '-' + 'parrec' if parrec else 'dcm')
@@ -122,7 +125,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
 
 @cli.command()
 @click.argument('directory', type=click.Path(exists=True), callback=abs_path)
-@click.option('-l', '--lut-file', type=click.Path(exists=True), required=True, callback=abs_path)
+@click.option('-l', '--lut-file', type=click.Path(exists=True), callback=abs_path)
 @click.option('--force', is_flag=True)
 @click.option('--parrec', is_flag=True)
 @click.option('--modality', type=str, default='mr')
@@ -138,7 +141,10 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
 
+    if lut_file is None:
+        lut_file = (directory.parent.parent / (metadata.ProjectID + '-lut.csv'))
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
+
     if not force and (json_obj['AutoConvVersion'] == __version__ and
                       json_obj['LookupTable']['LookupDict'] == lut.LookupDict):
         print('No action required. Software version and LUT dictionary match for %s.' % directory)
