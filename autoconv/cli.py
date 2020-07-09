@@ -79,8 +79,8 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
         metadata = Metadata(project_id, patient_id, time_id, site_id, project_shortname, no_project_subdir)
 
     if lut_file is None:
-        lut_file = (output_root / (project_id + '-lut.csv')) if no_project_subdir else \
-            (output_root / project_id / (project_id + '-lut.csv'))
+        lut_file = (output_root / (metadata.ProjectID + '-lut.csv')) if no_project_subdir else \
+            (output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv'))
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
     type_dir = output_root / metadata.dir_to_str() / (modality + '-' + ('parrec' if parrec else 'dcm'))
