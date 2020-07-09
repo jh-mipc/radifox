@@ -225,7 +225,7 @@ class BaseInfo:
             if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
                 sequence = sequence.replace('IR', 'IRF')
             if 'mprage' in series_desc or 'bravo' in series_desc or \
-                    (self.Manufacturer == 'philips' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant):
+                    (self.Manufacturer == 'PHILIPS' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant):
                 sequence = 'IRFSPGR'
             if modality == 'UNK':
                 if sequence == 'IRFSPGR':

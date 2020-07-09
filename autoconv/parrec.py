@@ -41,7 +41,7 @@ class ParrecInfo(BaseInfo):
 
         self.SeriesUID = par_file.name[:-4]
         self.StudyUID = '.'.join(self.SeriesUID.split('.')[:3])
-        self.Manufacturer = 'philips'
+        self.Manufacturer = 'PHILIPS'
         for key, value in GENERAL_INFO_FIELDS.items():
             setattr(self, key, hdr.general_info[value])
         self.ReconstructionNumber = hdr.general_info['recon_nr']
