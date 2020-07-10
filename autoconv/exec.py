@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 import shutil
@@ -12,8 +13,12 @@ from .parrec import ParrecSet, sort_parrecs
 from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, DIR_OCTAL
 
 
+class ExecError(Exception):
+    pass
+
+
 def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: LookupTable,
-                 verbose: bool, parrec: bool, rerun: bool, manual_args: dict,
+                 verbose: bool, modality: str, parrec: bool, rerun: bool, manual_args: dict,
                  input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
@@ -45,10 +50,14 @@ def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: Looku
             sort_func(type_folder)
             recursive_chmod(type_folder)
 
+        manual_json_file = (session_path / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
+        manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
+
         if parrec:
-            img_set = ParrecSet(source, output_root, metadata, lut, input_hash=input_hash, manual_args=manual_args)
+            img_set = ParrecSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash,
+                                manual_args=manual_args)
         else:
-            img_set = DicomSet(source, output_root, metadata, lut, input_hash=input_hash)
+            img_set = DicomSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash)
         img_set.create_all_nii()
         recursive_chmod(session_path / 'nii')
         img_set.generate_unconverted_info()
@@ -58,3 +67,4 @@ def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: Looku
         raise
     except:
         logging.exception('Fatal error occurred.')
+        raise ExecError()

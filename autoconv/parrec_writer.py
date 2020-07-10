@@ -150,7 +150,9 @@ def split_fix_parrec(in_filename: Path, study_uid, outdir) -> List[str]:
             split_vols[split_def] = []
         split_vols[split_def].append(vol_num)
 
-    series_uid = study_uid + ('.%02d.' % hdr.general_info['acq_nr']) + str(int(str(secrets.randbits(16))))
+    series_uid = study_uid + ('.%02d.%02d.' % (hdr.general_info['acq_nr'],
+                                               hdr.general_info['recon_nr']))\
+        + str(int(str(secrets.randbits(16))))
     for i, vol_nums in enumerate(sorted(split_vols.values())):
         this_hdr = deepcopy(hdr)
         this_hdr.image_defs = idefs[np.in1d(slice_vols, vol_nums)]

@@ -58,7 +58,7 @@ def pkg_commit_hash(pkg_path: Path):
 
 
 _version_major = 0
-_version_minor = 1
+_version_minor = 2
 _version_micro = 0
 _version_extra = ''  # Remove -dev for release
 

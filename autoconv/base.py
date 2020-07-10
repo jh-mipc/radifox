@@ -8,6 +8,7 @@ import shutil
 from subprocess import run
 from typing import List, Tuple, Union, Any, Optional
 
+import nibabel as nib
 import numpy as np
 
 from .info import __version__
@@ -15,12 +16,12 @@ from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
 # from .logging import WARNING_DEBUG
-from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files,
-                    add_acq_num, find_closest, FILE_OCTAL, sha1_file_dir, p_add)
+from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list,
+                    add_acq_num, find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions)
 
 
-DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'cal', 'scanogram']
-POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc']
+DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram']
+POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
                   'InversionTime', 'ComplexImageComponent']
@@ -30,8 +31,14 @@ PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
 class BaseInfo:
 
+    # TODO: Type consistent defaults?
     def __init__(self, path: Path) -> None:
         self.SourcePath = path
+        if self.SourcePath.suffix == '.par':
+            self.SourceHash = hash_file_list([self.SourcePath, self.SourcePath.with_suffix('.rec')],
+                                             include_names=False)
+        else:
+            self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
         self.SeriesUID = None
         self.StudyUID = None
         self.NumFiles = None
@@ -49,6 +56,7 @@ class BaseInfo:
         self.EchoTime = None
         self.InversionTime = None
         self.EchoTrainLength = None
+        self.EPIFactor = None
         self.AcquisitionMatrix = []
         self.AcquiredResolution = None
         self.ReconMatrix = None
@@ -61,6 +69,7 @@ class BaseInfo:
         self.BodyPartExamined = None
         self.StudyDescription = None
         self.SequenceVariant = tuple()
+        self.ScanOptions = tuple()
         self.SequenceName = None
         self.ExContrastAgent = None
         self.ImageOrientationPatient = None
@@ -77,7 +86,9 @@ class BaseInfo:
         self.NiftiCreated = False
         self.LookupName = None
         self.PredictedName = None
+        self.ManualName = None
         self.NiftiName = None
+        self.NiftiHash = None
 
     def __repr_json__(self) -> dict:
         return {k: NoIndent(v) for k, v in self.__dict__.items()}
@@ -87,7 +98,8 @@ class BaseInfo:
         series_desc = self.SeriesDescription.lower()
         type_status = ('derived' not in type_str) or \
                       ('derived' in type_str and 'primary' in type_str)
-        desc_ignore = any([item in series_desc for item in DESCRIPTION_IGNORE])
+        desc_ignore = any([item in series_desc for item in DESCRIPTION_IGNORE]) or \
+            re.search(r'\scal(?:\s+|$)', series_desc)
         mpr_ignore = (re.search(r'.*mpr(?!age).*', series_desc) is not None) or \
             any([img_type.lower() == 'mpr' for img_type in self.ImageType]) or \
             any(['projection' in img_type.lower() for img_type in self.ImageType]) or \
@@ -104,12 +116,18 @@ class BaseInfo:
             logging.info('This series is localizer, derived or processed image. Skipping.')
         return self.ConvertImage
 
-    def create_image_name(self, scan_str: str, lut_obj: LookupTable) -> None:
+    def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
         autogen = False
-        pred_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
-        if pred_list is False:
-            self.ConvertImage = False
-            return
+        manual_name = False
+        source_name = str(Path(self.SourcePath.parent.name) / self.SourcePath.name)
+        if source_name in manual_dict:
+            pred_list = manual_dict[source_name]
+            manual_name = True
+        else:
+            pred_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
+            if pred_list is False:
+                self.ConvertImage = False
+                return
         if pred_list is None:
             # Needs automatic naming
             logging.debug('Name lookup failed, using automatic name generation.')
@@ -117,15 +135,18 @@ class BaseInfo:
             series_desc = self.SeriesDescription.lower()
             if series_desc.startswith('wip'):
                 series_desc = series_desc[3:].lstrip()
+            scan_opts = [opt.lower() for opt in self.ScanOptions]
             # 1) Orientation
-            orientation = self.SliceOrientation.upper()
+            orientation = self.SliceOrientation.upper() if self.SliceOrientation is not None else 'NONE'
             # 2) Resolution
             resolution = self.AcquisitionDimension
+            if resolution not in ['2D', '3D']:
+                resolution = '3D' if '3d' in series_desc else '2D'
             # 3) Ex-contrast
             excontrast = 'PRE'
             if not (self.ExContrastAgent is None or self.ExContrastAgent == ''):
                 excontrast = 'POST'
-            elif any([item in series_desc for item in POSTGAD_DESC]):
+            elif any([item in series_desc for item in POSTGAD_DESC]) and 'pre' not in series_desc:
                 excontrast = 'POST'
             # 4) Modality
             desc_modalities = []
@@ -140,7 +161,8 @@ class BaseInfo:
                 desc_modalities.append('T2STAR')
             if 'stir' in series_desc:
                 desc_modalities.append('STIR')
-            if 'dti' in series_desc or 'diff' in series_desc or 'dw' in series_desc or 'b1000' in series_desc or \
+            if 'dti' in series_desc or 'diff' in series_desc or re.search(r'(?<!p)dw', series_desc) or \
+                    'b1000' in series_desc or 'tensor' in series_desc or \
                     any([img_type.lower() == 'diffusion' for img_type in self.ImageType]):
                 desc_modalities.append('DIFF')
 
@@ -164,10 +186,10 @@ class BaseInfo:
                 modality = 'FLOW'
             elif any(['tof' in img_type.lower() for img_type in self.ImageType]) or \
                     any(['tof' in variant.lower() for variant in self.SequenceVariant]) or \
-                    'tof' in series_desc or 'angio' in series_desc:
+                    re.search(r'tof(?!f)', series_desc) or 'angio' in series_desc:
                 modality = 'TOF'
             elif any(['mtc' in variant.lower() for variant in self.SequenceVariant]) or \
-                    getattr(self, 'MTContrast', 0) == 1:
+                    getattr(self, 'MTContrast', 0) == 1 or 'mt_gems' in scan_opts:
                 modality = 'MT'
             elif getattr(self, 'DiffusionFlag', 0) == 1:
                 modality = 'DIFF'
@@ -181,19 +203,17 @@ class BaseInfo:
                 sequence = 'SE'
             elif any([seq == 'gr' for seq in seq_type]):
                 sequence = 'GRE'
-            elif 't1ffe' in seq_name:
-                sequence = 'SPGR'
             elif self.FlipAngle >= 60:
                 sequence = 'SE'
-            if any(['ep' == seq for seq in seq_type]) or \
-                    'epi' in seq_name or 'epi' in series_desc or \
-                    getattr(self, 'EPIFactor', 0) > 1 or \
-                    'feepi' in seq_name:
+            if any(['ep' == seq for seq in seq_type]) or 'epi' in seq_name or \
+                    (self.EPIFactor is not None and self.EPIFactor > 1):
                 sequence = 'EPI'
+            if 't1ffe' in seq_name or 'fl3d1' in seq_name:
+                sequence = 'SPGR'
             if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
                                       any([variant == 'ss' for variant in seq_var])):
                 sequence = 'SPGR'
-            if sequence != 'EPI' and etl > 1:
+            if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
                 sequence = 'F' + sequence
             if sequence != 'EPI' and 'IR' not in sequence:
                 if self.InversionTime is not None and self.InversionTime > 50:
@@ -205,7 +225,7 @@ class BaseInfo:
             if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
                 sequence = sequence.replace('IR', 'IRF')
             if 'mprage' in series_desc or 'bravo' in series_desc or \
-                    self.Manufacturer == 'philips' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant:
+                    (self.Manufacturer == 'PHILIPS' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant):
                 sequence = 'IRFSPGR'
             if modality == 'UNK':
                 if sequence == 'IRFSPGR':
@@ -213,7 +233,7 @@ class BaseInfo:
                 elif sequence.endswith('SE'):
                     modality = 'T2'
                 elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
-                    modality = 'T1' if self.EchoTime < 15 and self.RepetitionTime < 60 else 'T2STAR'
+                    modality = 'T1' if self.EchoTime < 15 else 'T2STAR'
             if modality == 'T2' and sequence.startswith('IR'):
                 modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
             elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
@@ -235,7 +255,7 @@ class BaseInfo:
                     'l-sp' in series_desc:
                 body_part = 'LSPINE'
             elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
-                    re.search(r'\sct(?:\s+|$)', self.SeriesDescription.lower()) or 'vibe' in series_desc or \
+                    re.search(r'\sct(?:\s+|$)', series_desc) or \
                     series_desc.startswith('sp_'):
                 body_part = 'SPINE'
             elif 'orbit' in series_desc or 'thin' in series_desc or series_desc.startswith('on_'):
@@ -287,9 +307,12 @@ class BaseInfo:
         if autogen:
             self.PredictedName = pred_list
         else:
-            self.LookupName = pred_list
-        logging.debug('Predicted name: %s' % self.NiftiName)
+            if manual_name:
+                self.ManualName = pred_list
+            else:
+                self.LookupName = pred_list
         self.NiftiName = '_'.join([scan_str, '-'.join(pred_list)])
+        logging.debug('Predicted name: %s' % self.NiftiName)
 
     def create_nii(self) -> None:
         if not self.ConvertImage:
@@ -313,14 +336,22 @@ class BaseInfo:
             logging.warning('dcm2niix failed for %s' % self.SourcePath)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
             logging.warning('dcm2niix return code: %d' % result.returncode)
-            logging.warning('dcm2niix output:' % result.returncode)
-            logging.warning('\n' + result.stdout)
+            logging.warning('dcm2niix output:\n' + result.stdout)
             for filename in parse_dcm2niix_filenames(result.stdout):
                 remove_created_files(filename)
             logging.warning('Nifti creation failed.')
             return
 
-        for filename in parse_dcm2niix_filenames(result.stdout):
+        filenames = parse_dcm2niix_filenames(result.stdout)
+        if len(filenames) > 1:
+            filename_check = re.compile(str(filenames[0]) + r'_t[0-9]+$')
+            if all([filename_check.match(str(item)) is not None for item in filenames[1:]]):
+                nib.concat_images([nib.load(str(item) + '.nii.gz') for item in filenames])\
+                    .to_filename(str(filenames[0]) + '.nii.gz')
+                for filename in filenames[1:]:
+                    p_add(filename, '.nii.gz').unlink()
+                filenames = [filenames[0]]
+        for filename in filenames:
             if not success:
                 remove_created_files(filename)
             if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
@@ -337,13 +368,15 @@ class BaseInfo:
             if 'DIFF' in filename.name and p_add(filename, '_ADC.nii.gz').exists():
                 logging.info('Additional ADC images produced by dcm2niix. Removing.')
                 p_add(filename, '_ADC.nii.gz').unlink()
-            while re.search(r'_(e[0-9]+|ph)$', filename.name):
-                new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph)$', '', filename.name))
+            while re.search(r'_(e[0-9]+|ph|real|imaginary)$', filename.name):
+                new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph|real|imaginary)$', '', filename.name))
                 p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
                 filename = new_path
+        # TODO: Add a hash check to see if any previous ACQ# match exactly and remove if so
         if success:
             if (niidir / (self.NiftiName + '.nii.gz')).exists():
                 self.NiftiCreated = True
+                self.NiftiHash = hash_file_dir(niidir / (self.NiftiName + '.nii.gz'))
                 logging.info('Nifti created successfully at %s' % (niidir / (self.NiftiName + '.nii.gz')))
                 if '-ACQ3' in self.NiftiName:
                     logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
@@ -353,23 +386,24 @@ class BaseInfo:
                 logging.warning('Nifti creation failed for %s' % self.SourcePath)
                 logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
                 logging.warning('dcm2niix return code: %d' % result.returncode)
-                logging.warning('dcm2niix output:' % result.returncode)
-                logging.warning('\n' + result.stdout)
+                logging.warning('dcm2niix output:\n' + result.stdout)
                 logging.warning('Nifti creation failed.')
 
 
 class BaseSet:
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
-                 input_hash: Optional[str] = None) -> None:
+                 manual_names: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
         self.AutoConvVersion = __version__
+        self.ConversionSoftwareVersions = get_software_versions()
         self.InputSource = source
         if input_hash is None:
             logging.info('Hashing source file(s) for record keeping.')
-            self.InputHash = sha1_file_dir(self.InputSource)
+            self.InputHash = hash_file_dir(self.InputSource, False)
             logging.info('Hashing complete.')
         else:
             logging.info('Using existing source hash for record keeping.')
             self.InputHash = input_hash
+        self.ManualNames = manual_names if manual_names is not None else {}
         self.Metadata = metadata_obj
         self.LookupTable = lut_obj
         self.OutputRoot = output_root
@@ -419,8 +453,8 @@ class BaseSet:
                                               and di.RepetitionTime == other_di.RepetitionTime])
                 if closest_mt is not None:
                     logging.debug('Adjusting name for %s: %s --> %s' %
-                                  (di.SeriesUID, di.NiftiName, di.NiftiName + '-MTOFF'))
-                    di.NiftiName = di.NiftiName + '-MTOFF'
+                                  (di.SeriesUID, di.NiftiName, di.NiftiName.replace('-T1-', '-MT-') + '-MTOFF'))
+                    di.NiftiName = di.NiftiName.replace('-T1-', '-MT-') + '-MTOFF'
                     logging.debug('Adjusting name for %s: %s --> %s' %
                                   (self.SeriesList[closest_mt].SeriesUID,
                                    self.SeriesList[closest_mt].NiftiName,
@@ -472,13 +506,18 @@ class BaseSet:
                     logging.debug('Adjusting name for %s: %s --> %s' % (di.SeriesUID, di.NiftiName, new_name))
                     di.NiftiName = new_name
             elif non_matching == ['EchoTime', 'ComplexImageComponent']:
-                tes = list(set([di.EchoTime for di in sorted(di_list, key=lambda x: x.EchoTime)]))
+                switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
+                tes = sorted(list(set([di.EchoTime for di in di_list])))
                 for di in di_list:
                     comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
                     echo_num = tes.index(di.EchoTime)
                     new_name = '-'.join(di.NiftiName.split('-')[:-1] + ['ECHO%d' % (echo_num + 1), comp])
                     logging.debug('Adjusting name for %s: %s --> %s' % (di.SeriesUID, di.NiftiName, new_name))
                     di.NiftiName = new_name
+                    if switch_t2star:
+                        new_name = di.NiftiName.replace('-T1-', '-T2STAR-')
+                        logging.debug('Adjusting name for %s: %s --> %s' % (di.SeriesUID, di.NiftiName, new_name))
+                        di.NiftiName = new_name
             elif non_matching == ['ImageOrientationPatient']:
                 for di in di_list:
                     new_name = '-'.join(di.NiftiName.split('-')[:-1])
@@ -538,18 +577,19 @@ class TruncatedImageValue:
                  precision: float = 1e-4) -> None:
         self.value = value
         self.precision = precision
+        self.length = int(abs(np.log10(self.precision)))
 
     def __eq__(self, other: Union[Any, TruncatedImageValue]) -> bool:
         if isinstance(other, TruncatedImageValue):
-            if self.value is None or other.value is None:
-                return False
+            if self.value is None:
+                return other.value is None
             return all([abs(self.value[i]-other.value[i]) <= self.precision
                         for i in range(len(self.value))])
         else:
             return super().__eq__(other)
 
     def __hash__(self) -> int:
-        return hash(tuple(self.truncate()))
+        return hash(tuple(self.truncate())) if self.value is not None else hash(None)
 
     def __getitem__(self, item) -> Optional[float]:
         return self.value[item] if self.value is not None else None
@@ -558,9 +598,8 @@ class TruncatedImageValue:
         return self.truncate()
 
     def truncate(self) -> Optional[List[float]]:
-        return [float(np.around(int(num/self.precision)*self.precision,
-                                int(abs(np.log10(self.precision))+1)))
-                for num in self.value] if self.value is not None else None
+        return [float(np.around(num/2, self.length)*2) for num in self.value] \
+            if self.value is not None else None
 
 
 class ImageOrientation(TruncatedImageValue):
@@ -568,8 +607,7 @@ class ImageOrientation(TruncatedImageValue):
         if self.value is None:
             return None
         if len(self.value) == 6:  # Direction Cosines
-            orient_orth = [round(x) for x in self.value]
-            plane = int(np.argmax([abs(x) for x in np.cross(orient_orth[0:3], orient_orth[3:6])]))
+            plane = int(np.argmax([abs(x) for x in np.cross(self.value[0:3], self.value[3:6])]))
             return DCM_ORIENT_PLANES.get(plane, None)
         if len(self.value) == 4:  # Angulation + Plane
             return PARREC_ORIENTATIONS.get(self.value[3], None)

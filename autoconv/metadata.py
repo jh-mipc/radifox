@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from typing import Optional
 
-from .utils import sha1_file_dir
+from .utils import hash_file_dir
 
 
 META_TIME_CODES = {1: '00', 2: '06', 3: '12', 4: '24', 5: '36', 6: '48'}
@@ -36,7 +36,7 @@ class Metadata:
                 break
         out_cls = cls('treatms', patient_id, time_id, site_id, no_project_subdir=no_project_subdir)
         out_cls.TMSMetaFile = metadata_file
-        out_cls.TMSMetaFileHash = sha1_file_dir(metadata_file)
+        out_cls.TMSMetaFileHash = hash_file_dir(metadata_file)
         out_cls._RawMetaFileObj = {re.sub(r'\([0-9]*\)', '', k): v for k, v in metadata_obj.items()}
         return out_cls
 

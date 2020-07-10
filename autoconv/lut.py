@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Union, List
 
@@ -8,8 +7,8 @@ from .utils import read_csv, is_intstr
 class LookupTable:
 
     def __init__(self, lut_file: Path, project_id: str, site_id: str) -> None:
-        self.FileName = lut_file.resolve().expanduser()
-        lut, self.FileHash = read_csv(self.FileName)
+        filename = lut_file.resolve().expanduser()
+        lut = read_csv(filename)
         if site_id is None:
             site_id = ''
         self.LookupDict = {}
@@ -36,9 +35,10 @@ class LookupTable:
             series_desc = series_desc[4:]
         if series_desc.endswith(' CLEAR') or series_desc.endswith(' SENSE'):
             series_desc = series_desc[:-6]
-        if inst_name in self.LookupDict:
-            if series_desc in self.LookupDict[inst_name]:
-                if self.LookupDict[inst_name][series_desc] == 'None':
-                    return False
-                return self.LookupDict[inst_name][series_desc].split('-')
+        for item in [inst_name, 'None']:
+            if item in self.LookupDict:
+                if series_desc in self.LookupDict[item]:
+                    if self.LookupDict[item][series_desc] == 'None':
+                        return False
+                    return self.LookupDict[item][series_desc].split('-')
         return None
