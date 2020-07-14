@@ -71,7 +71,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
         metadata = Metadata.from_tms_metadata(tms_metafile, no_project_subdir)
         for arg in ['patient_id', 'time_id', 'site_id']:
             if locals().get(arg) is not None:
-                setattr(metadata, mapping[arg], getattr(locals(), arg))
+                setattr(metadata, mapping[arg], locals().get(arg))
     else:
         for item in ['project_id', 'patient_id', 'time_id']:
             if locals().get(item) is None:

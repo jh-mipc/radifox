@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 import re
 import shutil
-from subprocess import run
+from subprocess import run, PIPE, STDOUT
 from typing import List, Tuple, Union, Any, Optional
 
 import nibabel as nib
@@ -330,7 +330,7 @@ class BaseInfo:
         success = True
         dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
                         self.NiftiName, '-o', niidir, self.SourcePath]
-        result = run(dcm2niix_cmd, capture_output=True, text=True)
+        result = run(dcm2niix_cmd, stdout=PIPE, stderr=STDOUT, text=True)
 
         if result.returncode != 0:
             logging.warning('dcm2niix failed for %s' % self.SourcePath)
