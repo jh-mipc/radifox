@@ -4,7 +4,6 @@ import csv
 from datetime import datetime, date, time
 import hashlib
 import logging
-import os
 from pathlib import Path
 import re
 import shutil
@@ -20,8 +19,7 @@ ORIENT_CODES = {'sagittal': 'PIL', 'coronal': 'LIP', 'axial': 'LPS'}
 
 # http://stackoverflow.com/a/22718321
 def mkdir_p(path: Path, mode: int = 0o777) -> None:
-    # noinspection PyTypeChecker
-    os.makedirs(path, mode=mode, exist_ok=True)
+    path.mkdir(mode=mode, parents=True, exist_ok=True)
 
 
 def copytree_symlink(source: Path, dest: Path):
