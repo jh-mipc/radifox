@@ -25,6 +25,7 @@ def mkdir_p(path: Path, mode: int = 0o777) -> None:
 
 
 def copytree_symlink(source: Path, dest: Path):
+    dest.mkdir(parents=True, exist_ok=True)
     for path in source.glob('*'):
         if path.is_file():
             (dest / path.name).symlink_to(path)
