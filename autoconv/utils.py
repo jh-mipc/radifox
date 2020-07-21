@@ -24,6 +24,15 @@ def mkdir_p(path: Path, mode: int = 0o777) -> None:
     os.makedirs(path, mode=mode, exist_ok=True)
 
 
+def copytree_symlink(source: Path, dest: Path):
+    for path in source.glob('*'):
+        if path.is_file():
+            (dest / path.name).symlink_to(path)
+        elif path.is_dir():
+            (dest / path.name).mkdir()
+            copytree_symlink(path, dest / path.name)
+
+
 # http://stackoverflow.com/a/10840586
 def silentremove(filename: Path) -> None:
     import shutil
