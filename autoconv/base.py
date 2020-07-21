@@ -554,7 +554,7 @@ class BaseSet:
     def generate_sidecar(self, di_obj: BaseInfo) -> None:
         sidecar_file = self.OutputRoot / self.Metadata.dir_to_str() / 'nii' / (di_obj.NiftiName + '.json')
         logging.info('Writing image sidecar file to %s' % sidecar_file)
-        out_dict = {k: v for k, v in self.__dict__.items() if k != 'SeriesList'}
+        out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
