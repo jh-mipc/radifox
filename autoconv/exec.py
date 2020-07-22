@@ -17,7 +17,7 @@ class ExecError(Exception):
     pass
 
 
-def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: LookupTable,
+def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
                  verbose: bool, modality: str, parrec: bool, rerun: bool, symlink: bool,
                  manual_args: dict, input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
