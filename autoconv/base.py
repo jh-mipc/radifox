@@ -33,12 +33,9 @@ class BaseInfo:
 
     # TODO: Type consistent defaults?
     def __init__(self, path: Path) -> None:
-        self.SourcePath = path
-        if self.SourcePath.suffix == '.par':
-            self.SourceHash = hash_file_list([self.SourcePath, self.SourcePath.with_suffix('.rec')],
-                                             include_names=False)
-        else:
-            self.SourceHash = hash_file_dir(self.SourcePath, include_names=False)
+        self.SourcePath = Path(path.parent.name) / path.name
+        self.SourceHash = hash_file_list([path, path.with_suffix('.rec')], include_names=False) \
+            if self.SourcePath.suffix == '.par' else hash_file_dir(path, include_names=False)
         self.SeriesUID = None
         self.StudyUID = None
         self.NumFiles = None
@@ -119,7 +116,7 @@ class BaseInfo:
     def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
         autogen = False
         manual_name = False
-        source_name = str(Path(self.SourcePath.parent.name) / self.SourcePath.name)
+        source_name = str(self.SourcePath)
         if source_name in manual_dict:
             pred_list = manual_dict[source_name]
             manual_name = True
@@ -314,11 +311,12 @@ class BaseInfo:
         self.NiftiName = '_'.join([scan_str, '-'.join(pred_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
-    def create_nii(self) -> None:
+    def create_nii(self, output_dir: Path) -> None:
         if not self.ConvertImage:
             return
 
-        niidir = Path(self.SourcePath.parent.parent, 'nii')
+        niidir = output_dir / 'nii'
+        source = output_dir / self.SourcePath
         mkdir_p(niidir)
         count = 1
         while Path(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz').exists():
@@ -329,11 +327,11 @@ class BaseInfo:
 
         success = True
         dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
-                        self.NiftiName, '-o', niidir, self.SourcePath]
+                        self.NiftiName, '-o', niidir, source]
         result = run(dcm2niix_cmd, stdout=PIPE, stderr=STDOUT, text=True)
 
         if result.returncode != 0:
-            logging.warning('dcm2niix failed for %s' % self.SourcePath)
+            logging.warning('dcm2niix failed for %s' % source)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
             logging.warning('dcm2niix return code: %d' % result.returncode)
             logging.warning('dcm2niix output:\n' + result.stdout)
@@ -383,7 +381,7 @@ class BaseInfo:
                                     'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
             else:
                 self.NiftiCreated = False
-                logging.warning('Nifti creation failed for %s' % self.SourcePath)
+                logging.warning('Nifti creation failed for %s' % source)
                 logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
                 logging.warning('dcm2niix return code: %d' % result.returncode)
                 logging.warning('dcm2niix output:\n' + result.stdout)
@@ -395,10 +393,9 @@ class BaseSet:
                  manual_names: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
         self.AutoConvVersion = __version__
         self.ConversionSoftwareVersions = get_software_versions()
-        self.InputSource = source
         if input_hash is None:
             logging.info('Hashing source file(s) for record keeping.')
-            self.InputHash = hash_file_dir(self.InputSource, False)
+            self.InputHash = hash_file_dir(source, False)
             logging.info('Hashing complete.')
         else:
             logging.info('Using existing source hash for record keeping.')
@@ -410,7 +407,7 @@ class BaseSet:
         self.SeriesList = []
 
     def __repr_json__(self) -> dict:
-        return self.__dict__
+        return {key: value for key, value in self.__dict__.items() if key != 'OutputRoot'}
 
     def generate_unique_names(self) -> None:
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
@@ -549,21 +546,21 @@ class BaseSet:
         for di in self.SeriesList:
             if di.ConvertImage:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
-                di.create_nii()
+                di.create_nii(self.OutputRoot / self.Metadata.dir_to_str())
                 self.generate_sidecar(di)
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: x.ConvertImage, reverse=True)
 
     def generate_sidecar(self, di_obj: BaseInfo) -> None:
-        sidecar_file = di_obj.SourcePath.parent.parent / 'nii' / (di_obj.NiftiName + '.json')
+        sidecar_file = self.OutputRoot / self.Metadata.dir_to_str() / 'nii' / (di_obj.NiftiName + '.json')
         logging.info('Writing image sidecar file to %s' % sidecar_file)
-        out_dict = {k: v for k, v in self.__dict__.items() if k != 'SeriesList'}
+        out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
     def generate_unconverted_info(self) -> None:
-        info_file = self.OutputRoot / self.Metadata.dir_to_str() / (self.Metadata.prefix_to_str() +
-                                                                    '_MR-UnconvertedInfo.json')
+        info_file = self.OutputRoot / self.Metadata.dir_to_str() / \
+                    (self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json')
         logging.info('Writing unconverted info file to %s' % info_file)
         out_dict = deepcopy(self.__dict__)
         out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]

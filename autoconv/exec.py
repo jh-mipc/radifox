@@ -10,16 +10,16 @@ from .logging import create_loggers
 from .metadata import Metadata
 from .lut import LookupTable
 from .parrec import ParrecSet, sort_parrecs
-from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, DIR_OCTAL
+from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_symlink, DIR_OCTAL
 
 
 class ExecError(Exception):
     pass
 
 
-def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: LookupTable,
-                 verbose: bool, modality: str, parrec: bool, rerun: bool, manual_args: dict,
-                 input_hash: Optional[str] = None) -> None:
+def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
+                 verbose: bool, modality: str, parrec: bool, rerun: bool, symlink: bool,
+                 manual_args: dict, input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
@@ -37,10 +37,15 @@ def run_autoconv(source: Path, output_root: Path, metadata: Metadata, lut: Looku
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
             if source.is_dir():
-                logging.info('Copying files from source to %s folder' % type_folder.name)
-                # noinspection PyTypeChecker
-                shutil.copytree(source, type_folder, copy_function=shutil.copyfile)
-                logging.info('Copying complete')
+                if symlink:
+                    logging.info('Linking files from source to %s folder' % type_folder.name)
+                    copytree_symlink(source, type_folder)
+                    logging.info('Linking complete')
+                else:
+                    logging.info('Copying files from source to %s folder' % type_folder.name)
+                    # noinspection PyTypeChecker
+                    shutil.copytree(source, type_folder, copy_function=shutil.copyfile)
+                    logging.info('Copying complete')
             elif any([''.join(source.suffixes) == ext for ext in allowed_archives()[1]]):
                 extract_archive(source, type_folder)
             else:

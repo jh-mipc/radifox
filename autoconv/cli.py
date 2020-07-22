@@ -57,14 +57,15 @@ def cli():
 @click.option('--reckless', is_flag=True)
 @click.option('--no-project-subdir', is_flag=True)
 @click.option('--parrec', is_flag=True)
+@click.option('--symlink', is_flag=True)
 @click.option('--institution', type=str)
 @click.option('--field-strength', type=int, default=3)
 @click.option('--modality', type=str, default='mr')
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
 def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
             time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
-            no_project_subdir: bool, parrec: bool, institution: str, field_strength: int, modality: str,
-            manual_arg: dict) -> None:
+            no_project_subdir: bool, parrec: bool, symlink: bool, institution: str, field_strength: int,
+            modality: str, manual_arg: dict) -> None:
 
     mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
     if tms_metafile:
@@ -121,7 +122,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['MagneticFieldStrength'] = field_strength
     manual_arg['InstitutionName'] = institution
 
-    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, manual_arg, None)
+    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, symlink, manual_arg, None)
 
 
 @cli.command()
@@ -141,9 +142,11 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
+    # noinspection PyProtectedMember
+    output_root = Path(*directory.parts[:-2]) if metadata._NoProjectSubdir else Path(*directory.parts[:-3])
 
     if lut_file is None:
-        lut_file = (directory.parent.parent / (metadata.ProjectID + '-lut.csv'))
+        lut_file = Path(*directory.parts[:-2]) / (metadata.ProjectID + '-lut.csv')
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
     if not force and (json_obj['AutoConvVersion'] == __version__ and
@@ -151,6 +154,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         print('No action required. Software version and LUT dictionary match for %s.' % directory)
         return
 
+    type_dir = directory / ('%s-%s' % (modality, 'parrec' if parrec else 'dcm'))
     if parrec and not (directory / ('%s-parrec' % modality)).exists():
         raise ValueError('Update source was specified as PARREC, but '
                          '%s-parrec source directory does not exist.' % modality)
@@ -164,8 +168,8 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     for filepath in (directory / 'logs').glob('autoconv-*.log'):
         silentremove(filepath)
     try:
-        run_autoconv(Path(json_obj['InputSource']), Path(json_obj['OutputRoot']), metadata, lut, verbose, modality,
-                     parrec, True, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
+        run_autoconv(type_dir, output_root, metadata, lut, verbose, modality,
+                     parrec, True, False, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
     except ExecError:
         logging.info('Exception caught during update. Resetting to previous state.')
         silentremove(directory / 'nii')
