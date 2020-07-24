@@ -22,14 +22,17 @@ def mkdir_p(path: Path, mode: int = 0o777) -> None:
     path.mkdir(mode=mode, parents=True, exist_ok=True)
 
 
-def copytree_symlink(source: Path, dest: Path):
+def copytree_link(source: Path, dest: Path, symlink: bool):
     dest.mkdir(parents=True, exist_ok=True)
     for path in source.glob('*'):
         if path.is_file():
-            (dest / path.name).symlink_to(path)
+            if symlink:
+                (dest / path.name).symlink_to(path)
+            else:
+                (dest / path.name).link_to(path)
         elif path.is_dir():
             (dest / path.name).mkdir()
-            copytree_symlink(path, dest / path.name)
+            copytree_link(path, dest / path.name, symlink)
 
 
 # http://stackoverflow.com/a/10840586
