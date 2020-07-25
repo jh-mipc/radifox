@@ -30,7 +30,7 @@ def copytree_link(source: Path, dest: Path, symlink: bool):
                 (dest / path.name).symlink_to(path)
             else:
                 # noinspection PyTypeChecker
-                (dest / path.name).link_to(path)
+                path.link_to(dest / path.name)
         elif path.is_dir():
             (dest / path.name).mkdir()
             copytree_link(path, dest / path.name, symlink)
