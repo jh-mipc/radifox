@@ -10,7 +10,7 @@ from .logging import create_loggers
 from .metadata import Metadata
 from .lut import LookupTable
 from .parrec import ParrecSet, sort_parrecs
-from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_symlink, DIR_OCTAL
+from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_link, DIR_OCTAL
 
 
 class ExecError(Exception):
@@ -18,7 +18,7 @@ class ExecError(Exception):
 
 
 def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
-                 verbose: bool, modality: str, parrec: bool, rerun: bool, symlink: bool,
+                 verbose: bool, modality: str, parrec: bool, rerun: bool, link: Optional[str],
                  manual_args: dict, input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
@@ -37,9 +37,11 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
             if source.is_dir():
-                if symlink:
+                if link is not None:
                     logging.info('Linking files from source to %s folder' % type_folder.name)
-                    copytree_symlink(source, type_folder)
+                    if link not in ['symlink', 'hardlink']:
+                        raise ValueError('Unsupported linking type.')
+                    copytree_link(source, type_folder, link == 'symlink')
                     logging.info('Linking complete')
                 else:
                     logging.info('Copying files from source to %s folder' % type_folder.name)

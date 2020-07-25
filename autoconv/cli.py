@@ -58,14 +58,19 @@ def cli():
 @click.option('--no-project-subdir', is_flag=True)
 @click.option('--parrec', is_flag=True)
 @click.option('--symlink', is_flag=True)
+@click.option('--hardlink', is_flag=True)
 @click.option('--institution', type=str)
 @click.option('--field-strength', type=int, default=3)
 @click.option('--modality', type=str, default='mr')
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
 def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
             time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
-            no_project_subdir: bool, parrec: bool, symlink: bool, institution: str, field_strength: int,
-            modality: str, manual_arg: dict) -> None:
+            no_project_subdir: bool, parrec: bool, symlink: bool, hardlink: bool, institution: str,
+            field_strength: int, modality: str, manual_arg: dict) -> None:
+
+    if hardlink and symlink:
+        raise ValueError('Only one of --symlink and --hardlink can be used.')
+    linking = 'hardlink' if hardlink else ('symlink' if symlink else None)
 
     mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
     if tms_metafile:
@@ -122,7 +127,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['MagneticFieldStrength'] = field_strength
     manual_arg['InstitutionName'] = institution
 
-    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, symlink, manual_arg, None)
+    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, linking, manual_arg, None)
 
 
 @cli.command()
@@ -169,7 +174,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         silentremove(filepath)
     try:
         run_autoconv(type_dir, output_root, metadata, lut, verbose, modality,
-                     parrec, True, False, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
+                     parrec, True, None, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
     except ExecError:
         logging.info('Exception caught during update. Resetting to previous state.')
         silentremove(directory / 'nii')
