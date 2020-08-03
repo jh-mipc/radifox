@@ -224,7 +224,7 @@ def remove_duplicates(dcmdir: Path) -> None:
         inst_nums[ds.InstanceNumber].append((dcmfile, ds))
     count = 0
     for num in inst_nums:
-        inst_nums[num] = sorted(inst_nums[num], key=lambda x: getattr(x[1], 'InstanceCreationTime', None))
+        inst_nums[num] = sorted(inst_nums[num], key=lambda x: getattr(x[1], 'InstanceCreationTime', 0))
         for i in range(len(inst_nums[num])-1):
             for j in range(i+1, len(inst_nums[num])):
                 diff_keys = []
