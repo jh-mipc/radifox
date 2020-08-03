@@ -147,7 +147,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
             curr_dcm_img = item
             try:
                 ds = dicom.dcmread(str(curr_dcm_img), stop_before_pixels=True)
-            except InvalidDicomError:
+            except (InvalidDicomError, KeyError):
                 continue
             if isinstance(ds, DicomDir):
                 continue
