@@ -20,7 +20,7 @@ from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_
                     add_acq_num, find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions)
 
 
-DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram']
+DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain']
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
@@ -213,16 +213,15 @@ class BaseInfo:
             if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
                 sequence = 'F' + sequence
             if sequence != 'EPI' and 'IR' not in sequence:
-                if self.InversionTime is not None and self.InversionTime > 50:
-                    sequence = 'IR' + sequence
-                elif any([seq == 'ir' for seq in seq_type]):
-                    sequence = 'IR' + sequence
-                elif 'flair' in series_desc or 'stir' in series_desc:
+                if self.InversionTime is not None and self.InversionTime > 50 or \
+                        any([seq == 'ir' for seq in seq_type]) or \
+                        any([variant == 'mp' for variant in seq_var]) or \
+                        'flair' in series_desc or 'stir' in series_desc:
                     sequence = 'IR' + sequence
             if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
                 sequence = sequence.replace('IR', 'IRF')
             if 'mprage' in series_desc or 'bravo' in series_desc or \
-                    (self.Manufacturer == 'PHILIPS' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant):
+                    (self.Manufacturer == 'PHILIPS' and sequence == 'IRFGRE'):
                 sequence = 'IRFSPGR'
             if modality == 'UNK':
                 if sequence == 'IRFSPGR':
