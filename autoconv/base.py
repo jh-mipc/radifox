@@ -240,9 +240,10 @@ class BaseInfo:
             body_part = 'BRAIN'
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
+            # TODO: implement regex searches for body part
             if 'brain' in series_desc or series_desc.startswith('br_'):
                 body_part = 'BRAIN'
-            elif 'ctspine' in series_desc:
+            elif 'ctspine' in series_desc or 'ct spine' in series_desc:
                 body_part = 'SPINE'
             elif 'cerv' in series_desc or 'csp' in series_desc or 'c sp' in series_desc or \
                     'c-sp' in series_desc or 'msma' in series_desc:
