@@ -72,7 +72,7 @@ class DicomInfo(BaseInfo):
         series_time = extract_de(ds, 'SeriesTime', self.SeriesUID, False)
         self.AcqDateTime = ' '.join([str(series_date) if series_date is None else '0000-00-00',
                                      str(series_time) if series_date is None else '00:00:00'])
-        self.Manufacturer = self.Manufacturer.upper().split(' ')[0]
+        self.Manufacturer = '' if self.Manufacturer is None else self.Manufacturer.upper().split(' ')[0]
         if (0x2005, 0x1444) in ds:
             turbo = int(ds[(0x2005, 0x1444)].value)
             self.EchoTrainLength = turbo if turbo > 0 else self.EchoTrainLength
