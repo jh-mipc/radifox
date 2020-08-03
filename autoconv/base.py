@@ -96,7 +96,7 @@ class BaseInfo:
         type_status = ('derived' not in type_str) or \
                       ('derived' in type_str and 'primary' in type_str)
         desc_ignore = any([item in series_desc for item in DESCRIPTION_IGNORE]) or \
-            re.search(r'\scal(?:\s+|$)', series_desc)
+            re.search(r'(?<!cervi)cal(?:\W|ibration|$)', series_desc)
         mpr_ignore = (re.search(r'.*mpr(?!age).*', series_desc) is not None) or \
             any([img_type.lower() == 'mpr' for img_type in self.ImageType]) or \
             any(['projection' in img_type.lower() for img_type in self.ImageType]) or \
@@ -242,6 +242,8 @@ class BaseInfo:
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
             if 'brain' in series_desc or series_desc.startswith('br_'):
                 body_part = 'BRAIN'
+            elif 'ctspine' in series_desc:
+                body_part = 'SPINE'
             elif 'cerv' in series_desc or 'csp' in series_desc or 'c sp' in series_desc or \
                     'c-sp' in series_desc or 'msma' in series_desc:
                 body_part = 'CSPINE'
