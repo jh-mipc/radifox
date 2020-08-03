@@ -70,8 +70,8 @@ class DicomInfo(BaseInfo):
         self.SeriesDescription = '' if self.SeriesDescription is None else self.SeriesDescription
         series_date = extract_de(ds, 'SeriesDate', self.SeriesUID, False)
         series_time = extract_de(ds, 'SeriesTime', self.SeriesUID, False)
-        self.AcqDateTime = ' '.join([str(series_date) if series_date is None else '0000-00-00',
-                                     str(series_time) if series_date is None else '00:00:00'])
+        self.AcqDateTime = ' '.join([str(series_date) if series_date is not None else '0000-00-00',
+                                     str(series_time) if series_date is not None else '00:00:00'])
         self.Manufacturer = '' if self.Manufacturer is None else self.Manufacturer.upper().split(' ')[0]
         if (0x2005, 0x1444) in ds:
             turbo = int(ds[(0x2005, 0x1444)].value)
