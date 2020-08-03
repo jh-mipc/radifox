@@ -19,7 +19,6 @@ class Metadata:
         self.TimeID = time_id
         self.SiteID = site_id
         self.ProjectShortName = self.ProjectID.upper() if project_shortname is None else project_shortname
-        self.TMSMetaFile = None
         self.TMSMetaFileHash = None
         self._RawMetaFileObj = None
         self._NoProjectSubdir = no_project_subdir
@@ -35,7 +34,6 @@ class Metadata:
                 time_id = str(83 + tp_num) if tp_num > 6 else META_TIME_CODES[tp_num]
                 break
         out_cls = cls('treatms', patient_id, time_id, site_id, no_project_subdir=no_project_subdir)
-        out_cls.TMSMetaFile = metadata_file
         out_cls.TMSMetaFileHash = hash_file_dir(metadata_file)
         out_cls._RawMetaFileObj = {re.sub(r'\([0-9]*\)', '', k): v for k, v in metadata_obj.items()}
         return out_cls
@@ -44,15 +42,15 @@ class Metadata:
     def from_dict(cls, dict_obj: dict) -> Metadata:
         out_cls = cls(dict_obj['ProjectID'], dict_obj['PatientID'], dict_obj['TimeID'],
                       dict_obj['SiteID'], dict_obj['ProjectShortName'], dict_obj['_NoProjectSubdir'])
-        if 'TMSMetaFile' in dict_obj:
-            out_cls.TMSMetaFile = dict_obj['TMSMetaFile']
+        if 'TMSMetaFileHash' in dict_obj:
+            out_cls.TMSMetaFileHash = dict_obj['TMSMetaFileHash']
             out_cls._RawMetaFileObj = dict_obj['_RawMetaFileObj']
         return out_cls
 
     def __repr_json__(self) -> dict:
         skip_keys = []
-        if self.TMSMetaFile is None:
-            skip_keys += ['TMSMetaFile', 'TMSMetaFileHash', '_RawMetaFileObj']
+        if self.TMSMetaFileHash is None:
+            skip_keys += ['TMSMetaFileHash', '_RawMetaFileObj']
         return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
 
     def check_metadata(self) -> None:

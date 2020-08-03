@@ -100,15 +100,14 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                     raise ValueError('Unconverted info file (%s) does not exist for consistency checking. '
                                      'Cannot use --force, use --reckless instead.' % json_file)
                 json_obj = json.loads(json_file.read_text())
-                if json_obj['Metadata']['TMSMetaFile'] is not None:
-                    if metadata.TMSMetaFile is None:
+                if json_obj['Metadata']['TMSMetaFileHash'] is not None:
+                    if metadata.TMSMetaFileHash is None:
                         raise ValueError('Previous conversion did not use a TMS metadata file, '
                                          'run with --reckless to ignore this error.')
-                    check_metadata = Metadata.from_tms_metadata(Path(json_obj['Metadata']['TMSMetaFile']))
-                    if check_metadata.TMSMetaFileHash != metadata.TMSMetaFileHash:
+                    if json_obj['Metadata']['TMSMetaFileHash'] != metadata.TMSMetaFileHash:
                         raise ValueError('TMS meta data file has changed since last conversion, '
                                          'run with --reckless to ignore this error.')
-                elif json_obj['Metadata']['TMSMetaFile'] is None and metadata.TMSMetaFile is not None:
+                elif json_obj['Metadata']['TMSMetaFileHash'] is None and metadata.TMSMetaFileHash is not None:
                     raise ValueError('Previous conversion used a TMS metadata file, '
                                      'run with --reckless to ignore this error.')
                 if hash_file_dir(source, False) != json_obj['InputHash']:
