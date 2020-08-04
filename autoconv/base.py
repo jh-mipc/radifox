@@ -97,7 +97,8 @@ class BaseInfo:
                       ('derived' in type_str and 'primary' in type_str)
         desc_ignore = any([item in series_desc for item in DESCRIPTION_IGNORE]) or \
             re.search(r'(?<!cervi)cal(?:\W|ibration|$)', series_desc)
-        mpr_ignore = (re.search(r'.*mpr(?!age).*', series_desc) is not None) or \
+        mpr_ignore = ((re.search(r'.*mpr(?!age).*', series_desc) is not None) and
+                      self.ImageType[0].lower() != 'original') or \
             any([img_type.lower() == 'mpr' for img_type in self.ImageType]) or \
             any(['projection' in img_type.lower() for img_type in self.ImageType]) or \
             'composed' in series_desc or any(['composed' in img_type.lower() for img_type in self.ImageType])
