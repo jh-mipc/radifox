@@ -19,7 +19,7 @@ class ExecError(Exception):
 
 def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
                  verbose: bool, modality: str, parrec: bool, rerun: bool, link: Optional[str],
-                 manual_args: dict, input_hash: Optional[str] = None) -> None:
+                 manual_args: dict, manual_names: dict, input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
@@ -56,9 +56,6 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             recursive_chmod(type_folder)
             sort_func(type_folder)
             recursive_chmod(type_folder)
-
-        manual_json_file = (session_path / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
-        manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
         if parrec:
             img_set = ParrecSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash,

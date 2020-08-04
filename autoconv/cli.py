@@ -89,6 +89,10 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
             (output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv'))
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
+    manual_json_file = (output_root / metadata.dir_to_str() /
+                        (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
+    manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
+
     type_dir = output_root / metadata.dir_to_str() / (modality + '-' + ('parrec' if parrec else 'dcm'))
     if type_dir.exists():
         # TODO: Add checks to see if data has moved (warn and update? error?)
@@ -126,7 +130,8 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['MagneticFieldStrength'] = field_strength
     manual_arg['InstitutionName'] = institution
 
-    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, linking, manual_arg, None)
+    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, linking, manual_arg,
+                 manual_names, None)
 
 
 @cli.command()
@@ -153,9 +158,13 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         lut_file = Path(*directory.parts[:-2]) / (metadata.ProjectID + '-lut.csv')
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
+    manual_json_file = (directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
+    manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
+
     if not force and (json_obj['AutoConvVersion'] == __version__ and
-                      json_obj['LookupTable']['LookupDict'] == lut.LookupDict):
-        print('No action required. Software version and LUT dictionary match for %s.' % directory)
+                      json_obj['LookupTable']['LookupDict'] == lut.LookupDict and
+                      json_obj['ManualNames'] == manual_names):
+        print('No action required. Software version, LUT dictionary and naming dictionary match for %s.' % directory)
         return
 
     type_dir = directory / ('%s-%s' % (modality, 'parrec' if parrec else 'dcm'))
@@ -173,7 +182,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         silentremove(filepath)
     try:
         run_autoconv(type_dir, output_root, metadata, lut, verbose, modality,
-                     parrec, True, None, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
+                     parrec, True, None, json_obj.get('ManualArgs', {}), manual_names, json_obj['InputHash'])
     except ExecError:
         logging.info('Exception caught during update. Resetting to previous state.')
         silentremove(directory / 'nii')
