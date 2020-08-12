@@ -11,7 +11,7 @@ from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
-from .utils import hash_file_dir, silentremove, mkdir_p
+from .utils import hash_file_dir, silentremove, mkdir_p, version_check
 
 
 def abs_path(ctx, param, value) -> Path:
@@ -170,7 +170,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     manual_json_file = (directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
-    if not force and (json_obj['AutoConvVersion'] == __version__ and
+    if not force and (version_check(json_obj['AutoConvVersion'], __version__) and
                       json_obj['LookupTable']['LookupDict'] == lut.LookupDict and
                       json_obj['ManualNames'] == manual_names):
         print('No action required. Software version, LUT dictionary and naming dictionary match for %s.' % directory)
