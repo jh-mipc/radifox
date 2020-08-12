@@ -70,9 +70,9 @@ class DicomInfo(BaseInfo):
         self.SeriesDescription = '' if self.SeriesDescription is None else self.SeriesDescription
         series_date = extract_de(ds, 'SeriesDate', self.SeriesUID, False)
         series_time = extract_de(ds, 'SeriesTime', self.SeriesUID, False)
-        self.AcqDateTime = ' '.join([str(series_date) if series_date is None else '0000-00-00',
-                                     str(series_time) if series_date is None else '00:00:00'])
-        self.Manufacturer = self.Manufacturer.upper().split(' ')[0]
+        self.AcqDateTime = ' '.join([str(series_date) if series_date is not None else '0000-00-00',
+                                     str(series_time) if series_date is not None else '00:00:00'])
+        self.Manufacturer = '' if self.Manufacturer is None else self.Manufacturer.upper().split(' ')[0]
         if (0x2005, 0x1444) in ds:
             turbo = int(ds[(0x2005, 0x1444)].value)
             self.EchoTrainLength = turbo if turbo > 0 else self.EchoTrainLength
@@ -147,7 +147,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
             curr_dcm_img = item
             try:
                 ds = dicom.dcmread(str(curr_dcm_img), stop_before_pixels=True)
-            except InvalidDicomError:
+            except (InvalidDicomError, KeyError):
                 continue
             if isinstance(ds, DicomDir):
                 continue
@@ -224,7 +224,7 @@ def remove_duplicates(dcmdir: Path) -> None:
         inst_nums[ds.InstanceNumber].append((dcmfile, ds))
     count = 0
     for num in inst_nums:
-        inst_nums[num] = sorted(inst_nums[num], key=lambda x: getattr(x[1], 'InstanceCreationTime', None))
+        inst_nums[num] = sorted(inst_nums[num], key=lambda x: getattr(x[1], 'InstanceCreationTime', 0))
         for i in range(len(inst_nums[num])-1):
             for j in range(i+1, len(inst_nums[num])):
                 diff_keys = []

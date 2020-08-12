@@ -15,12 +15,13 @@ from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
+from .qa.qaimage import create_qa_image
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list,
                     add_acq_num, find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions)
 
 
-DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram']
+DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain']
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
@@ -96,8 +97,9 @@ class BaseInfo:
         type_status = ('derived' not in type_str) or \
                       ('derived' in type_str and 'primary' in type_str)
         desc_ignore = any([item in series_desc for item in DESCRIPTION_IGNORE]) or \
-            re.search(r'\scal(?:\s+|$)', series_desc)
-        mpr_ignore = (re.search(r'.*mpr(?!age).*', series_desc) is not None) or \
+            re.search(r'(?<!cervi)cal(?:\W|ibration|$)', series_desc)
+        mpr_ignore = ((re.search(r'.*mpr(?!age).*', series_desc) is not None) and
+                      self.ImageType[0].lower() != 'original') or \
             any([img_type.lower() == 'mpr' for img_type in self.ImageType]) or \
             any(['projection' in img_type.lower() for img_type in self.ImageType]) or \
             'composed' in series_desc or any(['composed' in img_type.lower() for img_type in self.ImageType])
@@ -213,16 +215,15 @@ class BaseInfo:
             if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
                 sequence = 'F' + sequence
             if sequence != 'EPI' and 'IR' not in sequence:
-                if self.InversionTime is not None and self.InversionTime > 50:
-                    sequence = 'IR' + sequence
-                elif any([seq == 'ir' for seq in seq_type]):
-                    sequence = 'IR' + sequence
-                elif 'flair' in series_desc or 'stir' in series_desc:
+                if self.InversionTime is not None and self.InversionTime > 50 or \
+                        any([seq == 'ir' for seq in seq_type]) or \
+                        any([variant == 'mp' for variant in seq_var]) or \
+                        'flair' in series_desc or 'stir' in series_desc:
                     sequence = 'IR' + sequence
             if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
                 sequence = sequence.replace('IR', 'IRF')
             if 'mprage' in series_desc or 'bravo' in series_desc or \
-                    (self.Manufacturer == 'PHILIPS' and sequence == 'FSPGR' and 'MP' in self.SequenceVariant):
+                    (self.Manufacturer == 'PHILIPS' and sequence == 'IRFGRE'):
                 sequence = 'IRFSPGR'
             if modality == 'UNK':
                 if sequence == 'IRFSPGR':
@@ -240,8 +241,11 @@ class BaseInfo:
             body_part = 'BRAIN'
             body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
             study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
+            # TODO: implement regex searches for body part
             if 'brain' in series_desc or series_desc.startswith('br_'):
                 body_part = 'BRAIN'
+            elif 'ctspine' in series_desc or 'ct spine' in series_desc:
+                body_part = 'SPINE'
             elif 'cerv' in series_desc or 'csp' in series_desc or 'c sp' in series_desc or \
                     'c-sp' in series_desc or 'msma' in series_desc:
                 body_part = 'CSPINE'
@@ -548,6 +552,8 @@ class BaseSet:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
                 di.create_nii(self.OutputRoot / self.Metadata.dir_to_str())
                 self.generate_sidecar(di)
+                if di.NiftiCreated:
+                    self.generate_qa_image(di)
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: x.ConvertImage, reverse=True)
 
@@ -557,6 +563,14 @@ class BaseSet:
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+
+    def generate_qa_image(self, di_obj: BaseInfo) -> None:
+        qa_dir = self.OutputRoot / self.Metadata.dir_to_str() / 'qa' / 'autoconv'
+        nifti_file = self.OutputRoot / self.Metadata.dir_to_str() / 'nii' / (di_obj.NiftiName + '.nii.gz')
+        qa_file = qa_dir / (di_obj.NiftiName + '.png')
+        logging.info('Creating QA image for %s' % nifti_file)
+        mkdir_p(qa_dir)
+        create_qa_image(nifti_file, qa_file)
 
     def generate_unconverted_info(self) -> None:
         info_file = self.OutputRoot / self.Metadata.dir_to_str() / \

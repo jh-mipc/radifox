@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 import shutil
@@ -19,7 +18,7 @@ class ExecError(Exception):
 
 def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
                  verbose: bool, modality: str, parrec: bool, rerun: bool, link: Optional[str],
-                 manual_args: dict, input_hash: Optional[str] = None) -> None:
+                 manual_args: dict, manual_names: dict, input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
@@ -30,10 +29,13 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
 
     try:
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
+        if metadata.AttemptNum is not None:
+            logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
         if parrec:
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
                          (manual_args['InstitutionName'], manual_args['MagneticFieldStrength']))
-        type_folder = session_path / ('mr-' + ('parrec' if parrec else 'dcm'))
+        logging.info('AutoConv starting: %s' % metadata.dir_to_str())
+        type_folder = session_path / (modality + '-' + ('parrec' if parrec else 'dcm'))
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
             if source.is_dir():
@@ -57,9 +59,6 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             sort_func(type_folder)
             recursive_chmod(type_folder)
 
-        manual_json_file = (session_path / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
-        manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
-
         if parrec:
             img_set = ParrecSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash,
                                 manual_args=manual_args)
@@ -67,9 +66,11 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             img_set = DicomSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash)
         img_set.create_all_nii()
         recursive_chmod(session_path / 'nii')
+        recursive_chmod(session_path / 'qa')
         img_set.generate_unconverted_info()
 
         recursive_chmod(session_path / 'logs')
+        logging.info('AutoConv finished: %s' % metadata.dir_to_str())
     except KeyboardInterrupt:
         raise
     except:

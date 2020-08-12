@@ -11,7 +11,7 @@ from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
-from .utils import hash_file_dir, silentremove, mkdir_p
+from .utils import hash_file_dir, silentremove, mkdir_p, version_check
 
 
 def abs_path(ctx, param, value) -> Path:
@@ -55,6 +55,7 @@ def cli():
 @click.option('-v', '--verbose', is_flag=True)
 @click.option('--force', is_flag=True)
 @click.option('--reckless', is_flag=True)
+@click.option('--append', is_flag=True)
 @click.option('--no-project-subdir', is_flag=True)
 @click.option('--parrec', is_flag=True)
 @click.option('--symlink', is_flag=True)
@@ -65,7 +66,7 @@ def cli():
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
 def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
             time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
-            no_project_subdir: bool, parrec: bool, symlink: bool, hardlink: bool, institution: str,
+            append: bool, no_project_subdir: bool, parrec: bool, symlink: bool, hardlink: bool, institution: str,
             field_strength: int, modality: str, manual_arg: dict) -> None:
 
     if hardlink and symlink:
@@ -89,10 +90,20 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
             (output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv'))
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
-    type_dir = output_root / metadata.dir_to_str() / (modality + '-' + ('parrec' if parrec else 'dcm'))
+    manual_json_file = (output_root / metadata.dir_to_str() /
+                        (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
+    manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
+
+    type_dirname = (modality + '-' + ('parrec' if parrec else 'dcm'))
+    type_dir = output_root / metadata.dir_to_str() / type_dirname
     if type_dir.exists():
         # TODO: Add checks to see if data has moved (warn and update? error?)
-        if force or reckless:
+        if append:
+            metadata.AttemptNum = 2
+            while (output_root / metadata.dir_to_str() / type_dirname).exists():
+                metadata.AttemptNum += 1
+            type_dir = output_root / metadata.dir_to_str() / type_dirname
+        elif force or reckless:
             if not reckless:
                 json_file = output_root / metadata.dir_to_str() / (metadata.prefix_to_str() +
                                                                    '_%s-UnconvertedInfo.json' % modality.upper())
@@ -100,15 +111,14 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                     raise ValueError('Unconverted info file (%s) does not exist for consistency checking. '
                                      'Cannot use --force, use --reckless instead.' % json_file)
                 json_obj = json.loads(json_file.read_text())
-                if json_obj['Metadata']['TMSMetaFile'] is not None:
-                    if metadata.TMSMetaFile is None:
+                if json_obj['Metadata']['TMSMetaFileHash'] is not None:
+                    if metadata.TMSMetaFileHash is None:
                         raise ValueError('Previous conversion did not use a TMS metadata file, '
                                          'run with --reckless to ignore this error.')
-                    check_metadata = Metadata.from_tms_metadata(Path(json_obj['Metadata']['TMSMetaFile']))
-                    if check_metadata.TMSMetaFileHash != metadata.TMSMetaFileHash:
+                    if json_obj['Metadata']['TMSMetaFileHash'] != metadata.TMSMetaFileHash:
                         raise ValueError('TMS meta data file has changed since last conversion, '
                                          'run with --reckless to ignore this error.')
-                elif json_obj['Metadata']['TMSMetaFile'] is None and metadata.TMSMetaFile is not None:
+                elif json_obj['Metadata']['TMSMetaFileHash'] is None and metadata.TMSMetaFileHash is not None:
                     raise ValueError('Previous conversion used a TMS metadata file, '
                                      'run with --reckless to ignore this error.')
                 if hash_file_dir(source, False) != json_obj['InputHash']:
@@ -127,7 +137,8 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['MagneticFieldStrength'] = field_strength
     manual_arg['InstitutionName'] = institution
 
-    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, linking, manual_arg, None)
+    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, linking, manual_arg,
+                 manual_names, None)
 
 
 @cli.command()
@@ -143,10 +154,16 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
 
     json_file = directory / '_'.join([subj_id, session_id, '%s-UnconvertedInfo.json' % modality.upper()])
     if not json_file.exists():
-        raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
+        att_json_file = directory / '_'.join([subj_id, '-'.join(session_id.split('-')[:-1]),
+                                              '%s-UnconvertedInfo.json' % modality.upper()])
+        if not att_json_file.exists():
+            raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
+        json_file = att_json_file
     json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
+    if session_id != metadata.TimeID:
+        metadata.AttemptNum = int(session_id.split('-')[-1])
     # noinspection PyProtectedMember
     output_root = Path(*directory.parts[:-2]) if metadata._NoProjectSubdir else Path(*directory.parts[:-3])
 
@@ -154,9 +171,13 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         lut_file = Path(*directory.parts[:-2]) / (metadata.ProjectID + '-lut.csv')
     lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
-    if not force and (json_obj['AutoConvVersion'] == __version__ and
-                      json_obj['LookupTable']['LookupDict'] == lut.LookupDict):
-        print('No action required. Software version and LUT dictionary match for %s.' % directory)
+    manual_json_file = (directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
+    manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
+
+    if not force and (version_check(json_obj['AutoConvVersion'], __version__) and
+                      json_obj['LookupTable']['LookupDict'] == lut.LookupDict and
+                      json_obj['ManualNames'] == manual_names):
+        print('No action required. Software version, LUT dictionary and naming dictionary match for %s.' % directory)
         return
 
     type_dir = directory / ('%s-%s' % (modality, 'parrec' if parrec else 'dcm'))
@@ -169,18 +190,28 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
 
     mkdir_p(directory / 'prev')
     (directory / 'nii').rename(directory / 'prev' / 'nii')
+    (directory / 'qa').rename(directory / 'prev' / 'qa')
     json_file.rename(directory / 'prev' / json_file.name)
-    for filepath in (directory / 'logs').glob('autoconv-*.log'):
-        silentremove(filepath)
+    mkdir_p(directory / 'prev' / 'logs')
+    for filepath in (directory / 'logs').glob('autoconv-*.log*'):
+        if filepath.name.endswith('.log'):
+            filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.01'))
+        else:
+            num = int(filepath.name.split('.')[-1]) + 1
+            filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.%02d' % num))
     try:
         run_autoconv(type_dir, output_root, metadata, lut, verbose, modality,
-                     parrec, True, None, json_obj.get('ManualArgs', {}), json_obj['InputHash'])
+                     parrec, True, None, json_obj.get('ManualArgs', {}), manual_names, json_obj['InputHash'])
     except ExecError:
         logging.info('Exception caught during update. Resetting to previous state.')
         silentremove(directory / 'nii')
         (directory / 'prev' / 'nii').rename(directory / 'nii')
+        silentremove(directory / 'qa')
+        (directory / 'prev' / 'qa').rename(directory / 'qa')
         silentremove(json_file)
         (directory / 'prev' / json_file.name).rename(json_file)
+        for filepath in (directory / 'prev' / 'logs').glob('autoconv-*.log*'):
+            filepath.rename(directory / 'logs' / filepath.name)
     silentremove(directory / 'prev')
 
 

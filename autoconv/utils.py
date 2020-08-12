@@ -287,3 +287,14 @@ def get_software_versions():
     dcmdjpeg_version = check_output([shutil.which('dcmdjpeg'), '--version']).decode().strip().split('\n')[0].strip()
     emf2sf_version = check_output([shutil.which('emf2sf'), '--version']).decode().strip()
     return {'dcm2niix': dcm2niix_version, 'dcmdjpeg': dcmdjpeg_version, 'emf2sf': emf2sf_version}
+
+
+def version_check(saved_version, current_version):
+    if 'dev' in saved_version or 'dev' in current_version:
+        return False
+    saved_arr = saved_version.split('-')[0].split('.')
+    current_arr = current_version.split('-')[0].split('.')
+    for saved, current in zip(saved_arr, current_arr):
+        if int(saved) < int(current):
+            return False
+    return True
