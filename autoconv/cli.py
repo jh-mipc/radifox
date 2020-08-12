@@ -192,8 +192,13 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     (directory / 'nii').rename(directory / 'prev' / 'nii')
     (directory / 'qa').rename(directory / 'prev' / 'qa')
     json_file.rename(directory / 'prev' / json_file.name)
-    for filepath in (directory / 'logs').glob('autoconv-*.log'):
-        silentremove(filepath)
+    mkdir_p(directory / 'prev' / 'logs')
+    for filepath in (directory / 'logs').glob('autoconv-*.log*'):
+        if filepath.name.endswith('.log'):
+            filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.01'))
+        else:
+            num = int(filepath.name.split('.')[-1]) + 1
+            filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.%02d' % num))
     try:
         run_autoconv(type_dir, output_root, metadata, lut, verbose, modality,
                      parrec, True, None, json_obj.get('ManualArgs', {}), manual_names, json_obj['InputHash'])
@@ -205,6 +210,8 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         (directory / 'prev' / 'qa').rename(directory / 'qa')
         silentremove(json_file)
         (directory / 'prev' / json_file.name).rename(json_file)
+        for filepath in (directory / 'prev' / 'logs').glob('autoconv-*.log*'):
+            filepath.rename(directory / 'logs' / filepath.name)
     silentremove(directory / 'prev')
 
 
