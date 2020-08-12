@@ -34,7 +34,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
         if parrec:
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
                          (manual_args['InstitutionName'], manual_args['MagneticFieldStrength']))
-        logging.info('Scan conversion starting: %s' % metadata.dir_to_str())
+        logging.info('AutoConv starting: %s' % metadata.dir_to_str())
         type_folder = session_path / (modality + '-' + ('parrec' if parrec else 'dcm'))
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
@@ -70,7 +70,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
         img_set.generate_unconverted_info()
 
         recursive_chmod(session_path / 'logs')
-        logging.info('Scan conversion finished: %s' % metadata.dir_to_str())
+        logging.info('AutoConv finished: %s' % metadata.dir_to_str())
     except KeyboardInterrupt:
         raise
     except:
