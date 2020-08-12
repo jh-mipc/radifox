@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 import shutil
@@ -33,7 +32,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
         if parrec:
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
                          (manual_args['InstitutionName'], manual_args['MagneticFieldStrength']))
-        type_folder = session_path / ('mr-' + ('parrec' if parrec else 'dcm'))
+        type_folder = session_path / (modality + '-' + ('parrec' if parrec else 'dcm'))
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
             if source.is_dir():

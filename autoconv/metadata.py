@@ -18,6 +18,7 @@ class Metadata:
         self.PatientID = patient_id
         self.TimeID = time_id
         self.SiteID = site_id
+        self.AttemptNum = None
         self.ProjectShortName = self.ProjectID.upper() if project_shortname is None else project_shortname
         self.TMSMetaFileHash = None
         self._RawMetaFileObj = None
@@ -48,7 +49,7 @@ class Metadata:
         return out_cls
 
     def __repr_json__(self) -> dict:
-        skip_keys = []
+        skip_keys = ['AttemptNum']
         if self.TMSMetaFileHash is None:
             skip_keys += ['TMSMetaFileHash', '_RawMetaFileObj']
         return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
@@ -69,7 +70,8 @@ class Metadata:
     def dir_to_str(self) -> Path:
         patient_id = self.ProjectShortName + '-' + self.PatientID if self.SiteID is None \
             else self.ProjectShortName + '-' + self.SiteID + '-' + self.PatientID
-        output_dir = Path(patient_id, self.TimeID)
+        # noinspection PyStringFormat
+        output_dir = Path(patient_id, self.TimeID + ('' if self.AttemptNum is None else ('-%d' % self.AttemptNum)))
         if not self._NoProjectSubdir:
             output_dir = Path(self.ProjectID, output_dir)
         return output_dir

@@ -55,6 +55,7 @@ def cli():
 @click.option('-v', '--verbose', is_flag=True)
 @click.option('--force', is_flag=True)
 @click.option('--reckless', is_flag=True)
+@click.option('--append', is_flag=True)
 @click.option('--no-project-subdir', is_flag=True)
 @click.option('--parrec', is_flag=True)
 @click.option('--symlink', is_flag=True)
@@ -65,7 +66,7 @@ def cli():
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
 def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
             time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
-            no_project_subdir: bool, parrec: bool, symlink: bool, hardlink: bool, institution: str,
+            append: bool, no_project_subdir: bool, parrec: bool, symlink: bool, hardlink: bool, institution: str,
             field_strength: int, modality: str, manual_arg: dict) -> None:
 
     if hardlink and symlink:
@@ -93,10 +94,16 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                         (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
-    type_dir = output_root / metadata.dir_to_str() / (modality + '-' + ('parrec' if parrec else 'dcm'))
+    type_dirname = (modality + '-' + ('parrec' if parrec else 'dcm'))
+    type_dir = output_root / metadata.dir_to_str() / type_dirname
     if type_dir.exists():
         # TODO: Add checks to see if data has moved (warn and update? error?)
-        if force or reckless:
+        if append:
+            metadata.AttemptNum = 2
+            while (output_root / metadata.dir_to_str() / type_dirname).exists():
+                metadata.AttemptNum += 1
+            type_dir = output_root / metadata.dir_to_str() / type_dirname
+        elif force or reckless:
             if not reckless:
                 json_file = output_root / metadata.dir_to_str() / (metadata.prefix_to_str() +
                                                                    '_%s-UnconvertedInfo.json' % modality.upper())
@@ -151,6 +158,8 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
+    if session_id != metadata.TimeID:
+        metadata.AttemptNum = int(session_id.split('-')[-1])
     # noinspection PyProtectedMember
     output_root = Path(*directory.parts[:-2]) if metadata._NoProjectSubdir else Path(*directory.parts[:-3])
 
