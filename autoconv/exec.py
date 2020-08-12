@@ -29,6 +29,8 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
 
     try:
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
+        if metadata.AttemptNum is not None:
+            logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
         if parrec:
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
                          (manual_args['InstitutionName'], manual_args['MagneticFieldStrength']))
