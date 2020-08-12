@@ -27,13 +27,19 @@ class Metadata:
     @classmethod
     def from_tms_metadata(cls, metadata_file: Path, no_project_subdir: bool = False) -> Metadata:
         metadata_obj = json.loads(metadata_file.read_text())['metadataFieldsToValues']
-        site_id, patient_id = metadata_obj['patient_id'].split('-')
-        time_id = None
-        for key in metadata_obj.keys():
-            if re.match(r'mri_timepoint\(\d+\)', key):
-                tp_num = int(re.findall(r'\d+', key)[0])
-                time_id = str(83 + tp_num) if tp_num > 6 else META_TIME_CODES[tp_num]
-                break
+        if 'patient_id' in metadata_obj:
+            site_id, patient_id = metadata_obj['patient_id'].split('-')
+        else:
+            site_id, patient_id = metadata_obj['site_id'], '900'
+        if patient_id == '900':
+            time_id = '99'
+        else:
+            time_id = None
+            for key in metadata_obj.keys():
+                if re.match(r'mri_timepoint\(\d+\)', key):
+                    tp_num = int(re.findall(r'\d+', key)[0])
+                    time_id = str(83 + tp_num) if tp_num > 6 else META_TIME_CODES[tp_num]
+                    break
         out_cls = cls('treatms', patient_id, time_id, site_id, no_project_subdir=no_project_subdir)
         out_cls.TMSMetaFileHash = hash_file_dir(metadata_file)
         out_cls._RawMetaFileObj = {re.sub(r'\([0-9]*\)', '', k): v for k, v in metadata_obj.items()}
