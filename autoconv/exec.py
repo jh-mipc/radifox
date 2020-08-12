@@ -63,6 +63,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             img_set = DicomSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash)
         img_set.create_all_nii()
         recursive_chmod(session_path / 'nii')
+        recursive_chmod(session_path / 'qa')
         img_set.generate_unconverted_info()
 
         recursive_chmod(session_path / 'logs')

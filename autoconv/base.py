@@ -15,6 +15,7 @@ from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
+from .qa.qaimage import create_qa_image
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list,
                     add_acq_num, find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions)
@@ -551,6 +552,8 @@ class BaseSet:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
                 di.create_nii(self.OutputRoot / self.Metadata.dir_to_str())
                 self.generate_sidecar(di)
+                if di.NiftiCreated:
+                    self.generate_qa_image(di)
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: x.ConvertImage, reverse=True)
 
@@ -560,6 +563,14 @@ class BaseSet:
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+
+    def generate_qa_image(self, di_obj: BaseInfo) -> None:
+        qa_dir = self.OutputRoot / self.Metadata.dir_to_str() / 'qa' / 'autoconv'
+        nifti_file = self.OutputRoot / self.Metadata.dir_to_str() / 'nii' / (di_obj.NiftiName + '.nii.gz')
+        qa_file = qa_dir / (di_obj.NiftiName + '.png')
+        logging.info('Creating QA image for %s' % nifti_file)
+        mkdir_p(qa_dir)
+        create_qa_image(nifti_file, qa_file)
 
     def generate_unconverted_info(self) -> None:
         info_file = self.OutputRoot / self.Metadata.dir_to_str() / \

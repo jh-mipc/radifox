@@ -186,6 +186,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
 
     mkdir_p(directory / 'prev')
     (directory / 'nii').rename(directory / 'prev' / 'nii')
+    (directory / 'qa').rename(directory / 'prev' / 'qa')
     json_file.rename(directory / 'prev' / json_file.name)
     for filepath in (directory / 'logs').glob('autoconv-*.log'):
         silentremove(filepath)
@@ -196,6 +197,8 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
         logging.info('Exception caught during update. Resetting to previous state.')
         silentremove(directory / 'nii')
         (directory / 'prev' / 'nii').rename(directory / 'nii')
+        silentremove(directory / 'qa')
+        (directory / 'prev' / 'qa').rename(directory / 'qa')
         silentremove(json_file)
         (directory / 'prev' / json_file.name).rename(json_file)
     silentremove(directory / 'prev')
