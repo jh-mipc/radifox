@@ -154,7 +154,11 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
 
     json_file = directory / '_'.join([subj_id, session_id, '%s-UnconvertedInfo.json' % modality.upper()])
     if not json_file.exists():
-        raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
+        att_json_file = directory / '_'.join([subj_id, '-'.join(session_id.split('-')[:-1]),
+                                              '%s-UnconvertedInfo.json' % modality.upper()])
+        if not att_json_file.exists():
+            raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
+        json_file = att_json_file
     json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
