@@ -22,7 +22,7 @@ def create_qa_image(input_filename, output_filename,
                           int(np.ceil((max_size - sel_slice.shape[i])/2.0))) for i in range(2)]
             slices[i].append(np.pad(sel_slice, pad_width, 'constant'))
     montage = np.concatenate([np.concatenate(slices[i], 0) for i in range(len(slices))], 1)
-    montage += np.min(montage)
+    montage -= np.min(montage)
     montage = np.array(montage / np.percentile(montage[np.nonzero(montage)], 99.9) * 255.0)
     montage[montage > 255.0] = 255.0
     Image.fromarray(montage.astype(np.ubyte).T).save(output_filename)

@@ -50,7 +50,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
                     # noinspection PyTypeChecker
                     shutil.copytree(source, type_folder, copy_function=shutil.copyfile)
                     logging.info('Copying complete')
-            elif any([''.join(source.suffixes) == ext for ext in allowed_archives()[1]]):
+            elif any([source.name.endswith(ext) for ext in allowed_archives()[1]]):
                 extract_archive(source, type_folder)
             else:
                 raise ValueError('Source is not a directory, but does not match one of '
