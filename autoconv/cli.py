@@ -189,9 +189,9 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
                          '%s-dcm source directory does not exist.' % modality)
 
     mkdir_p(directory / 'prev')
-    (directory / 'nii').rename(directory / 'prev' / 'nii')
-    (directory / 'qa').rename(directory / 'prev' / 'qa')
-    json_file.rename(directory / 'prev' / json_file.name)
+    for filename in ['nii', 'qa', json_file.name]:
+        if (directory / filename).exists():
+            (directory / filename).rename(directory / 'prev' / filename)
     mkdir_p(directory / 'prev' / 'logs')
     for filepath in (directory / 'logs').glob('autoconv-*.log*'):
         if filepath.name.endswith('.log'):
@@ -204,14 +204,15 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
                      parrec, True, None, json_obj.get('ManualArgs', {}), manual_names, json_obj['InputHash'])
     except ExecError:
         logging.info('Exception caught during update. Resetting to previous state.')
-        silentremove(directory / 'nii')
-        (directory / 'prev' / 'nii').rename(directory / 'nii')
-        silentremove(directory / 'qa')
-        (directory / 'prev' / 'qa').rename(directory / 'qa')
-        silentremove(json_file)
-        (directory / 'prev' / json_file.name).rename(json_file)
+        for filename in ['nii', 'qa', json_file.name]:
+            silentremove(directory / filename)
+            if (directory / 'prev' / filename).exists():
+                (directory / 'prev' / filename).rename(directory / filename)
         for filepath in (directory / 'prev' / 'logs').glob('autoconv-*.log*'):
             filepath.rename(directory / 'logs' / filepath.name)
+    else:
+        for filepath in (directory / 'logs').glob('autoconv-*.log.*'):
+            silentremove(filepath)
     silentremove(directory / 'prev')
 
 
