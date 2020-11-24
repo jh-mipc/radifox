@@ -43,6 +43,6 @@ class LookupTable:
                         return False
                     lookup_arr = self.LookupDict[item][series_desc].split('-')
                     if len(lookup_arr) < 6:
-                        lookup_arr += [None] * (6 - len(lookup_arr))
+                        lookup_arr += ['None'] * (6 - len(lookup_arr))
                     return [None if item.upper() == 'NONE' else item for item in lookup_arr]
         return None
