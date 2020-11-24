@@ -116,21 +116,19 @@ class BaseInfo:
         return self.ConvertImage
 
     def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
-        autogen = False
-        manual_name = False
         source_name = str(self.SourcePath)
+        man_list = None
+        pred_list = None
         if source_name in manual_dict:
-            pred_list = manual_dict[source_name]
-            manual_name = True
-        else:
-            pred_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
-            if pred_list is False:
-                self.ConvertImage = False
-                return
-        if pred_list is None:
+            man_list = manual_dict[source_name]
+        lut_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
+        if lut_list is False:
+            self.ConvertImage = False
+            return
+        if (man_list is None or any([item is None for item in man_list])) \
+                and (lut_list is None or any([item is None for item in lut_list])):
             # Needs automatic naming
             logging.debug('Name lookup failed, using automatic name generation.')
-            autogen = True
             series_desc = self.SeriesDescription.lower()
             if series_desc.startswith('wip'):
                 series_desc = series_desc[3:].lstrip()
@@ -301,18 +299,25 @@ class BaseInfo:
                 body_part = 'SPINE'
 
             pred_list = [body_part, modality, sequence, resolution, orientation, excontrast]
-        else:
-            logging.debug('Name lookup successful.')
-        if pred_list[1] == 'DE':
-            pred_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
-        if autogen:
-            self.PredictedName = pred_list
-        else:
-            if manual_name:
-                self.ManualName = pred_list
-            else:
-                self.LookupName = pred_list
-        self.NiftiName = '_'.join([scan_str, '-'.join(pred_list)])
+
+        for item_list in [pred_list, man_list, lut_list]:
+            if item_list is not None and item_list[1] == 'DE':
+                item_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
+
+        self.ManualName = man_list
+        self.LookupName = lut_list
+        self.PredictedName = pred_list
+
+        final_list = [None] * 6
+        if self.ManualName is not None:
+            final_list = [self.ManualName[i] if final_list[i] is None else final_list[i]
+                          for i in range(len(final_list))]
+        if self.LookupName is not None:
+            final_list = [self.LookupName[i] if final_list[i] is None else final_list[i]
+                          for i in range(len(final_list))]
+        final_list = [self.PredictedName[i] if final_list[i] is None else final_list[i]
+                      for i in range(len(final_list))]
+        self.NiftiName = '_'.join([scan_str, '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
     def create_nii(self, output_dir: Path) -> None:
