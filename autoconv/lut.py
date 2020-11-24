@@ -39,7 +39,7 @@ class LookupTable:
         for item in [inst_name, 'NONE']:
             if item in self.LookupDict:
                 if series_desc in self.LookupDict[item]:
-                    if self.LookupDict[item][series_desc].upper() == 'NONE':
+                    if self.LookupDict[item][series_desc].upper() == 'FALSE':
                         return False
                     lookup_arr = self.LookupDict[item][series_desc].split('-')
                     if len(lookup_arr) < 6:
