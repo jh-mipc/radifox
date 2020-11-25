@@ -277,8 +277,7 @@ class BaseInfo:
             else float(self.SliceSpacing)
         if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
             logging.info('This series is localizer, derived or processed image. Skipping.')
-            self.ConvertImage = False
-            return
+            return False
         elif body_part == 'ORBITS' and self.NumFiles * slice_sp > 120:
             body_part = 'BRAIN'
         elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
@@ -307,6 +306,9 @@ class BaseInfo:
                 logging.exception('Automatic name generation failed.')
                 self.ConvertImage = False
                 return
+        if pred_list is False:
+            self.ConvertImage = False
+            return
 
         for item_list in [pred_list, man_list, lut_list]:
             if item_list is not None and item_list[1] == 'DE':
