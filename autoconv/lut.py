@@ -10,21 +10,22 @@ class LookupTable:
         filename = lut_file.resolve().expanduser()
         lut = read_csv(filename)
         if site_id is None:
-            site_id = ''
+            site_id = 'NONE'
         self.LookupDict = {}
         for row, (project, site) in enumerate(zip(lut['Project'], lut['Site'])):
-            if is_intstr(site) and is_intstr(site_id):
-                site = int(site)
-                site_id = int(site_id)
-            if site == site_id and project == project_id:
-                if lut['InstitutionName'][row] not in self.LookupDict:
-                    self.LookupDict[lut['InstitutionName'][row]] = {}
-                if lut['SeriesDescription'][row] in self.LookupDict[lut['InstitutionName'][row]]:
+            site_name = 'NONE' if site.upper() == 'NONE' else site
+            if is_intstr(site_name) and is_intstr(site_id):
+                site_name = str(int(site_name))
+                site_id = str(int(site_id))
+            if site_name == site_id and project == project_id:
+                inst_name = 'NONE' if lut['InstitutionName'][row].upper() == 'NONE' else lut['InstitutionName'][row]
+                if inst_name not in self.LookupDict:
+                    self.LookupDict[inst_name] = {}
+                if lut['SeriesDescription'][row] in self.LookupDict[inst_name]:
                     raise ValueError(
-                        'Series description (%s) already exists for site (%04d) and institution name (%s)' %
-                        (lut['SeriesDescription'][row], int(site_id), lut['InstitutionName'][row]))
-                self.LookupDict[lut['InstitutionName'][row]][lut['SeriesDescription'][row]] = \
-                    lut['OutputFilename'][row]
+                        'Series description (%s) already exists for site (%s) and institution name (%s)' %
+                        (lut['SeriesDescription'][row], site_id, inst_name))
+                self.LookupDict[inst_name][lut['SeriesDescription'][row]] = lut['OutputFilename'][row]
 
     def __repr_json__(self) -> dict:
         return self.__dict__
@@ -35,10 +36,13 @@ class LookupTable:
             series_desc = series_desc[4:]
         if series_desc.endswith(' CLEAR') or series_desc.endswith(' SENSE'):
             series_desc = series_desc[:-6]
-        for item in [inst_name, 'None']:
+        for item in [inst_name, 'NONE']:
             if item in self.LookupDict:
                 if series_desc in self.LookupDict[item]:
-                    if self.LookupDict[item][series_desc] == 'None':
+                    if self.LookupDict[item][series_desc].upper() == 'FALSE':
                         return False
-                    return self.LookupDict[item][series_desc].split('-')
+                    lookup_arr = self.LookupDict[item][series_desc].split('-')
+                    if len(lookup_arr) < 6:
+                        lookup_arr += ['None'] * (6 - len(lookup_arr))
+                    return [None if item.upper() == 'NONE' else item for item in lookup_arr]
         return None

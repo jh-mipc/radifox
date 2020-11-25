@@ -32,7 +32,7 @@ PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
 class BaseInfo:
 
-    # TODO: Type consistent defaults?
+    # TODO: Type consistent defaults? Type checking?
     def __init__(self, path: Path) -> None:
         self.SourcePath = Path(path.parent.name) / path.name
         self.SourceHash = hash_file_list([path, path.with_suffix('.rec')], include_names=False) \
@@ -115,204 +115,220 @@ class BaseInfo:
             logging.info('This series is localizer, derived or processed image. Skipping.')
         return self.ConvertImage
 
-    def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
-        autogen = False
-        manual_name = False
-        source_name = str(self.SourcePath)
-        if source_name in manual_dict:
-            pred_list = manual_dict[source_name]
-            manual_name = True
-        else:
-            pred_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
-            if pred_list is False:
-                self.ConvertImage = False
-                return
-        if pred_list is None:
-            # Needs automatic naming
-            logging.debug('Name lookup failed, using automatic name generation.')
-            autogen = True
-            series_desc = self.SeriesDescription.lower()
-            if series_desc.startswith('wip'):
-                series_desc = series_desc[3:].lstrip()
-            scan_opts = [opt.lower() for opt in self.ScanOptions]
-            # 1) Orientation
-            orientation = self.SliceOrientation.upper() if self.SliceOrientation is not None else 'NONE'
-            # 2) Resolution
-            resolution = self.AcquisitionDimension
-            if resolution not in ['2D', '3D']:
-                resolution = '3D' if '3d' in series_desc else '2D'
-            # 3) Ex-contrast
-            excontrast = 'PRE'
-            if not (self.ExContrastAgent is None or self.ExContrastAgent == ''):
-                excontrast = 'POST'
-            elif any([item in series_desc for item in POSTGAD_DESC]) and 'pre' not in series_desc:
-                excontrast = 'POST'
-            # 4) Modality
-            desc_modalities = []
-            if 't1' in series_desc:
-                desc_modalities.append('T1')
-            if 't2' in series_desc:
-                desc_modalities.append('T2')
-            if 'flair' in series_desc:
-                desc_modalities.append('FLAIR')
-            if re.search(r'medic(?!al)', series_desc) or 't2star' in series_desc or \
-                    re.search(r'swi(?!p)', series_desc) or 't2*' in series_desc or 'swan' in series_desc:
-                desc_modalities.append('T2STAR')
-            if 'stir' in series_desc:
-                desc_modalities.append('STIR')
-            if 'dti' in series_desc or 'diff' in series_desc or re.search(r'(?<!p)dw', series_desc) or \
-                    'b1000' in series_desc or 'tensor' in series_desc or \
-                    any([img_type.lower() == 'diffusion' for img_type in self.ImageType]):
-                desc_modalities.append('DIFF')
+    def automatic_name_generation(self):
+        series_desc = self.SeriesDescription.lower()
+        if series_desc.startswith('wip'):
+            series_desc = series_desc[3:].lstrip()
+        scan_opts = [opt.lower() for opt in self.ScanOptions]
+        # 1) Orientation
+        orientation = self.SliceOrientation.upper() if self.SliceOrientation is not None else 'NONE'
+        # 2) Resolution
+        resolution = self.AcquisitionDimension
+        if resolution not in ['2D', '3D']:
+            resolution = '3D' if '3d' in series_desc else '2D'
+        # 3) Ex-contrast
+        excontrast = 'PRE'
+        if not (self.ExContrastAgent is None or self.ExContrastAgent == ''):
+            excontrast = 'POST'
+        elif any([item in series_desc for item in POSTGAD_DESC]) and 'pre' not in series_desc:
+            excontrast = 'POST'
+        # 4) Modality
+        desc_modalities = []
+        if 't1' in series_desc:
+            desc_modalities.append('T1')
+        if 't2' in series_desc:
+            desc_modalities.append('T2')
+        if 'flair' in series_desc:
+            desc_modalities.append('FLAIR')
+        if re.search(r'medic(?!al)', series_desc) or 't2star' in series_desc or \
+                re.search(r'swi(?!p)', series_desc) or 't2*' in series_desc or 'swan' in series_desc:
+            desc_modalities.append('T2STAR')
+        if 'stir' in series_desc:
+            desc_modalities.append('STIR')
+        if 'dti' in series_desc or 'diff' in series_desc or re.search(r'(?<!p)dw', series_desc) or \
+                'b1000' in series_desc or 'tensor' in series_desc or \
+                any([img_type.lower() == 'diffusion' for img_type in self.ImageType]):
+            desc_modalities.append('DIFF')
 
-            modality = 'UNK'
-            if len(desc_modalities) == 1:
-                modality = desc_modalities[0]
-            else:
-                if 'T1' in desc_modalities and 'T2STAR' in desc_modalities:
-                    modality = 'T1'
-                if 'T1' in desc_modalities and 'FLAIR' in desc_modalities:
-                    modality = 'T1'
-                if 'T2' in desc_modalities and 'T2STAR' in desc_modalities:
-                    modality = 'T2STAR'
-            if series_desc in ['swi_images', 'pha_images', 'mag_images']:
-                self.ComplexImageComponent = {'swi_images': 'SWI',
-                                              'mag_images': 'MAGNITUDE',
-                                              'pha_images': 'PHASE'}[series_desc]
+        modality = 'UNK'
+        if len(desc_modalities) == 1:
+            modality = desc_modalities[0]
+        else:
+            if 'T1' in desc_modalities and 'T2STAR' in desc_modalities:
+                modality = 'T1'
+            if 'T1' in desc_modalities and 'FLAIR' in desc_modalities:
+                modality = 'T1'
+            if 'T2' in desc_modalities and 'T2STAR' in desc_modalities:
                 modality = 'T2STAR'
-            elif any(['flow' in img_type.lower() for img_type in self.ImageType]) or \
-                    any(['velocity' in img_type.lower() for img_type in self.ImageType]):
-                modality = 'FLOW'
-            elif any(['tof' in img_type.lower() for img_type in self.ImageType]) or \
-                    any(['tof' in variant.lower() for variant in self.SequenceVariant]) or \
-                    re.search(r'tof(?!f)', series_desc) or 'angio' in series_desc:
-                modality = 'TOF'
-            elif any(['mtc' in variant.lower() for variant in self.SequenceVariant]) or \
-                    getattr(self, 'MTContrast', 0) == 1 or 'mt_gems' in scan_opts:
-                modality = 'MT'
-            elif getattr(self, 'DiffusionFlag', 0) == 1:
-                modality = 'DIFF'
-            # 5) Sequence
-            etl = 1 if self.EchoTrainLength is None else self.EchoTrainLength
-            seq_name = '' if self.SequenceName is None else self.SequenceName.lower()
-            seq_type = [seq.lower() for seq in self.SequenceType]
-            seq_var = [variant.lower() for variant in self.SequenceVariant]
-            sequence = 'UNK'
-            if any([seq == 'se' for seq in seq_type]):
-                sequence = 'SE'
-            elif any([seq == 'gr' for seq in seq_type]):
-                sequence = 'GRE'
-            elif self.FlipAngle >= 60:
-                sequence = 'SE'
-            if any(['ep' == seq for seq in seq_type]) or 'epi' in seq_name or \
-                    (self.EPIFactor is not None and self.EPIFactor > 1):
-                sequence = 'EPI'
-            if 't1ffe' in seq_name or 'fl3d1' in seq_name:
-                sequence = 'SPGR'
-            if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
-                                      any([variant == 'ss' for variant in seq_var])):
-                sequence = 'SPGR'
-            if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
-                sequence = 'F' + sequence
-            if sequence != 'EPI' and 'IR' not in sequence:
-                if self.InversionTime is not None and self.InversionTime > 50 or \
-                        any([seq == 'ir' for seq in seq_type]) or \
-                        any([variant == 'mp' for variant in seq_var]) or \
-                        'flair' in series_desc or 'stir' in series_desc:
-                    sequence = 'IR' + sequence
-            if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
-                sequence = sequence.replace('IR', 'IRF')
-            if 'mprage' in series_desc or 'bravo' in series_desc or \
-                    (self.Manufacturer == 'PHILIPS' and sequence == 'IRFGRE'):
-                sequence = 'IRFSPGR'
-            if modality == 'UNK':
-                if sequence == 'IRFSPGR':
-                    modality = 'T1'
-                elif sequence.endswith('SE'):
-                    modality = 'T2'
-                elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
-                    modality = 'T1' if self.EchoTime < 15 else 'T2STAR'
-            if modality == 'T2' and sequence.startswith('IR'):
-                modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
-            elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
-                modality = 'T2STAR'
-            elif modality == 'T2' and self.EchoTime < 30:
-                modality = 'PD' if self.RepetitionTime > 800 else 'T1'
+        if series_desc in ['swi_images', 'pha_images', 'mag_images']:
+            self.ComplexImageComponent = {'swi_images': 'SWI',
+                                          'mag_images': 'MAGNITUDE',
+                                          'pha_images': 'PHASE'}[series_desc]
+            modality = 'T2STAR'
+        elif any(['flow' in img_type.lower() for img_type in self.ImageType]) or \
+                any(['velocity' in img_type.lower() for img_type in self.ImageType]):
+            modality = 'FLOW'
+        elif any(['tof' in img_type.lower() for img_type in self.ImageType]) or \
+                any(['tof' in variant.lower() for variant in self.SequenceVariant]) or \
+                re.search(r'tof(?!f)', series_desc) or 'angio' in series_desc:
+            modality = 'TOF'
+        elif any(['mtc' in variant.lower() for variant in self.SequenceVariant]) or \
+                getattr(self, 'MTContrast', 0) == 1 or 'mt_gems' in scan_opts:
+            modality = 'MT'
+        elif getattr(self, 'DiffusionFlag', 0) == 1:
+            modality = 'DIFF'
+        # 5) Sequence
+        etl = 1 if self.EchoTrainLength is None else self.EchoTrainLength
+        seq_name = '' if self.SequenceName is None else self.SequenceName.lower()
+        seq_type = [seq.lower() for seq in self.SequenceType]
+        seq_var = [variant.lower() for variant in self.SequenceVariant]
+        sequence = 'UNK'
+        if any([seq == 'se' for seq in seq_type]):
+            sequence = 'SE'
+        elif any([seq == 'gr' for seq in seq_type]):
+            sequence = 'GRE'
+        elif self.FlipAngle >= 60:
+            sequence = 'SE'
+        if any(['ep' == seq for seq in seq_type]) or 'epi' in seq_name or \
+                (self.EPIFactor is not None and self.EPIFactor > 1):
+            sequence = 'EPI'
+        if 't1ffe' in seq_name or 'fl3d1' in seq_name:
+            sequence = 'SPGR'
+        if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
+                                  any([variant == 'ss' for variant in seq_var])):
+            sequence = 'SPGR'
+        if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
+            sequence = 'F' + sequence
+        if sequence != 'EPI' and 'IR' not in sequence:
+            if self.InversionTime is not None and self.InversionTime > 50 or \
+                    any([seq == 'ir' for seq in seq_type]) or \
+                    any([variant == 'mp' for variant in seq_var]) or \
+                    'flair' in series_desc or 'stir' in series_desc:
+                sequence = 'IR' + sequence
+        if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
+            sequence = sequence.replace('IR', 'IRF')
+        if 'mprage' in series_desc or 'bravo' in series_desc or \
+                (self.Manufacturer == 'PHILIPS' and sequence == 'IRFGRE'):
+            sequence = 'IRFSPGR'
+        if modality == 'UNK':
+            if sequence == 'IRFSPGR':
+                modality = 'T1'
+            elif sequence.endswith('SE'):
+                modality = 'T2'
+            elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
+                modality = 'T1' if self.EchoTime < 15 else 'T2STAR'
+        if modality == 'T2' and sequence.startswith('IR'):
+            modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
+        elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
+            modality = 'T2STAR'
+        elif modality == 'T2' and self.EchoTime < 30:
+            modality = 'PD' if self.RepetitionTime > 800 else 'T1'
+        body_part = 'BRAIN'
+        body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
+        study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
+        # TODO: implement regex searches for body part
+        if 'brain' in series_desc or series_desc.startswith('br_'):
             body_part = 'BRAIN'
-            body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
-            study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
-            # TODO: implement regex searches for body part
-            if 'brain' in series_desc or series_desc.startswith('br_'):
-                body_part = 'BRAIN'
-            elif 'ctspine' in series_desc or 'ct spine' in series_desc:
-                body_part = 'SPINE'
-            elif 'cerv' in series_desc or 'csp' in series_desc or 'c sp' in series_desc or \
-                    'c-sp' in series_desc or 'msma' in series_desc:
-                body_part = 'CSPINE'
-            elif 'thor' in series_desc or 'tsp' in series_desc or 't sp' in series_desc or \
-                    't-sp' in series_desc:
-                body_part = 'TSPINE'
-            elif 'lumb' in series_desc or 'lsp' in series_desc or 'l sp' in series_desc or \
-                    'l-sp' in series_desc:
-                body_part = 'LSPINE'
-            elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
-                    re.search(r'\sct(?:\s+|$)', series_desc) or \
-                    series_desc.startswith('sp_'):
-                body_part = 'SPINE'
-            elif 'orbit' in series_desc or 'thin' in series_desc or series_desc.startswith('on_'):
-                body_part = 'ORBITS'
-            elif 'brain' in study_desc:
-                body_part = 'BRAIN'
-            elif 'cerv' in study_desc or ('cspine' in study_desc and 'thor' not in study_desc):
-                body_part = 'CSPINE'
-            elif 'thor' in study_desc or 'tspine' in study_desc:
-                body_part = 'TSPINE'
-            elif 'lumb' in study_desc or 'lspine' in study_desc:
-                body_part = 'LSPINE'
-            elif 'orbit' in study_desc:
-                body_part = 'ORBITS'
-            elif 'brain' in body_part_ex:
-                body_part = 'BRAIN'
-            elif 'cspine' in body_part_ex or 'ctspine' in body_part_ex:
-                body_part = 'CSPINE'
-            elif 'tspine' in body_part_ex or 'tlspine' in body_part_ex:
-                body_part = 'TSPINE'
-            elif 'lspine' in body_part_ex or 'lsspine' in body_part_ex:
-                body_part = 'LSPINE'
-            elif 'spine' in series_desc or 'spine' in body_part_ex or \
-                    'spine' in study_desc:
-                body_part = 'SPINE'
-            if modality == 'DIFF' and orientation == 'SAGITTAL':
-                body_part = 'SPINE'
-            if 'upper' in series_desc:
-                body_part = 'CSPINE'
-            elif 'lower' in series_desc:
-                body_part = 'TSPINE'
-            slice_sp = float(self.SliceThickness) if self.SliceSpacing is None \
-                else float(self.SliceSpacing)
-            if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
-                logging.info('This series is localizer, derived or processed image. Skipping.')
+        elif 'ctspine' in series_desc or 'ct spine' in series_desc:
+            body_part = 'SPINE'
+        elif 'cerv' in series_desc or 'csp' in series_desc or 'c sp' in series_desc or \
+                'c-sp' in series_desc or 'msma' in series_desc:
+            body_part = 'CSPINE'
+        elif 'thor' in series_desc or 'tsp' in series_desc or 't sp' in series_desc or \
+                't-sp' in series_desc:
+            body_part = 'TSPINE'
+        elif 'lumb' in series_desc or 'lsp' in series_desc or 'l sp' in series_desc or \
+                'l-sp' in series_desc:
+            body_part = 'LSPINE'
+        elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
+                re.search(r'\sct(?:\s+|$)', series_desc) or \
+                series_desc.startswith('sp_'):
+            body_part = 'SPINE'
+        elif 'orbit' in series_desc or 'thin' in series_desc or series_desc.startswith('on_'):
+            body_part = 'ORBITS'
+        elif 'brain' in study_desc:
+            body_part = 'BRAIN'
+        elif 'cerv' in study_desc or ('cspine' in study_desc and 'thor' not in study_desc):
+            body_part = 'CSPINE'
+        elif 'thor' in study_desc or 'tspine' in study_desc:
+            body_part = 'TSPINE'
+        elif 'lumb' in study_desc or 'lspine' in study_desc:
+            body_part = 'LSPINE'
+        elif 'orbit' in study_desc:
+            body_part = 'ORBITS'
+        elif 'brain' in body_part_ex:
+            body_part = 'BRAIN'
+        elif 'cspine' in body_part_ex or 'ctspine' in body_part_ex:
+            body_part = 'CSPINE'
+        elif 'tspine' in body_part_ex or 'tlspine' in body_part_ex:
+            body_part = 'TSPINE'
+        elif 'lspine' in body_part_ex or 'lsspine' in body_part_ex:
+            body_part = 'LSPINE'
+        elif 'spine' in series_desc or 'spine' in body_part_ex or \
+                'spine' in study_desc:
+            body_part = 'SPINE'
+        if modality == 'DIFF' and orientation == 'SAGITTAL':
+            body_part = 'SPINE'
+        if 'upper' in series_desc:
+            body_part = 'CSPINE'
+        elif 'lower' in series_desc:
+            body_part = 'TSPINE'
+        slice_sp = float(self.SliceThickness) if self.SliceSpacing is None \
+            else float(self.SliceSpacing)
+        if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
+            logging.info('This series is localizer, derived or processed image. Skipping.')
+            return False
+        elif body_part == 'ORBITS' and self.NumFiles * slice_sp > 120:
+            body_part = 'BRAIN'
+        elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
+                and orientation == 'SAGITTAL':
+            body_part = 'SPINE'
+
+        return [body_part, modality, sequence, resolution, orientation, excontrast]
+
+    def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
+        source_name = str(self.SourcePath)
+        man_list = None
+        pred_list = None
+        if source_name in manual_dict:
+            man_list = manual_dict[source_name]
+        lut_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
+        if man_list is False or lut_list is False:
+            self.ConvertImage = False
+            return
+        if (man_list is None or any([item is None for item in man_list])) \
+                and (lut_list is None or any([item is None for item in lut_list])):
+            # Needs automatic naming
+            logging.debug('Name lookup failed or incomplete, using automatic name generation.')
+            try:
+                pred_list = self.automatic_name_generation()
+            except TypeError:
+                logging.exception('Automatic name generation failed.')
                 self.ConvertImage = False
                 return
-            elif body_part == 'ORBITS' and self.NumFiles * slice_sp > 120:
-                body_part = 'BRAIN'
-            elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
-                    and orientation == 'SAGITTAL':
-                body_part = 'SPINE'
+        if pred_list is False:
+            self.ConvertImage = False
+            return
 
-            pred_list = [body_part, modality, sequence, resolution, orientation, excontrast]
-        else:
-            logging.debug('Name lookup successful.')
-        if pred_list[1] == 'DE':
-            pred_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
-        if autogen:
-            self.PredictedName = pred_list
-        else:
-            if manual_name:
-                self.ManualName = pred_list
-            else:
-                self.LookupName = pred_list
-        self.NiftiName = '_'.join([scan_str, '-'.join(pred_list)])
+        for item_list in [pred_list, man_list, lut_list]:
+            if item_list is not None and item_list[1] == 'DE':
+                item_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
+
+        self.ManualName = man_list
+        self.LookupName = lut_list
+        self.PredictedName = pred_list
+
+        final_list = [None] * 6
+        if self.ManualName is not None:
+            final_list = [self.ManualName[i] if final_list[i] is None else final_list[i]
+                          for i in range(len(final_list))]
+        if self.LookupName is not None:
+            final_list = [self.LookupName[i] if final_list[i] is None else final_list[i]
+                          for i in range(len(final_list))]
+        if self.PredictedName is not None:
+            final_list = [self.PredictedName[i] if final_list[i] is None else final_list[i]
+                          for i in range(len(final_list))]
+        self.NiftiName = '_'.join([scan_str, '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
     def create_nii(self, output_dir: Path) -> None:

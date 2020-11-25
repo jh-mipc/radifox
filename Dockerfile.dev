@@ -110,8 +110,3 @@ COPY --from=build_stage ${SOFTDIR}/dcm2niix/bin/dcm2niix ${SOFTDIR}/dcm2niix/bin
 
 # Update environment variables
 ENV PATH ${SOFTDIR}/dcm2niix/bin:${SOFTDIR}/dcm4che/bin:${SOFTDIR}/dcmtk/bin:${PATH}
-
-# Create dev directory and update env
-RUN mkdir -p /ext-module
-ENV PATH /ext-module/bin:${PATH}
-ENV PYTHONPATH /ext-module/python-lib:${PYTHONPATH}
