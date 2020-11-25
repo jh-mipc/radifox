@@ -323,8 +323,9 @@ class BaseInfo:
         if self.LookupName is not None:
             final_list = [self.LookupName[i] if final_list[i] is None else final_list[i]
                           for i in range(len(final_list))]
-        final_list = [self.PredictedName[i] if final_list[i] is None else final_list[i]
-                      for i in range(len(final_list))]
+        if self.PredictedName is not None:
+            final_list = [self.PredictedName[i] if final_list[i] is None else final_list[i]
+                          for i in range(len(final_list))]
         self.NiftiName = '_'.join([scan_str, '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
