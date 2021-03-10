@@ -278,7 +278,9 @@ def hash_file_list(file_list: List[Path], include_names: bool = True) -> str:
     return str(hash_obj.hexdigest())
 
 
-def hash_value(value: str, hash_func: Any = hashlib.sha256) -> str:
+def hash_value(value: str, hash_func: Any = hashlib.sha256) -> Optional[str]:
+    if value is None:
+        return None
     m = hash_func()
     m.update(value.encode())
     return str(m.hexdigest())
@@ -307,7 +309,5 @@ def version_check(saved_version, current_version):
 
 
 def shift_date(datetime_str: Optional[str] = None, date_shift_days: int = 0):
-    if value is None:
-        return None
     orig_date = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
     return (orig_date + timedelta(days=date_shift_days)).strftime('%Y-%m-%d %H:%M:%S')
