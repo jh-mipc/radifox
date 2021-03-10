@@ -34,7 +34,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             logging.info('Anonymization will be performed, including removal of copied source folders.')
         if not lut_file.exists():
             logging.warning('LUT file does not exist. Creating a blank file at %s.' % lut_file)
-            lut_file.write_text('')
+            lut_file.write_text('Project,Site,InstitutionName,SeriesDescription,OutputFilename\n')
         lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
         if metadata.AttemptNum is not None:
             logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
