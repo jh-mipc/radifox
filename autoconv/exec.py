@@ -31,7 +31,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
     try:
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
         if remove_identifiers:
-            logging.warning('Anonymization will be performed, including removal of copied source folders.')
+            logging.info('Anonymization will be performed, including removal of copied source folders.')
         if metadata.AttemptNum is not None:
             logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
         if parrec:
