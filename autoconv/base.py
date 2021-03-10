@@ -609,7 +609,7 @@ class BaseSet:
                     (self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json')
         logging.info('Writing unconverted info file to %s' % info_file)
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
-        out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
+        out_dict['SeriesList'] = [item for item in self.SeriesList if not item.NiftiCreated]
         if self.RemoveIdentifiers:
             out_dict = self.anonymize(out_dict, self.DateShiftDays)
         info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
