@@ -1,7 +1,7 @@
 from codecs import BOM_UTF8
 from collections.abc import Sequence
 import csv
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 import hashlib
 import logging
 from pathlib import Path
@@ -278,6 +278,12 @@ def hash_file_list(file_list: List[Path], include_names: bool = True) -> str:
     return str(hash_obj.hexdigest())
 
 
+def hash_value(value: str, hash_func: Any = hashlib.sha256) -> str:
+    m = hash_func()
+    m.update(value.encode())
+    return str(m.hexdigest())
+
+
 def p_add(path: Path, extra: str) -> Path:
     return path.parent / (path.name + extra)
 
@@ -298,3 +304,10 @@ def version_check(saved_version, current_version):
         if int(saved) < int(current):
             return False
     return True
+
+
+def shift_date(datetime_str: Optional[str] = None, date_shift_days: int = 0):
+    if value is None:
+        return None
+    orig_date = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
+    return (orig_date + timedelta(days=date_shift_days)).strftime('%Y-%m-%d %H:%M:%S')

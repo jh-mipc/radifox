@@ -88,9 +88,10 @@ class ParrecInfo(BaseInfo):
 class ParrecSet(BaseSet):
 
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
-                 manual_names: Optional[dict] = None, manual_args: Optional[dict] = None,
-                 input_hash: Optional[str] = None) -> None:
-        super().__init__(source, output_root, metadata_obj, lut_obj, manual_names, input_hash)
+                 remove_identifiers: bool = False, date_shift_days: int = 0, manual_names: Optional[dict] = None,
+                 manual_args: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
+        super().__init__(source, output_root, metadata_obj, lut_obj, remove_identifiers, date_shift_days,
+                         manual_names, input_hash)
         self.ManualArgs = manual_args
 
         for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):

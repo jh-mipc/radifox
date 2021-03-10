@@ -1,7 +1,8 @@
+from copy import deepcopy
 from pathlib import Path
 from typing import Union, List
 
-from .utils import read_csv, is_intstr
+from .utils import read_csv, is_intstr, hash_value
 
 
 class LookupTable:
@@ -29,6 +30,13 @@ class LookupTable:
 
     def __repr_json__(self) -> dict:
         return self.__dict__
+
+    def anonymized(self):
+        anon_copy = deepcopy(self)
+        for inst_name in self.LookupDict:
+            anon_copy.LookupDict[hash_value(inst_name)] = self.LookupDict[inst_name]
+            del anon_copy.LookupDict[inst_name]
+        return anon_copy
 
     def check(self, inst_name: str, series_desc: str) -> Union[List[str], bool, None]:
         # Deal with extras from PARRECs

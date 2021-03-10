@@ -18,7 +18,8 @@ class ExecError(Exception):
 
 def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
                  verbose: bool, modality: str, parrec: bool, rerun: bool, link: Optional[str],
-                 manual_args: dict, manual_names: dict, input_hash: Optional[str] = None) -> None:
+                 manual_args: dict, remove_identifiers: bool, date_shift_days: int, manual_names: dict,
+                 input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
@@ -60,10 +61,11 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             recursive_chmod(type_folder)
 
         if parrec:
-            img_set = ParrecSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash,
-                                manual_args=manual_args)
+            img_set = ParrecSet(source, output_root, metadata, lut, remove_identifiers, date_shift_days, manual_names,
+                                input_hash=input_hash, manual_args=manual_args)
         else:
-            img_set = DicomSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash)
+            img_set = DicomSet(source, output_root, metadata, lut, remove_identifiers, date_shift_days, manual_names,
+                               input_hash=input_hash)
         img_set.create_all_nii()
         recursive_chmod(session_path / 'nii')
         recursive_chmod(session_path / 'qa')
