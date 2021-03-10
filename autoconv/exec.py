@@ -9,7 +9,7 @@ from .logging import create_loggers
 from .metadata import Metadata
 from .lut import LookupTable
 from .parrec import ParrecSet, sort_parrecs
-from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_link, DIR_OCTAL
+from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_link, DIR_OCTAL, hash_value
 
 
 class ExecError(Exception):
@@ -18,7 +18,8 @@ class ExecError(Exception):
 
 def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
                  verbose: bool, modality: str, parrec: bool, rerun: bool, link: Optional[str],
-                 manual_args: dict, manual_names: dict, input_hash: Optional[str] = None) -> None:
+                 manual_args: dict, remove_identifiers: bool, date_shift_days: int, manual_names: dict,
+                 input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
     session_path.chmod(DIR_OCTAL)
@@ -29,11 +30,15 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
 
     try:
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
+        if remove_identifiers:
+            logging.info('Anonymization will be performed, including removal of copied source folders.')
         if metadata.AttemptNum is not None:
             logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
         if parrec:
+            inst_name = hash_value(manual_args['InstitutionName']) if remove_identifiers \
+                else manual_args['InstitutionName']
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
-                         (manual_args['InstitutionName'], manual_args['MagneticFieldStrength']))
+                         (inst_name, manual_args['MagneticFieldStrength']))
         logging.info('AutoConv starting: %s' % metadata.dir_to_str())
         type_folder = session_path / (modality + '-' + ('parrec' if parrec else 'dcm'))
         sort_func = sort_parrecs if parrec else sort_dicoms
@@ -60,16 +65,19 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             recursive_chmod(type_folder)
 
         if parrec:
-            img_set = ParrecSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash,
-                                manual_args=manual_args)
+            img_set = ParrecSet(source, output_root, metadata, lut, remove_identifiers, date_shift_days, manual_names,
+                                input_hash=input_hash, manual_args=manual_args)
         else:
-            img_set = DicomSet(source, output_root, metadata, lut, manual_names, input_hash=input_hash)
+            img_set = DicomSet(source, output_root, metadata, lut, remove_identifiers, date_shift_days, manual_names,
+                               input_hash=input_hash)
         img_set.create_all_nii()
         recursive_chmod(session_path / 'nii')
         recursive_chmod(session_path / 'qa')
         img_set.generate_unconverted_info()
 
         recursive_chmod(session_path / 'logs')
+        if remove_identifiers:
+            shutil.rmtree(type_folder)
         logging.info('AutoConv finished: %s' % metadata.dir_to_str())
     except KeyboardInterrupt:
         raise

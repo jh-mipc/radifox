@@ -17,8 +17,8 @@ from .lut import LookupTable
 from .metadata import Metadata
 from .qa.qaimage import create_qa_image
 # from .logging import WARNING_DEBUG
-from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list,
-                    add_acq_num, find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions)
+from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list, add_acq_num,
+                    find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date)
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain']
@@ -26,6 +26,8 @@ POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
                   'InversionTime', 'ComplexImageComponent']
+HASH_ITEMS = ['InstitutionName', 'DeviceIdentifier']
+SHIFT_ITEMS = ['AcqDateTime']
 DCM_ORIENT_PLANES = {0: 'sagittal', 1: 'coronal', 2: 'axial'}
 PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
@@ -43,6 +45,7 @@ class BaseInfo:
         self.InstitutionName = None
         self.Manufacturer = None
         self.ScannerModelName = None
+        self.DeviceIdentifier = None
         self.SeriesDescription = None
         self.AcqDateTime = None
         self.MagneticFieldStrength = None
@@ -90,6 +93,14 @@ class BaseInfo:
 
     def __repr_json__(self) -> dict:
         return {k: NoIndent(v) for k, v in self.__dict__.items()}
+
+    def anonymized(self, date_shift_days: int = 0):
+        anon_copy = deepcopy(self)
+        for key in HASH_ITEMS:
+            setattr(anon_copy, key, hash_value(getattr(anon_copy, key)))
+        for key in SHIFT_ITEMS:
+            setattr(anon_copy, key, shift_date(getattr(anon_copy, key), date_shift_days))
+        return anon_copy
 
     def should_convert(self) -> bool:
         type_str = ' '.join(self.ImageType[:2]).lower()
@@ -354,13 +365,13 @@ class BaseInfo:
             logging.warning('dcm2niix failed for %s' % source)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
             logging.warning('dcm2niix return code: %d' % result.returncode)
-            logging.warning('dcm2niix output:\n' + result.stdout)
-            for filename in parse_dcm2niix_filenames(result.stdout):
+            logging.warning('dcm2niix output:\n' + str(result.stdout))
+            for filename in parse_dcm2niix_filenames(str(result.stdout)):
                 remove_created_files(filename)
             logging.warning('Nifti creation failed.')
             return
 
-        filenames = parse_dcm2niix_filenames(result.stdout)
+        filenames = parse_dcm2niix_filenames(str(result.stdout))
         if len(filenames) > 1:
             filename_check = re.compile(str(filenames[0]) + r'_t[0-9]+$')
             if all([filename_check.match(str(item)) is not None for item in filenames[1:]]):
@@ -404,13 +415,14 @@ class BaseInfo:
                 logging.warning('Nifti creation failed for %s' % source)
                 logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
                 logging.warning('dcm2niix return code: %d' % result.returncode)
-                logging.warning('dcm2niix output:\n' + result.stdout)
+                logging.warning('dcm2niix output:\n' + str(result.stdout))
                 logging.warning('Nifti creation failed.')
 
 
 class BaseSet:
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
-                 manual_names: Optional[dict] = None, input_hash: Optional[str] = None) -> None:
+                 remove_identifiers: bool = False, date_shift_days: int = 0, manual_names: Optional[dict] = None,
+                 input_hash: Optional[str] = None) -> None:
         self.AutoConvVersion = __version__
         self.ConversionSoftwareVersions = get_software_versions()
         if input_hash is None:
@@ -423,11 +435,13 @@ class BaseSet:
         self.ManualNames = manual_names if manual_names is not None else {}
         self.Metadata = metadata_obj
         self.LookupTable = lut_obj
+        self.RemoveIdentifiers = remove_identifiers
+        self.DateShiftDays = date_shift_days
         self.OutputRoot = output_root
         self.SeriesList = []
 
     def __repr_json__(self) -> dict:
-        return {key: value for key, value in self.__dict__.items() if key != 'OutputRoot'}
+        return {key: value for key, value in self.__dict__.items() if key not in ['OutputRoot', 'DateShiftDays']}
 
     def generate_unique_names(self) -> None:
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
@@ -578,6 +592,8 @@ class BaseSet:
         logging.info('Writing image sidecar file to %s' % sidecar_file)
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
+        if self.RemoveIdentifiers:
+            out_dict = self.anonymize(out_dict, self.DateShiftDays)
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
     def generate_qa_image(self, di_obj: BaseInfo) -> None:
@@ -592,10 +608,22 @@ class BaseSet:
         info_file = self.OutputRoot / self.Metadata.dir_to_str() / \
                     (self.Metadata.prefix_to_str() + '_MR-UnconvertedInfo.json')
         logging.info('Writing unconverted info file to %s' % info_file)
-        out_dict = deepcopy(self.__dict__)
-        out_dict['SeriesList'] = [item for item in out_dict['SeriesList'] if not item.NiftiCreated]
+        out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
+        out_dict['SeriesList'] = [item for item in self.SeriesList if not item.NiftiCreated]
+        if self.RemoveIdentifiers:
+            out_dict = self.anonymize(out_dict, self.DateShiftDays)
         info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
         info_file.chmod(FILE_OCTAL)
+
+    @staticmethod
+    def anonymize(ident_dict: dict, date_shift_days: int = 0):
+        anon_dict = deepcopy(ident_dict)
+        anon_dict['LookupTable'] = ident_dict['LookupTable'].anonymized()
+        if 'SeriesInfo' in anon_dict:
+            anon_dict['SeriesInfo'] = ident_dict['SeriesInfo'].anonymized(date_shift_days)
+        if 'SeriesList' in anon_dict:
+            anon_dict['SeriesList'] = [item.anonymized(date_shift_days) for item in ident_dict['SeriesList']]
+        return anon_dict
 
 
 class TruncatedImageValue:

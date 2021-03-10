@@ -63,11 +63,13 @@ def cli():
 @click.option('--institution', type=str)
 @click.option('--field-strength', type=int, default=3)
 @click.option('--modality', type=str, default='mr')
+@click.option('--anonymize', is_flag=True)
+@click.option('--date-shift-days', type=int, default=0)
 @click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
 def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
             time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
             append: bool, no_project_subdir: bool, parrec: bool, symlink: bool, hardlink: bool, institution: str,
-            field_strength: int, modality: str, manual_arg: dict) -> None:
+            field_strength: int, modality: str, anonymize: bool, date_shift_days: int, manual_arg: dict) -> None:
 
     if hardlink and symlink:
         raise ValueError('Only one of --symlink and --hardlink can be used.')
@@ -138,7 +140,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['InstitutionName'] = institution
 
     run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, linking, manual_arg,
-                 manual_names, None)
+                 anonymize, date_shift_days, manual_names, None)
 
 
 @cli.command()
@@ -201,7 +203,8 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
             filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.%02d' % num))
     try:
         run_autoconv(type_dir, output_root, metadata, lut, verbose, modality,
-                     parrec, True, None, json_obj.get('ManualArgs', {}), manual_names, json_obj['InputHash'])
+                     parrec, True, None, json_obj.get('ManualArgs', {}), False, 0,
+                     manual_names, json_obj['InputHash'])
     except ExecError:
         logging.info('Exception caught during update. Resetting to previous state.')
         for filename in ['nii', 'qa', json_file.name]:
