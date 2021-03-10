@@ -59,8 +59,8 @@ def pkg_commit_hash(pkg_path: Path):
 
 _version_major = 0
 _version_minor = 3
-_version_micro = 2
-_version_extra = ''  # Remove -dev for release
+_version_micro = 3
+_version_extra = '-dev'  # Remove -dev for release
 
 if '-dev' in _version_extra:
     src, hsh = pkg_commit_hash(Path(__file__).parent)
