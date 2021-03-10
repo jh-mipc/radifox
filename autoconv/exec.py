@@ -30,6 +30,8 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
 
     try:
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
+        if remove_identifiers:
+            logging.warning('Anonymization will be performed, including removal of log and copied source folders.')
         if metadata.AttemptNum is not None:
             logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
         if parrec:
@@ -72,6 +74,9 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
         img_set.generate_unconverted_info()
 
         recursive_chmod(session_path / 'logs')
+        if remove_identifiers:
+            shutil.rmtree(type_folder)
+            shutil.rmtree(session_path / 'logs')
         logging.info('AutoConv finished: %s' % metadata.dir_to_str())
     except KeyboardInterrupt:
         raise
