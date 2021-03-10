@@ -90,7 +90,6 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     if lut_file is None:
         lut_file = (output_root / (metadata.ProjectID + '-lut.csv')) if no_project_subdir else \
             (output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv'))
-    lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
 
     manual_json_file = (output_root / metadata.dir_to_str() /
                         (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
@@ -139,7 +138,7 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
     manual_arg['MagneticFieldStrength'] = field_strength
     manual_arg['InstitutionName'] = institution
 
-    run_autoconv(source, output_root, metadata, lut, verbose, modality, parrec, False, linking, manual_arg,
+    run_autoconv(source, output_root, metadata, lut_file, verbose, modality, parrec, False, linking, manual_arg,
                  anonymize, date_shift_days, manual_names, None)
 
 
@@ -170,14 +169,14 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     output_root = Path(*directory.parts[:-2]) if metadata._NoProjectSubdir else Path(*directory.parts[:-3])
 
     if lut_file is None:
-        lut_file = Path(*directory.parts[:-2]) / (metadata.ProjectID + '-lut.csv')
-    lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
+        lut_file = output_root / (metadata.ProjectID + '-lut.csv')
+    lookup_dict = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID).LookupDict if lut_file.exists() else {}
 
     manual_json_file = (directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
     if not force and (version_check(json_obj['AutoConvVersion'], __version__) and
-                      json_obj['LookupTable']['LookupDict'] == lut.LookupDict and
+                      json_obj['LookupTable']['LookupDict'] == lookup_dict and
                       json_obj['ManualNames'] == manual_names):
         print('No action required. Software version, LUT dictionary and naming dictionary match for %s.' % directory)
         return
@@ -202,7 +201,7 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
             num = int(filepath.name.split('.')[-1]) + 1
             filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.%02d' % num))
     try:
-        run_autoconv(type_dir, output_root, metadata, lut, verbose, modality,
+        run_autoconv(type_dir, output_root, metadata, lut_file, verbose, modality,
                      parrec, True, None, json_obj.get('ManualArgs', {}), False, 0,
                      manual_names, json_obj['InputHash'])
     except ExecError:

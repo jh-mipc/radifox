@@ -16,7 +16,7 @@ class ExecError(Exception):
     pass
 
 
-def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut: LookupTable,
+def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut_file: Path,
                  verbose: bool, modality: str, parrec: bool, rerun: bool, link: Optional[str],
                  manual_args: dict, remove_identifiers: bool, date_shift_days: int, manual_names: dict,
                  input_hash: Optional[str] = None) -> None:
@@ -32,6 +32,10 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
         if remove_identifiers:
             logging.info('Anonymization will be performed, including removal of copied source folders.')
+        if not lut_file.exists():
+            logging.warning('LUT file does not exist. Creating a blank file at %s.' % lut_file)
+            lut_file.write_text('')
+        lut = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID)
         if metadata.AttemptNum is not None:
             logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
         if parrec:
