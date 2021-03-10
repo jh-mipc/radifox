@@ -354,13 +354,13 @@ class BaseInfo:
             logging.warning('dcm2niix failed for %s' % source)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
             logging.warning('dcm2niix return code: %d' % result.returncode)
-            logging.warning('dcm2niix output:\n' + result.stdout)
-            for filename in parse_dcm2niix_filenames(result.stdout):
+            logging.warning('dcm2niix output:\n' + str(result.stdout))
+            for filename in parse_dcm2niix_filenames(str(result.stdout)):
                 remove_created_files(filename)
             logging.warning('Nifti creation failed.')
             return
 
-        filenames = parse_dcm2niix_filenames(result.stdout)
+        filenames = parse_dcm2niix_filenames(str(result.stdout))
         if len(filenames) > 1:
             filename_check = re.compile(str(filenames[0]) + r'_t[0-9]+$')
             if all([filename_check.match(str(item)) is not None for item in filenames[1:]]):
@@ -404,7 +404,7 @@ class BaseInfo:
                 logging.warning('Nifti creation failed for %s' % source)
                 logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
                 logging.warning('dcm2niix return code: %d' % result.returncode)
-                logging.warning('dcm2niix output:\n' + result.stdout)
+                logging.warning('dcm2niix output:\n' + str(result.stdout))
                 logging.warning('Nifti creation failed.')
 
 
