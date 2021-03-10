@@ -9,7 +9,7 @@ from .logging import create_loggers
 from .metadata import Metadata
 from .lut import LookupTable
 from .parrec import ParrecSet, sort_parrecs
-from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_link, DIR_OCTAL
+from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_link, DIR_OCTAL, hash_value
 
 
 class ExecError(Exception):
@@ -31,12 +31,14 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
     try:
         logging.info('Beginning scan conversion using AutoConv v' + __version__)
         if remove_identifiers:
-            logging.warning('Anonymization will be performed, including removal of log and copied source folders.')
+            logging.warning('Anonymization will be performed, including removal of copied source folders.')
         if metadata.AttemptNum is not None:
             logging.info('Multiple attempts found. This will be attempt #%d' % metadata.AttemptNum)
         if parrec:
+            inst_name = hash_value(manual_args['InstitutionName']) if remove_identifiers \
+                else manual_args['InstitutionName']
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
-                         (manual_args['InstitutionName'], manual_args['MagneticFieldStrength']))
+                         (inst_name, manual_args['MagneticFieldStrength']))
         logging.info('AutoConv starting: %s' % metadata.dir_to_str())
         type_folder = session_path / (modality + '-' + ('parrec' if parrec else 'dcm'))
         sort_func = sort_parrecs if parrec else sort_dicoms
@@ -76,7 +78,6 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
         recursive_chmod(session_path / 'logs')
         if remove_identifiers:
             shutil.rmtree(type_folder)
-            shutil.rmtree(session_path / 'logs')
         logging.info('AutoConv finished: %s' % metadata.dir_to_str())
     except KeyboardInterrupt:
         raise
