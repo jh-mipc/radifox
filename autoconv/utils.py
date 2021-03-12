@@ -221,8 +221,8 @@ def find_closest(target: int, to_check: List[int]) -> Optional[int]:
     elif len(to_check) == 1:
         return to_check[0]
     signed_dists = []
-    for i, check_val in enumerate(to_check):
-        signed_dists.append((check_val - target, i))
+    for check_val in to_check:
+        signed_dists.append((check_val - target, check_val))
     min_dist = min([abs(val[0]) for val in signed_dists])
     candidates = [val[1] for val in signed_dists if abs(val[0]) == min_dist]
     return candidates[0] if len(candidates) == 1 else min(candidates)
