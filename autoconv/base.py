@@ -102,6 +102,11 @@ class BaseInfo:
             setattr(anon_copy, key, shift_date(getattr(anon_copy, key), date_shift_days))
         return anon_copy
 
+    def update_name(self, name_lambda: Callable[[str], str], message: str = 'Adjusting name') -> None:
+        logging.debug('%s for %s: %s --> %s' %
+                      (message, self.SeriesUID, self.NiftiName, name_lambda(self.NiftiName)))
+        self.NiftiName = name_lambda(self.NiftiName)
+
     def should_convert(self) -> bool:
         type_str = ' '.join(self.ImageType[:2]).lower()
         series_desc = self.SeriesDescription.lower()
@@ -352,9 +357,7 @@ class BaseInfo:
         count = 1
         while Path(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz').exists():
             count += 1
-        logging.debug('Adjusting name for %s: %s --> %s' % (self.SeriesUID, self.NiftiName,
-                                                            add_acq_num(self.NiftiName, count)))
-        self.NiftiName = add_acq_num(self.NiftiName, count)
+        self.update_name(lambda x: add_acq_num(x, count))
 
         success = True
         dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
@@ -451,7 +454,7 @@ class BaseSet:
                 continue
             # sWIP is Philips indicator for a "sum" of a multi-echo image
             if di.SeriesDescription.startswith('sWIP'):
-                self.update_name(di, lambda x: x + '-SUM')
+                di.update_name(lambda x: x + '-SUM')
             # Change T1 image to MT/MTOFF if matches an MT sequence and add MTON for the corresponding MT scan
             if di.NiftiName.split('_')[-1].split('-')[1] in ['T1', 'T2STAR'] and \
                     any([di.NiftiName.split('_')[-1] ==
@@ -469,8 +472,8 @@ class BaseSet:
                                               and di.FlipAngle == other_di.FlipAngle
                                               and di.RepetitionTime == other_di.RepetitionTime])
                 if closest_mt is not None:
-                    self.update_name(di, lambda x: x.replace('-T1-', '-MT-') + '-MTOFF')
-                    self.update_name(self.SeriesList[closest_mt], lambda x: x + '-MTON')
+                    di.update_name(lambda x: x.replace('-T1-', '-MT-') + '-MTOFF')
+                    self.SeriesList[closest_mt].update_name(lambda x: x + '-MTON')
 
             # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
             if di.NiftiName.split('_')[-1].split('-')[0] == 'SPINE':
@@ -478,11 +481,11 @@ class BaseSet:
                         di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \
                         abs(di.ImagePositionPatient[2] - self.SeriesList[i - 1].ImagePositionPatient[2]) > 100:
                     if self.SeriesList[i - 1].NiftiName.split('_')[-1].split('-')[0] == 'CSPINE':
-                        self.update_name(di, lambda x: x.replace('SPINE', 'TSPINE'))
+                        di.update_name(lambda x: x.replace('SPINE', 'TSPINE'))
                     else:
-                        self.update_name(di, lambda x: x.replace('SPINE', 'LSPINE'))
+                        di.update_name(lambda x: x.replace('SPINE', 'LSPINE'))
                 else:
-                    self.update_name(di, lambda x: x.replace('SPINE', 'CSPINE'))
+                    di.update_name(lambda x: x.replace('SPINE', 'CSPINE'))
 
         names_set = set([di.NiftiName for di in self.SeriesList])
         names_dict = {name: {} for name in names_set}
@@ -501,7 +504,7 @@ class BaseSet:
                     for di in names_dict[name][root_uid]:
                         dyn_checks[root_uid].append(di)
                         dyn_num = names_dict[di.NiftiName][root_uid].index(di) + 1
-                        self.update_name(di, lambda x: x + ('-DYN%d' % dyn_num))
+                        di.update_name(lambda x: x + ('-DYN%d' % dyn_num))
 
         for dcm_uid, di_list in dyn_checks.items():
             non_matching = []
@@ -511,25 +514,25 @@ class BaseSet:
             if non_matching == ['EchoTime']:
                 switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
                 for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime)):
-                    self.update_name(di, lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
+                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
                     if switch_t2star:
-                        self.update_name(di, lambda x: x.replace('-T1-', '-T2STAR-'))
+                        di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
             elif non_matching == ['ComplexImageComponent']:
                 for di in di_list:
                     comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
-                    self.update_name(di, lambda x: '-'.join(x.split('-')[:-1] + [comp]))
+                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + [comp]))
             elif non_matching == ['EchoTime', 'ComplexImageComponent']:
                 switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
                 tes = sorted(list(set([di.EchoTime for di in di_list])))
                 for di in di_list:
                     comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
                     echo_num = tes.index(di.EchoTime)
-                    self.update_name(di, lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (echo_num + 1), comp]))
+                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (echo_num + 1), comp]))
                     if switch_t2star:
-                        self.update_name(di, lambda x: x.replace('-T1-', '-T2STAR-'))
+                        di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
             elif non_matching == ['ImageOrientationPatient']:
                 for di in di_list:
-                    self.update_name(di, lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
+                    di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
             else:
                 continue
 
@@ -539,7 +542,7 @@ class BaseSet:
             if di.NiftiName.split('_')[2].split('-')[1] == 'T2STAR' and not \
                     any([di.NiftiName.split('_')[2].split('-')[-1] == item for item in ['MAG', 'PHA', 'SWI']]):
                 comp = di.ComplexImageComponent[:3] if di.ComplexImageComponent is not None else 'MAG'
-                self.update_name(di, lambda x: x + '-' + comp)
+                di.update_name(lambda x: x + '-' + comp)
 
         for di in self.SeriesList:
             if di.NiftiName is not None and ' '.join(di.ImageType[:2]).lower() == 'derived primary':
@@ -597,12 +600,6 @@ class BaseSet:
         if 'SeriesList' in anon_dict:
             anon_dict['SeriesList'] = [item.anonymized(date_shift_days) for item in ident_dict['SeriesList']]
         return anon_dict
-
-    @staticmethod
-    def update_name(di: BaseInfo, name_lambda: Callable[[str], str], message: str = 'Adjusting name') -> None:
-        logging.debug('%s for %s: %s --> %s' %
-                      (message, di.SeriesUID, di.NiftiName, name_lambda(di.NiftiName)))
-        di.NiftiName = name_lambda(di.NiftiName)
 
 
 class TruncatedImageValue:
