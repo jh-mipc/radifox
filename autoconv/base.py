@@ -216,7 +216,7 @@ class BaseInfo:
         if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
             sequence = 'F' + sequence
         if sequence != 'EPI' and 'IR' not in sequence:
-            if self.InversionTime is not None and self.InversionTime > 50 or \
+            if (self.InversionTime is not None and self.InversionTime > 50) or \
                     any([seq == 'ir' for seq in seq_type]) or \
                     any([variant == 'mp' for variant in seq_var]) or \
                     'flair' in series_desc or 'stir' in series_desc:
@@ -232,13 +232,13 @@ class BaseInfo:
             elif sequence.endswith('SE'):
                 modality = 'T2'
             elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
-                modality = 'T1' if self.EchoTime < 15 else 'T2STAR'
+                modality = 'T1' if self.EchoTime is not None and self.EchoTime < 15 else 'T2STAR'
         if modality == 'T2' and sequence.startswith('IR'):
             modality = 'STIR' if self.InversionTime is not None and self.InversionTime < 400 else 'FLAIR'
         elif modality == 'T2' and (sequence.endswith('GRE') or sequence.endswith('SPGR')):
             modality = 'T2STAR'
-        elif modality == 'T2' and self.EchoTime < 30:
-            modality = 'PD' if self.RepetitionTime > 800 else 'T1'
+        elif modality == 'T2' and self.EchoTime is not None and self.EchoTime < 30:
+            modality = 'PD' if self.RepetitionTime is not None and self.RepetitionTime > 800 else 'T1'
         body_part = 'BRAIN'
         body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
         study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
