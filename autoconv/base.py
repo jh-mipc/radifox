@@ -564,7 +564,7 @@ class BaseSet:
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         if self.RemoveIdentifiers:
-            out_dict['SeriesInfo']['SourcePath'] = None
+            out_dict['SeriesInfo'].SeriesInfo = None
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
     def generate_qa_image(self, di_obj: BaseInfo) -> None:
@@ -583,7 +583,7 @@ class BaseSet:
         out_dict['SeriesList'] = [item for item in self.SeriesList if not item.NiftiCreated]
         if self.RemoveIdentifiers:
             for series in out_dict['SeriesList']:
-                series['SourcePath'] = None
+                series.SeriesInfo = None
         info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
         info_file.chmod(FILE_OCTAL)
 
