@@ -1,9 +1,9 @@
 from __future__ import annotations
-from copy import deepcopy
 import json
 import logging
 from pathlib import Path
 import re
+import secrets
 import shutil
 from subprocess import run, PIPE, STDOUT
 from typing import Callable, List, Tuple, Union, Any, Optional
@@ -94,13 +94,11 @@ class BaseInfo:
     def __repr_json__(self) -> dict:
         return {k: NoIndent(v) for k, v in self.__dict__.items()}
 
-    def anonymized(self, date_shift_days: int = 0):
-        anon_copy = deepcopy(self)
+    def anonymize(self, date_shift_days: int = 0):
         for key in HASH_ITEMS:
-            setattr(anon_copy, key, hash_value(getattr(anon_copy, key)))
+            setattr(self, key, hash_value(getattr(self, key)))
         for key in SHIFT_ITEMS:
-            setattr(anon_copy, key, shift_date(getattr(anon_copy, key), date_shift_days))
-        return anon_copy
+            setattr(self, key, shift_date(getattr(self, key), date_shift_days))
 
     def update_name(self, name_lambda: Callable[[str], str], message: str = 'Adjusting name') -> None:
         logging.debug('%s for %s: %s --> %s' %
@@ -548,6 +546,8 @@ class BaseSet:
                     di.ConvertImage = False
 
     def create_all_nii(self) -> None:
+        if self.RemoveIdentifiers:
+            self.anonymize()
         for di in self.SeriesList:
             if di.ConvertImage:
                 logging.info('Creating Nifti for %s' % di.SeriesUID)
@@ -564,7 +564,7 @@ class BaseSet:
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         if self.RemoveIdentifiers:
-            out_dict = self.anonymize(out_dict, self.DateShiftDays)
+            out_dict['SeriesInfo']['SourcePath'] = None
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
     def generate_qa_image(self, di_obj: BaseInfo) -> None:
@@ -582,19 +582,23 @@ class BaseSet:
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesList'] = [item for item in self.SeriesList if not item.NiftiCreated]
         if self.RemoveIdentifiers:
-            out_dict = self.anonymize(out_dict, self.DateShiftDays)
+            for series in out_dict['SeriesList']:
+                series['SourcePath'] = None
         info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
         info_file.chmod(FILE_OCTAL)
 
-    @staticmethod
-    def anonymize(ident_dict: dict, date_shift_days: int = 0):
-        anon_dict = deepcopy(ident_dict)
-        anon_dict['LookupTable'] = ident_dict['LookupTable'].anonymized()
-        if 'SeriesInfo' in anon_dict:
-            anon_dict['SeriesInfo'] = ident_dict['SeriesInfo'].anonymized(date_shift_days)
-        if 'SeriesList' in anon_dict:
-            anon_dict['SeriesList'] = [item.anonymized(date_shift_days) for item in ident_dict['SeriesList']]
-        return anon_dict
+    def anonymize(self):
+        anon_study_ids = {}
+        anon_series_count = {}
+        for di in self.SeriesList:
+            if di.StudyUID not in anon_study_ids:
+                anon_study_ids[di.StudyUID] = '2.25.' + str(int(str(secrets.randbits(96))))
+                anon_series_count[di.StudyUID] = 0
+            anon_series_count[di.StudyUID] += 1
+            di.SeriesUID = anon_study_ids[di.StudyUID] + ('%03d' % anon_series_count[di.StudyUID])
+            di.StudyUID = anon_study_ids[di.StudyUID]
+            di.anonymize(self.DateShiftDays)
+        self.LookupTable.anonymize()
 
 
 class TruncatedImageValue:
