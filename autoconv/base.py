@@ -516,7 +516,7 @@ class BaseSet:
                     non_matching.append(item)
             if non_matching == ['EchoTime']:
                 switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
-                for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime)):
+                for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime if x.EchoTime is not None else 0)):
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
                     if switch_t2star:
                         di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
@@ -526,7 +526,7 @@ class BaseSet:
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1] + [comp]))
             elif non_matching == ['EchoTime', 'ComplexImageComponent']:
                 switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
-                tes = sorted(list(set([di.EchoTime for di in di_list])))
+                tes = sorted(list(set([di.EchoTime if di.EchoTime is not None else 0 for di in di_list])))
                 for di in di_list:
                     comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
                     echo_num = tes.index(di.EchoTime)
