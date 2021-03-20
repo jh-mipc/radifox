@@ -514,28 +514,20 @@ class BaseSet:
             for item in MATCHING_ITEMS:
                 if any([getattr(di_list[0], item) != getattr(di_list[i], item) for i in range(len(di_list))]):
                     non_matching.append(item)
+            if non_matching == ['ImageOrientationPatient']:
+                for di in di_list:
+                    di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
+                continue
             if non_matching == ['EchoTime']:
                 switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
                 for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime if x.EchoTime is not None else 0)):
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
                     if switch_t2star:
                         di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
-            elif non_matching == ['ComplexImageComponent']:
+            if non_matching == ['ComplexImageComponent']:
                 for di in di_list:
                     comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1] + [comp]))
-            elif non_matching == ['EchoTime', 'ComplexImageComponent']:
-                switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
-                tes = sorted(list(set([di.EchoTime if di.EchoTime is not None else 0 for di in di_list])))
-                for di in di_list:
-                    comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
-                    echo_num = tes.index(di.EchoTime)
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (echo_num + 1), comp]))
-                    if switch_t2star:
-                        di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
-            elif non_matching == ['ImageOrientationPatient']:
-                for di in di_list:
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
             else:
                 continue
 
