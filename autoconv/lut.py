@@ -31,9 +31,13 @@ class LookupTable:
         return self.__dict__
 
     def anonymize(self):
+        old_inst_names = []
         for inst_name in self.LookupDict:
-            self.LookupDict[hash_value(inst_name)] = self.LookupDict[inst_name]
-            del self.LookupDict[inst_name]
+            if inst_name.upper() != 'NONE':
+                self.LookupDict[hash_value(inst_name)] = self.LookupDict[inst_name]
+                old_inst_names.append(inst_name)
+        for key in old_inst_names:
+            del self.LookupDict[key]
 
     def check(self, inst_name: str, series_desc: str) -> Union[List[str], bool, None]:
         # Deal with extras from PARRECs
