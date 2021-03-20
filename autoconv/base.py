@@ -564,7 +564,7 @@ class BaseSet:
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         if self.RemoveIdentifiers:
-            out_dict['SeriesInfo'].SeriesInfo = None
+            out_dict['SeriesInfo'].SourcePath = None
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
     def generate_qa_image(self, di_obj: BaseInfo) -> None:
@@ -583,11 +583,12 @@ class BaseSet:
         out_dict['SeriesList'] = [item for item in self.SeriesList if not item.NiftiCreated]
         if self.RemoveIdentifiers:
             for series in out_dict['SeriesList']:
-                series.SeriesInfo = None
+                series.SourcePath = None
         info_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
         info_file.chmod(FILE_OCTAL)
 
     def anonymize(self):
+        logging.info('Anonymizing info...')
         anon_study_ids = {}
         anon_series_count = {}
         for di in self.SeriesList:
@@ -595,7 +596,7 @@ class BaseSet:
                 anon_study_ids[di.StudyUID] = '2.25.' + str(int(str(secrets.randbits(96))))
                 anon_series_count[di.StudyUID] = 0
             anon_series_count[di.StudyUID] += 1
-            di.SeriesUID = anon_study_ids[di.StudyUID] + ('%03d' % anon_series_count[di.StudyUID])
+            di.SeriesUID = anon_study_ids[di.StudyUID] + ('.%03d' % anon_series_count[di.StudyUID])
             di.StudyUID = anon_study_ids[di.StudyUID]
             di.anonymize(self.DateShiftDays)
         self.LookupTable.anonymize()
