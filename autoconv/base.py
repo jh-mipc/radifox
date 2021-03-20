@@ -455,6 +455,9 @@ class BaseSet:
             # sWIP is Philips indicator for a "sum" of a multi-echo image
             if di.SeriesDescription.startswith('sWIP'):
                 di.update_name(lambda x: x + '-SUM')
+            # ND images for Siemens scans indicates a "no distortion correction" scan
+            if di.Manufacturer == 'SIEMENS' and any([img_type.lower() == 'nd' for img_type in di.ImageType]):
+                di.update_name(lambda x: x + '-ND')
             # Change T1 image to MT/MTOFF if matches an MT sequence and add MTON for the corresponding MT scan
             if di.NiftiName.split('_')[-1].split('-')[1] in ['T1', 'T2STAR'] and \
                     any([di.NiftiName.split('_')[-1] ==
