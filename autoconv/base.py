@@ -455,10 +455,6 @@ class BaseSet:
             # sWIP is Philips indicator for a "sum" of a multi-echo image
             if di.SeriesDescription.startswith('sWIP'):
                 di.update_name(lambda x: x + '-SUM')
-            # ND images for Siemens scans indicates a "no distortion correction" scan
-            if di.Manufacturer == 'SIEMENS' and any([img_type.lower() == 'nd' for img_type in di.ImageType]) \
-                    and di.SeriesDescription.lower().endswith('_nd'):
-                di.update_name(lambda x: x + '-ND')
             # Change T1 image to MT/MTOFF if matches an MT sequence and add MTON for the corresponding MT scan
             if di.NiftiName.split('_')[-1].split('-')[1] in ['T1', 'T2STAR'] and \
                     any([di.NiftiName.split('_')[-1] ==
@@ -478,7 +474,6 @@ class BaseSet:
                 if closest_mt is not None:
                     di.update_name(lambda x: x.replace('-T1-', '-MT-') + '-MTOFF')
                     self.SeriesList[closest_mt].update_name(lambda x: x + '-MTON')
-
             # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
             if di.NiftiName.split('_')[-1].split('-')[0] == 'SPINE':
                 if self.SeriesList[i - 1].NiftiName is not None and \
@@ -490,6 +485,10 @@ class BaseSet:
                         di.update_name(lambda x: x.replace('SPINE', 'LSPINE'))
                 else:
                     di.update_name(lambda x: x.replace('SPINE', 'CSPINE'))
+            # ND images for Siemens scans indicates a "no distortion correction" scan
+            if di.Manufacturer == 'SIEMENS' and any([img_type.lower() == 'nd' for img_type in di.ImageType]) \
+                    and di.SeriesDescription.lower().endswith('_nd'):
+                di.update_name(lambda x: x + '-ND')
 
         names_set = set([di.NiftiName for di in self.SeriesList])
         names_dict = {name: {} for name in names_set}
