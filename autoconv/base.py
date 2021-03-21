@@ -310,8 +310,7 @@ class BaseInfo:
         if man_list is False or lut_list is False:
             self.ConvertImage = False
             return
-        if (man_list is None or any([item is None for item in man_list])) \
-                and (lut_list is None or any([item is None for item in lut_list])):
+        if any([item is None for item in man_list]) and any([item is None for item in lut_list]):
             # Needs automatic naming
             logging.debug('Name lookup failed or incomplete, using automatic name generation.')
             try:
