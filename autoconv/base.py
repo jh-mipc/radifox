@@ -302,8 +302,8 @@ class BaseInfo:
 
     def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
         source_name = str(self.SourcePath)
-        man_list = None
-        pred_list = None
+        man_list = [None] * 6
+        pred_list = [None] * 6
         if source_name in manual_dict:
             man_list = manual_dict[source_name]
         lut_list = lut_obj.check(self.InstitutionName, self.SeriesDescription)
@@ -325,23 +325,20 @@ class BaseInfo:
             return
 
         for item_list in [pred_list, man_list, lut_list]:
-            if item_list is not None and item_list[1] == 'DE':
+            if item_list[1] == 'DE':
                 item_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
 
         self.ManualName = man_list
         self.LookupName = lut_list
         self.PredictedName = pred_list
 
-        final_list = [None] * 6
-        if self.ManualName is not None:
-            final_list = [self.ManualName[i] if final_list[i] is None else final_list[i]
-                          for i in range(len(final_list))]
-        if self.LookupName is not None:
-            final_list = [self.LookupName[i] if final_list[i] is None else final_list[i]
-                          for i in range(len(final_list))]
-        if self.PredictedName is not None:
-            final_list = [self.PredictedName[i] if final_list[i] is None else final_list[i]
-                          for i in range(len(final_list))]
+        final_list = [None] * max([len(item_list) for item_list in [man_list, lut_list, pred_list]])
+        final_list = [self.ManualName[i] if i < len(self.ManualName) and final_list[i] is None else final_list[i]
+                      for i in range(len(final_list))]
+        final_list = [self.LookupName[i] if i < len(self.LookupName) and final_list[i] is None else final_list[i]
+                      for i in range(len(final_list))]
+        final_list = [self.PredictedName[i] if i < len(self.PredictedName) and final_list[i] is None else final_list[i]
+                      for i in range(len(final_list))]
         self.NiftiName = '_'.join([scan_str, '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
