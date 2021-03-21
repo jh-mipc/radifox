@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Optional
 
 from .utils import read_csv, is_intstr, hash_value
 
@@ -39,7 +39,7 @@ class LookupTable:
         for key in old_inst_names:
             del self.LookupDict[key]
 
-    def check(self, inst_name: str, series_desc: str) -> Union[List[str], bool, None]:
+    def check(self, inst_name: str, series_desc: str) -> Union[List[Optional[str]], bool]:
         # Deal with extras from PARRECs
         if series_desc.startswith('WIP '):
             series_desc = series_desc[4:]
@@ -54,4 +54,4 @@ class LookupTable:
                     if len(lookup_arr) < 6:
                         lookup_arr += ['None'] * (6 - len(lookup_arr))
                     return [None if item.upper() == 'NONE' else item for item in lookup_arr]
-        return None
+        return [None] * 6
