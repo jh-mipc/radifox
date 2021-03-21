@@ -93,10 +93,13 @@ setup(
           'autoconv=autoconv.cli:cli'
       ]
     },
+    python_requires='>=3.8.2',
     install_requires=[
       'nibabel',
       'pydicom',
       'numpy',
+      'pillow',
+      'scipy',
       'click',
     ],
     package_data={'autoconv': ['parrec_templates/*.txt']},

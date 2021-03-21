@@ -1,6 +1,5 @@
-from copy import deepcopy
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Optional
 
 from .utils import read_csv, is_intstr, hash_value
 
@@ -31,14 +30,16 @@ class LookupTable:
     def __repr_json__(self) -> dict:
         return self.__dict__
 
-    def anonymized(self):
-        anon_copy = deepcopy(self)
+    def anonymize(self):
+        old_inst_names = []
         for inst_name in self.LookupDict:
-            anon_copy.LookupDict[hash_value(inst_name)] = self.LookupDict[inst_name]
-            del anon_copy.LookupDict[inst_name]
-        return anon_copy
+            if inst_name.upper() != 'NONE':
+                self.LookupDict[hash_value(inst_name)] = self.LookupDict[inst_name]
+                old_inst_names.append(inst_name)
+        for key in old_inst_names:
+            del self.LookupDict[key]
 
-    def check(self, inst_name: str, series_desc: str) -> Union[List[str], bool, None]:
+    def check(self, inst_name: str, series_desc: str) -> Union[List[Optional[str]], bool]:
         # Deal with extras from PARRECs
         if series_desc.startswith('WIP '):
             series_desc = series_desc[4:]
@@ -53,4 +54,4 @@ class LookupTable:
                     if len(lookup_arr) < 6:
                         lookup_arr += ['None'] * (6 - len(lookup_arr))
                     return [None if item.upper() == 'NONE' else item for item in lookup_arr]
-        return None
+        return [None] * 6
