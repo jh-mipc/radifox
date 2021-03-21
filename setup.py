@@ -93,7 +93,7 @@ setup(
           'autoconv=autoconv.cli:cli'
       ]
     },
-    python_requires='>3.8.2',
+    python_requires='>=3.8.2',
     install_requires=[
       'nibabel',
       'pydicom',
