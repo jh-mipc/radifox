@@ -488,23 +488,23 @@ class BaseSet:
                 else:
                     di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
 
-        names_set = set([di.NiftiName for di in self.SeriesList])
-        names_dict = {name: {} for name in names_set}
+        ruid_set = set(['.'.join(di.SeriesUID.split('.')[:-1]) for di in self.SeriesList])
+        ruid_dict = {ruid: {} for ruid in ruid_set}
         for di in self.SeriesList:
             if di.NiftiName is None:
                 continue
             root_uid = '.'.join(di.SeriesUID.split('.')[:-1])
-            if root_uid not in names_dict[di.NiftiName]:
-                names_dict[di.NiftiName][root_uid] = []
-            names_dict[di.NiftiName][root_uid].append(di)
+            if di.NiftiName not in ruid_dict[root_uid]:
+                ruid_dict[root_uid][di.NiftiName] = []
+            ruid_dict[root_uid][di.NiftiName].append(di)
         dyn_checks = {}
-        for name in names_dict:
-            for root_uid in names_dict[name]:
-                dyn_checks[root_uid] = []
-                if len(names_dict[name][root_uid]) > 1:
-                    for di in names_dict[name][root_uid]:
+        for root_uid in ruid_dict:
+            dyn_checks[root_uid] = []
+            for name in ruid_dict[root_uid]:
+                if len(ruid_dict[root_uid][name]) > 1:
+                    for di in ruid_dict[root_uid][name]:
                         dyn_checks[root_uid].append(di)
-                        dyn_num = names_dict[di.NiftiName][root_uid].index(di) + 1
+                        dyn_num = dyn_checks[root_uid].index(di) + 1
                         di.update_name(lambda x: x + ('-DYN%d' % dyn_num))
 
         for dcm_uid, di_list in dyn_checks.items():
@@ -517,10 +517,10 @@ class BaseSet:
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
                 continue
             if non_matching == ['EchoTime']:
-                switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
+                switch_t2star = any(['-T2STAR-' in di.NiftiName for di in di_list])
                 for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime if x.EchoTime is not None else 0)):
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
-                    if switch_t2star:
+                    if switch_t2star and '-T1-' in di.NiftiName:
                         di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
             if non_matching == ['ComplexImageComponent']:
                 for di in di_list:
