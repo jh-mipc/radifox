@@ -482,11 +482,11 @@ class BaseSet:
                         di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \
                         abs(di.ImagePositionPatient[2] - self.SeriesList[i - 1].ImagePositionPatient[2]) > 100:
                     if self.SeriesList[i - 1].NiftiName.split('_')[-1].split('-')[0] == 'CSPINE':
-                        di.update_name(lambda x: x.replace('SPINE', 'TSPINE'))
+                        di.update_name(lambda x: x.replace('_SPINE-', '_TSPINE-'))
                     else:
-                        di.update_name(lambda x: x.replace('SPINE', 'LSPINE'))
+                        di.update_name(lambda x: x.replace('_SPINE-', '_LSPINE-'))
                 else:
-                    di.update_name(lambda x: x.replace('SPINE', 'CSPINE'))
+                    di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
 
         names_set = set([di.NiftiName for di in self.SeriesList])
         names_dict = {name: {} for name in names_set}
