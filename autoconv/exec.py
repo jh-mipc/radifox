@@ -9,7 +9,8 @@ from .logging import create_loggers
 from .metadata import Metadata
 from .lut import LookupTable
 from .parrec import ParrecSet, sort_parrecs
-from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_link, DIR_OCTAL, hash_value
+from .utils import mkdir_p, extract_archive, allowed_archives, recursive_chmod, copytree_link, \
+    DIR_OCTAL, has_permissions, hash_value
 
 
 class ExecError(Exception):
@@ -22,8 +23,10 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
                  input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
     mkdir_p(session_path)
-    session_path.chmod(DIR_OCTAL)
-    session_path.parent.chmod(mode=DIR_OCTAL)
+    if not has_permissions(session_path, DIR_OCTAL):
+        session_path.chmod(DIR_OCTAL)
+    if not has_permissions(session_path.parent, DIR_OCTAL):
+        session_path.parent.chmod(mode=DIR_OCTAL)
 
     create_loggers(output_root / metadata.dir_to_str(), verbose)
     metadata.check_metadata()
