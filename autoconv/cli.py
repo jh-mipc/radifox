@@ -169,7 +169,11 @@ def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality:
     output_root = Path(*directory.parts[:-2]) if metadata._NoProjectSubdir else Path(*directory.parts[:-3])
 
     if lut_file is None:
-        lut_file = output_root / (metadata.ProjectID + '-lut.csv')
+        # noinspection PyProtectedMember
+        if metadata._NoProjectSubdir:
+            lut_file = output_root / (metadata.ProjectID + '-lut.csv')
+        else:
+            lut_file = output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv')
     lookup_dict = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID).LookupDict if lut_file.exists() else {}
 
     manual_json_file = (directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
