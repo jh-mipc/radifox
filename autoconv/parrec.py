@@ -73,7 +73,7 @@ class ParrecInfo(BaseInfo):
         self.SliceThickness = float(image_defs.slice_thickness[0])
         self.SliceSpacing = float(image_defs.slice_thickness[0]) + float(image_defs.slice_gap[0])
         self.ReconMatrix = [int(image_defs.recon_resolution[0][0]), int(image_defs.recon_resolution[0][1])]
-        self.ReconResolution = [int(image_defs.pixel_spacing[0][0]), int(image_defs.pixel_spacing[0][1])]
+        self.ReconResolution = [float(image_defs.pixel_spacing[0][0]), float(image_defs.pixel_spacing[0][1])]
         self.FieldOfView = [res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)]
         self.AcquiredResolution = [fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)]
         self.NumberOfAverages = int(image_defs.number_of_averages[0])
