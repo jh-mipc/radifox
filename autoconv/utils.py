@@ -200,6 +200,10 @@ FILE_OCTAL = 0o660
 DIR_OCTAL = 0o2770
 
 
+def has_permissions(path: Path, octal: int = DIR_OCTAL) -> bool:
+    return int('0o' + oct(path.stat().st_mode)[-4:], 8) == octal
+
+
 def recursive_chmod(directory: Path, dir_octal: int = DIR_OCTAL,
                     file_octal: int = FILE_OCTAL) -> None:
     if not directory.exists():

@@ -206,7 +206,7 @@ class BaseInfo:
         if any(['ep' == seq for seq in seq_type]) or 'epi' in seq_name or \
                 (self.EPIFactor is not None and self.EPIFactor > 1):
             sequence = 'EPI'
-        if 't1ffe' in seq_name or 'fl3d1' in seq_name:
+        if re.search(r'(t1.?[tf]fe|fl3d1)', seq_name):
             sequence = 'SPGR'
         if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
                                   any([variant == 'ss' for variant in seq_var])):
@@ -217,17 +217,15 @@ class BaseInfo:
             if (self.InversionTime is not None and self.InversionTime > 50) or \
                     any([seq == 'ir' for seq in seq_type]) or \
                     any([variant == 'mp' for variant in seq_var]) or \
-                    'flair' in series_desc or 'stir' in series_desc:
+                    re.search(r't1.?tfe', seq_name) or \
+                    re.search(r'(flair|stir|mp.?rage|bravo)', series_desc):
                 sequence = 'IR' + sequence
         if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
             sequence = sequence.replace('IR', 'IRF')
-        if 'mprage' in series_desc or 'bravo' in series_desc or \
-                (self.Manufacturer == 'PHILIPS' and sequence == 'IRFGRE'):
+        if sequence == 'IRFGRE':
             sequence = 'IRFSPGR'
         if modality == 'UNK':
-            if sequence == 'IRFSPGR':
-                modality = 'T1'
-            elif sequence.endswith('SE'):
+            if sequence.endswith('SE'):
                 modality = 'T2'
             elif sequence.endswith('GRE') or sequence.endswith('SPGR'):
                 modality = 'T1' if self.EchoTime is not None and self.EchoTime < 15 else 'T2STAR'
@@ -241,42 +239,38 @@ class BaseInfo:
         body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
         study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
         # TODO: implement regex searches for body part
-        if 'brain' in series_desc or series_desc.startswith('br_'):
+        if re.search('(brain|^br_)', series_desc):
             body_part = 'BRAIN'
-        elif 'ctspine' in series_desc or 'ct spine' in series_desc:
+        elif re.search(r'ct[ -]?spine', series_desc):
             body_part = 'SPINE'
-        elif 'cerv' in series_desc or 'csp' in series_desc or 'c sp' in series_desc or \
-                'c-sp' in series_desc or 'msma' in series_desc:
+        elif re.search(r'(cerv|c[ -]?sp|msma)', series_desc):
             body_part = 'CSPINE'
-        elif 'thor' in series_desc or 'tsp' in series_desc or 't sp' in series_desc or \
-                't-sp' in series_desc:
+        elif re.search(r'(thor|t[ -]?sp)', series_desc):
             body_part = 'TSPINE'
-        elif 'lumb' in series_desc or 'lsp' in series_desc or 'l sp' in series_desc or \
-                'l-sp' in series_desc:
+        elif re.search(r'(lumb|l[ -]?sp)', series_desc):
             body_part = 'LSPINE'
-        elif 'me3d1r3' in seq_name or 'me2d1r2' in seq_name or \
-                re.search(r'\sct(?:\s+|$)', series_desc) or \
-                series_desc.startswith('sp_'):
+        elif re.search(r'(me3d1r3|me2d1r2)', seq_name) or \
+                re.search(r'(\sct(?:\s+|$)|^sp_)', series_desc):
             body_part = 'SPINE'
-        elif 'orbit' in series_desc or 'thin' in series_desc or series_desc.startswith('on_'):
+        elif re.search(r'(orbit|thin|^on_)', series_desc):
             body_part = 'ORBITS'
         elif 'brain' in study_desc:
             body_part = 'BRAIN'
-        elif 'cerv' in study_desc or ('cspine' in study_desc and 'thor' not in study_desc):
+        elif re.search(r'(cerv|c[ -]?spine)', study_desc) and 'thor' not in study_desc:
             body_part = 'CSPINE'
-        elif 'thor' in study_desc or 'tspine' in study_desc:
+        elif re.search(r'(thor|t[ -]?spine)', study_desc):
             body_part = 'TSPINE'
-        elif 'lumb' in study_desc or 'lspine' in study_desc:
+        elif re.search(r'(lumb|l[ -]?spine)', study_desc):
             body_part = 'LSPINE'
         elif 'orbit' in study_desc:
             body_part = 'ORBITS'
         elif 'brain' in body_part_ex:
             body_part = 'BRAIN'
-        elif 'cspine' in body_part_ex or 'ctspine' in body_part_ex:
+        elif re.search(r'ct?spine', body_part_ex):
             body_part = 'CSPINE'
-        elif 'tspine' in body_part_ex or 'tlspine' in body_part_ex:
+        elif re.search(r'tl?spine', body_part_ex):
             body_part = 'TSPINE'
-        elif 'lspine' in body_part_ex or 'lsspine' in body_part_ex:
+        elif re.search(r'ls?spine', body_part_ex):
             body_part = 'LSPINE'
         elif 'spine' in series_desc or 'spine' in body_part_ex or \
                 'spine' in study_desc:
@@ -482,29 +476,29 @@ class BaseSet:
                         di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \
                         abs(di.ImagePositionPatient[2] - self.SeriesList[i - 1].ImagePositionPatient[2]) > 100:
                     if self.SeriesList[i - 1].NiftiName.split('_')[-1].split('-')[0] == 'CSPINE':
-                        di.update_name(lambda x: x.replace('SPINE', 'TSPINE'))
+                        di.update_name(lambda x: x.replace('_SPINE-', '_TSPINE-'))
                     else:
-                        di.update_name(lambda x: x.replace('SPINE', 'LSPINE'))
+                        di.update_name(lambda x: x.replace('_SPINE-', '_LSPINE-'))
                 else:
-                    di.update_name(lambda x: x.replace('SPINE', 'CSPINE'))
+                    di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
 
-        names_set = set([di.NiftiName for di in self.SeriesList])
-        names_dict = {name: {} for name in names_set}
+        ruid_set = set(['.'.join(di.SeriesUID.split('.')[:-1]) for di in self.SeriesList])
+        ruid_dict = {ruid: {} for ruid in ruid_set}
         for di in self.SeriesList:
             if di.NiftiName is None:
                 continue
             root_uid = '.'.join(di.SeriesUID.split('.')[:-1])
-            if root_uid not in names_dict[di.NiftiName]:
-                names_dict[di.NiftiName][root_uid] = []
-            names_dict[di.NiftiName][root_uid].append(di)
+            if di.NiftiName not in ruid_dict[root_uid]:
+                ruid_dict[root_uid][di.NiftiName] = []
+            ruid_dict[root_uid][di.NiftiName].append(di)
         dyn_checks = {}
-        for name in names_dict:
-            for root_uid in names_dict[name]:
-                dyn_checks[root_uid] = []
-                if len(names_dict[name][root_uid]) > 1:
-                    for di in names_dict[name][root_uid]:
+        for root_uid in ruid_dict:
+            dyn_checks[root_uid] = []
+            for name in ruid_dict[root_uid]:
+                if len(ruid_dict[root_uid][name]) > 1:
+                    for di in ruid_dict[root_uid][name]:
                         dyn_checks[root_uid].append(di)
-                        dyn_num = names_dict[di.NiftiName][root_uid].index(di) + 1
+                        dyn_num = dyn_checks[root_uid].index(di) + 1
                         di.update_name(lambda x: x + ('-DYN%d' % dyn_num))
 
         for dcm_uid, di_list in dyn_checks.items():
@@ -517,10 +511,10 @@ class BaseSet:
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
                 continue
             if non_matching == ['EchoTime']:
-                switch_t2star = any(['T2STAR' in di.NiftiName for di in di_list])
+                switch_t2star = any(['-T2STAR-' in di.NiftiName for di in di_list])
                 for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime if x.EchoTime is not None else 0)):
                     di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
-                    if switch_t2star:
+                    if switch_t2star and '-T1-' in di.NiftiName:
                         di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
             if non_matching == ['ComplexImageComponent']:
                 for di in di_list:

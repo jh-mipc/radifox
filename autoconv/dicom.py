@@ -82,6 +82,11 @@ class DicomInfo(BaseInfo):
                 self.EPIFactor = int(ds[(0x2001, 0x1013)].value)
             except ValueError:
                 pass
+        if self.InversionTime == 0.0 and (0x2001, 0x101b) in ds:
+            try:
+                self.InversionTime = float(ds[(0x2001, 0x101b)].value)
+            except ValueError:
+                pass
         if self.AcquisitionMatrix is not None:
             # noinspection PyUnresolvedReferences
             self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \

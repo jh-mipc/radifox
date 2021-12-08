@@ -41,7 +41,7 @@ def pkg_commit_hash(pkg_path: Path):
         cfg_parser.read_file(fp)
     archive_subst = cfg_parser.get('commit hash', 'archive_subst_hash')
     if not archive_subst.startswith('$Format'):  # it has been substituted
-        return 'archive substitution', archive_subst
+        return 'archive substitution', archive_subst[:7]
     install_subst = cfg_parser.get('commit hash', 'install_hash')
     if install_subst != '':
         return 'installation', install_subst
@@ -59,7 +59,7 @@ def pkg_commit_hash(pkg_path: Path):
 
 _version_major = 0
 _version_minor = 3
-_version_micro = 6
+_version_micro = 7
 _version_extra = ''  # Remove -dev for release
 
 if '-dev' in _version_extra:
