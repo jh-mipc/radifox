@@ -89,7 +89,8 @@ RUN mkdir -p ${SOFTDIR}
 # Install java runtime
 RUN mkdir /usr/share/man/man1/
 RUN apt-get update && \
-    apt-get -y install default-jre-headless
+    apt-get -y install default-jre-headless && \
+    apt-get -y --no-install-recommends install git
 
 # Copy python wheels and install
 COPY --from=build_stage /opt/build/wheels /wheels
