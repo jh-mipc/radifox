@@ -243,11 +243,11 @@ class BaseInfo:
             body_part = 'BRAIN'
         elif re.search(r'ct[ -]?spine', series_desc):
             body_part = 'SPINE'
-        elif re.search(r'(cerv|c[ -]?sp|msma)', series_desc):
+        elif re.search(r'(cerv|c[ -]?sp|c.?spine|msma)', series_desc):
             body_part = 'CSPINE'
-        elif re.search(r'(thor|t[ -]?sp)', series_desc):
+        elif re.search(r'(thor|t[ -]?sp|t.?spine)', series_desc):
             body_part = 'TSPINE'
-        elif re.search(r'(lumb|l[ -]?sp)', series_desc):
+        elif re.search(r'(lumb|l[ -]?sp|l.?spine)', series_desc):
             body_part = 'LSPINE'
         elif re.search(r'(me3d1r3|me2d1r2)', seq_name) or \
                 re.search(r'(\sc.?tl?(?:\s+|$)|^sp_)', series_desc) or \
