@@ -249,7 +249,7 @@ class BaseInfo:
         elif re.search(r'(lumb|l[ -]?sp)', series_desc):
             body_part = 'LSPINE'
         elif re.search(r'(me3d1r3|me2d1r2)', seq_name) or \
-                re.search(r'(\sctl?(?:\s+|$)|^sp_)', series_desc):
+                re.search(r'(\sc.?tl?(?:\s+|$)|^sp_)', series_desc):
             body_part = 'SPINE'
         elif re.search(r'(orbit|thin|^on_)', series_desc):
             body_part = 'ORBITS'
@@ -280,10 +280,6 @@ class BaseInfo:
             body_part = 'SPINE'
         if modality == 'DIFF' and orientation == 'SAGITTAL':
             body_part = 'SPINE'
-        if body_part == 'SPINE' and re.search(r'upper(?!t)', series_desc):
-            body_part = 'CSPINE'
-        elif body_part == 'SPINE' and 'lower' in series_desc:
-            body_part = 'TSPINE'
         slice_sp = float(self.SliceThickness) if self.SliceSpacing is None \
             else float(self.SliceSpacing)
         if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
@@ -294,6 +290,11 @@ class BaseInfo:
         elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
                 and orientation == 'SAGITTAL':
             body_part = 'SPINE'
+
+        if body_part == 'SPINE' and re.search(r'upper(?!\s*t)', series_desc):
+            body_part = 'CSPINE'
+        elif body_part == 'SPINE' and 'lower' in series_desc:
+            body_part = 'TSPINE'
 
         return [body_part, modality, sequence, resolution, orientation, excontrast]
 
@@ -483,11 +484,12 @@ class BaseSet:
                              key=lambda x: x.ImagePositionPatient[2], reverse=True)
             spine_idx = 0
             for i, di in enumerate(di_list):
+                current_level = di.NiftiName.split('_')[-1].split('-')[0]
                 if i == 0:
-                    di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
+                    if current_level == 'SPINE':
+                        di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
                     spine_idx = spine_indexes.index(di.NiftiName.split('_')[-1].split('-')[0])
                     continue
-                current_level = di.NiftiName.split('_')[-1].split('-')[0]
                 if abs(di.ImagePositionPatient[2] - di_list[i - 1].ImagePositionPatient[2]) > 100:
                     spine_idx = min(spine_idx + 1, len(spine_indexes) - 1)
                 di.update_name(lambda x: x.replace('_%s-' % current_level, '_%s-' % spine_indexes[spine_idx]))
