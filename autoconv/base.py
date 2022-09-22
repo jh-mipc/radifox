@@ -11,7 +11,7 @@ from typing import Callable, List, Tuple, Union, Any, Optional
 import nibabel as nib
 import numpy as np
 
-from .info import __version__
+from ._version import __version__
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata

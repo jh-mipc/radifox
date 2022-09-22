@@ -5,9 +5,9 @@ import shutil
 
 import click
 
+from ._version import __version__
 from .base import BaseInfo
 from .exec import run_autoconv, ExecError
-from .info import __version__
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
