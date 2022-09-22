@@ -235,6 +235,7 @@ class BaseInfo:
             modality = 'T2STAR'
         elif modality == 'T2' and self.EchoTime is not None and self.EchoTime < 30:
             modality = 'PD' if self.RepetitionTime is not None and self.RepetitionTime > 800 else 'T1'
+
         body_part = 'BRAIN'
         body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
         study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
@@ -249,7 +250,8 @@ class BaseInfo:
         elif re.search(r'(lumb|l[ -]?sp)', series_desc):
             body_part = 'LSPINE'
         elif re.search(r'(me3d1r3|me2d1r2)', seq_name) or \
-                re.search(r'(\sc.?tl?(?:\s+|$)|^sp_)', series_desc):
+                re.search(r'(\sc.?tl?(?:\s+|$)|^sp_)', series_desc) or \
+                re.search(r'(t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)', series_desc):
             body_part = 'SPINE'
         elif re.search(r'(orbit|thin|^on_)', series_desc):
             body_part = 'ORBITS'
@@ -290,6 +292,9 @@ class BaseInfo:
         elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
                 and orientation == 'SAGITTAL':
             body_part = 'SPINE'
+        elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
+                and orientation == 'AXIAL':
+            body_part = 'ORBITS'
 
         if body_part == 'SPINE' and re.search(r'upper(?!\s*t)', series_desc):
             body_part = 'CSPINE'
