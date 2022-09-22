@@ -477,7 +477,8 @@ class BaseSet:
         # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
         spine_indexes = ['SPINE', 'CSPINE', 'TSPINE', 'LSPINE']
         for series_description in set([di.SeriesDescription for di in self.SeriesList
-                                       if 'SPINE' in di.NiftiName.split('_')[-1].split('-')[0]]):
+                                       if di.NiftiName is not None and
+                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0]]):
             di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description],
                              key=lambda x: x.ImagePositionPatient[2], reverse=True)
             spine_idx = 0
