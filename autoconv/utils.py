@@ -29,8 +29,7 @@ def copytree_link(source: Path, dest: Path, symlink: bool):
             if symlink:
                 (dest / path.name).symlink_to(path)
             else:
-                # noinspection PyTypeChecker
-                path.link_to(dest / path.name)
+                (dest / path.name).hardlink_to(path)
         elif path.is_dir():
             (dest / path.name).mkdir()
             copytree_link(path, dest / path.name, symlink)
@@ -113,7 +112,7 @@ def extract_de(ds: FileDataset, label: str, series_uid, keep_list: bool = False)
         out_list = tuple(out_list)
     except ValueError:
         logging.warning('Data element (%s) will not conform to required type (%s) for %s.' %
-                        (de.description(), str(vr_corr[de.VR]), series_uid))
+                        (de.name, str(vr_corr[de.VR]), series_uid))
         return tuple() if keep_list else None
     return out_list[0] if (len(out_list) == 1 and not keep_list) else out_list
 

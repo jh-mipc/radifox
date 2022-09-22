@@ -41,6 +41,7 @@ RUN \
     mkdir dcm2niix-build && \
     cd dcm2niix-build && \
     cmake ../dcm2niix -DCMAKE_INSTALL_PREFIX=${SOFTDIR}/dcm2niix \
+        -DUSE_GIT_PROTOCOL=OFF \
         -DCMAKE_BUILD_TYPE=Release \
         -DZLIB_IMPLEMENTATION=Cloudflare \
         -DUSE_JPEGLS=ON \
@@ -88,7 +89,8 @@ RUN mkdir -p ${SOFTDIR}
 # Install java runtime
 RUN mkdir /usr/share/man/man1/
 RUN apt-get update && \
-    apt-get -y install default-jre-headless
+    apt-get -y install default-jre-headless && \
+    apt-get -y --no-install-recommends install git
 
 # Copy python wheels and install
 COPY --from=build_stage /opt/build/wheels /wheels
@@ -112,8 +114,8 @@ COPY --from=build_stage ${SOFTDIR}/dcm2niix/bin/dcm2niix ${SOFTDIR}/dcm2niix/bin
 ENV PATH ${SOFTDIR}/dcm2niix/bin:${SOFTDIR}/dcm4che/bin:${SOFTDIR}/dcmtk/bin:${PATH}
 
 # Copy package and install
-COPY . ${SOFTDIR}/autoconv-src/
-RUN pip install ${SOFTDIR}/autoconv-src/ && \
-    rm -rf ${SOFTDIR}/autoconv-src/
+COPY . /tmp/autoconv-src/
+RUN pip install /tmp/autoconv-src/ && \
+    rm -rf $/tmp/autoconv-src/
 
 ENTRYPOINT 'autoconv'

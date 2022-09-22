@@ -11,7 +11,7 @@ from typing import Callable, List, Tuple, Union, Any, Optional
 import nibabel as nib
 import numpy as np
 
-from .info import __version__
+from ._version import __version__
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
@@ -160,7 +160,7 @@ class BaseInfo:
         if 'stir' in series_desc:
             desc_modalities.append('STIR')
         if 'dti' in series_desc or 'diff' in series_desc or re.search(r'(?<!p)dw', series_desc) or \
-                'b1000' in series_desc or 'tensor' in series_desc or \
+                series_desc.endswith('b1000') or series_desc.endswith('b0') or 'tensor' in series_desc or \
                 any([img_type.lower() == 'diffusion' for img_type in self.ImageType]):
             desc_modalities.append('DIFF')
 
@@ -235,31 +235,36 @@ class BaseInfo:
             modality = 'T2STAR'
         elif modality == 'T2' and self.EchoTime is not None and self.EchoTime < 30:
             modality = 'PD' if self.RepetitionTime is not None and self.RepetitionTime > 800 else 'T1'
+
         body_part = 'BRAIN'
         body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
         study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
-        # TODO: implement regex searches for body part
         if re.search('(brain|^br_)', series_desc):
             body_part = 'BRAIN'
         elif re.search(r'ct[ -]?spine', series_desc):
             body_part = 'SPINE'
-        elif re.search(r'(cerv|c[ -]?sp|msma)', series_desc):
+        elif re.search(r'(cerv|c[ -]?sp|c.?spine|msma)', series_desc):
             body_part = 'CSPINE'
-        elif re.search(r'(thor|t[ -]?sp)', series_desc):
+        elif re.search(r'(thor|t[ -]?sp|t.?spine)', series_desc):
             body_part = 'TSPINE'
-        elif re.search(r'(lumb|l[ -]?sp)', series_desc):
+        elif re.search(r'(lumb|l[ -]?sp|l.?spine)', series_desc):
             body_part = 'LSPINE'
         elif re.search(r'(me3d1r3|me2d1r2)', seq_name) or \
-                re.search(r'(\sct(?:\s+|$)|^sp_)', series_desc):
+                re.search(r'(\sc.?tl?(?:\s+|$)|^sp_)', series_desc) or \
+                re.search(r'(t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)', series_desc):
             body_part = 'SPINE'
         elif re.search(r'(orbit|thin|^on_)', series_desc):
             body_part = 'ORBITS'
         elif 'brain' in study_desc:
             body_part = 'BRAIN'
-        elif re.search(r'(cerv|c[ -]?spine)', study_desc) and 'thor' not in study_desc:
+        elif re.search(r'(cerv|c[ -]?spine)', study_desc):
             body_part = 'CSPINE'
+            if 'thor' in study_desc:
+                body_part = 'SPINE'
         elif re.search(r'(thor|t[ -]?spine)', study_desc):
             body_part = 'TSPINE'
+            if 'cerv' in study_desc:
+                body_part = 'SPINE'
         elif re.search(r'(lumb|l[ -]?spine)', study_desc):
             body_part = 'LSPINE'
         elif 'orbit' in study_desc:
@@ -277,10 +282,6 @@ class BaseInfo:
             body_part = 'SPINE'
         if modality == 'DIFF' and orientation == 'SAGITTAL':
             body_part = 'SPINE'
-        if 'upper' in series_desc:
-            body_part = 'CSPINE'
-        elif 'lower' in series_desc:
-            body_part = 'TSPINE'
         slice_sp = float(self.SliceThickness) if self.SliceSpacing is None \
             else float(self.SliceSpacing)
         if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
@@ -291,6 +292,14 @@ class BaseInfo:
         elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
                 and orientation == 'SAGITTAL':
             body_part = 'SPINE'
+        elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
+                and orientation == 'AXIAL':
+            body_part = 'ORBITS'
+
+        if body_part == 'SPINE' and re.search(r'upper(?!\s*t)', series_desc):
+            body_part = 'CSPINE'
+        elif body_part == 'SPINE' and 'lower' in series_desc:
+            body_part = 'TSPINE'
 
         return [body_part, modality, sequence, resolution, orientation, excontrast]
 
@@ -441,17 +450,17 @@ class BaseSet:
             if di.NiftiName is None:
                 continue
             # sWIP is Philips indicator for a "sum" of a multi-echo image
-            if di.SeriesDescription.startswith('sWIP'):
+            if di.SeriesDescription.startswith('sWIP') or di.SeriesDescription.startswith('smFFE'):
                 di.update_name(lambda x: x + '-SUM')
             # ND images for Siemens scans indicates a "no distortion correction" scan
             if di.Manufacturer == 'SIEMENS' and any([img_type.lower() == 'nd' for img_type in di.ImageType]) \
                     and di.SeriesDescription.lower().endswith('_nd'):
                 di.update_name(lambda x: x + '-ND')
 
+        # Change T1 image to MT/MTOFF if matches an MT sequence and add MTON for the corresponding MT scan
         for i, di in enumerate(self.SeriesList):
             if di.NiftiName is None:
                 continue
-            # Change T1 image to MT/MTOFF if matches an MT sequence and add MTON for the corresponding MT scan
             if di.NiftiName.split('_')[-1].split('-')[1] in ['T1', 'T2STAR'] and \
                     any([di.NiftiName.split('_')[-1] ==
                          other_di.NiftiName.split('_')[-1].replace('-MT-', '-%s-' %
@@ -470,17 +479,25 @@ class BaseSet:
                 if closest_mt is not None:
                     di.update_name(lambda x: x.replace('-T1-', '-MT-') + '-MTOFF')
                     self.SeriesList[closest_mt].update_name(lambda x: x + '-MTON')
-            # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
-            if di.NiftiName.split('_')[-1].split('-')[0] == 'SPINE':
-                if self.SeriesList[i - 1].NiftiName is not None and \
-                        di.SeriesDescription == self.SeriesList[i - 1].SeriesDescription and \
-                        abs(di.ImagePositionPatient[2] - self.SeriesList[i - 1].ImagePositionPatient[2]) > 100:
-                    if self.SeriesList[i - 1].NiftiName.split('_')[-1].split('-')[0] == 'CSPINE':
-                        di.update_name(lambda x: x.replace('_SPINE-', '_TSPINE-'))
-                    else:
-                        di.update_name(lambda x: x.replace('_SPINE-', '_LSPINE-'))
-                else:
-                    di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
+
+        # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
+        spine_indexes = ['SPINE', 'CSPINE', 'TSPINE', 'LSPINE']
+        for series_description in set([di.SeriesDescription for di in self.SeriesList
+                                       if di.NiftiName is not None and
+                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0]]):
+            di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description],
+                             key=lambda x: x.ImagePositionPatient[2], reverse=True)
+            spine_idx = 0
+            for i, di in enumerate(di_list):
+                current_level = di.NiftiName.split('_')[-1].split('-')[0]
+                if i == 0:
+                    if current_level == 'SPINE':
+                        di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
+                    spine_idx = spine_indexes.index(di.NiftiName.split('_')[-1].split('-')[0])
+                    continue
+                if abs(di.ImagePositionPatient[2] - di_list[i - 1].ImagePositionPatient[2]) > 100:
+                    spine_idx = min(spine_idx + 1, len(spine_indexes) - 1)
+                di.update_name(lambda x: x.replace('_%s-' % current_level, '_%s-' % spine_indexes[spine_idx]))
 
         ruid_set = set(['.'.join(di.SeriesUID.split('.')[:-1]) for di in self.SeriesList])
         ruid_dict = {ruid: {} for ruid in ruid_set}
