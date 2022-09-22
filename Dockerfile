@@ -114,8 +114,8 @@ COPY --from=build_stage ${SOFTDIR}/dcm2niix/bin/dcm2niix ${SOFTDIR}/dcm2niix/bin
 ENV PATH ${SOFTDIR}/dcm2niix/bin:${SOFTDIR}/dcm4che/bin:${SOFTDIR}/dcmtk/bin:${PATH}
 
 # Copy package and install
-COPY . ${SOFTDIR}/autoconv-src/
-RUN pip install ${SOFTDIR}/autoconv-src/ && \
-    rm -rf ${SOFTDIR}/autoconv-src/
+COPY . /tmp/autoconv-src/
+RUN pip install /tmp/autoconv-src/ && \
+    rm -rf $/tmp/autoconv-src/
 
 ENTRYPOINT 'autoconv'
