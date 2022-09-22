@@ -41,6 +41,7 @@ RUN \
     mkdir dcm2niix-build && \
     cd dcm2niix-build && \
     cmake ../dcm2niix -DCMAKE_INSTALL_PREFIX=${SOFTDIR}/dcm2niix \
+        -DUSE_GIT_PROTOCOL=OFF \
         -DCMAKE_BUILD_TYPE=Release \
         -DZLIB_IMPLEMENTATION=Cloudflare \
         -DUSE_JPEGLS=ON \
