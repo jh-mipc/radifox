@@ -484,8 +484,11 @@ class BaseSet:
         spine_indexes = ['SPINE', 'CSPINE', 'TSPINE', 'LSPINE']
         for series_description in set([di.SeriesDescription for di in self.SeriesList
                                        if di.NiftiName is not None and
-                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0]]):
-            di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description],
+                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                                       all([item is None for item in di.ManualName])]):
+            di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description and
+                              di.NiftiName is not None and 'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                              all([item is None for item in di.ManualName])],
                              key=lambda x: x.ImagePositionPatient[2], reverse=True)
             spine_idx = 0
             for i, di in enumerate(di_list):
