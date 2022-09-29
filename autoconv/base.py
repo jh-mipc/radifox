@@ -292,9 +292,6 @@ class BaseInfo:
         elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
                 and orientation == 'SAGITTAL':
             body_part = 'SPINE'
-        elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
-                and orientation == 'AXIAL':
-            body_part = 'ORBITS'
 
         if body_part == 'SPINE' and re.search(r'upper(?!\s*t)', series_desc):
             body_part = 'CSPINE'
