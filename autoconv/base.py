@@ -292,9 +292,6 @@ class BaseInfo:
         elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
                 and orientation == 'SAGITTAL':
             body_part = 'SPINE'
-        elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
-                and orientation == 'AXIAL':
-            body_part = 'ORBITS'
 
         if body_part == 'SPINE' and re.search(r'upper(?!\s*t)', series_desc):
             body_part = 'CSPINE'
@@ -484,8 +481,11 @@ class BaseSet:
         spine_indexes = ['SPINE', 'CSPINE', 'TSPINE', 'LSPINE']
         for series_description in set([di.SeriesDescription for di in self.SeriesList
                                        if di.NiftiName is not None and
-                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0]]):
-            di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description],
+                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                                       all([item is None for item in di.ManualName])]):
+            di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description and
+                              di.NiftiName is not None and 'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                              all([item is None for item in di.ManualName])],
                              key=lambda x: x.ImagePositionPatient[2], reverse=True)
             spine_idx = 0
             for i, di in enumerate(di_list):
