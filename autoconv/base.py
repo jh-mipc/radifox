@@ -500,23 +500,20 @@ class BaseSet:
                 di.update_name(lambda x: x.replace('_%s-' % current_level, '_%s-' % spine_indexes[spine_idx]))
 
         ruid_set = set(['.'.join(di.SeriesUID.split('.')[:-1]) for di in self.SeriesList])
-        ruid_dict = {ruid: {} for ruid in ruid_set}
+        ruid_dict = {ruid: [] for ruid in ruid_set}
         for di in self.SeriesList:
             if di.NiftiName is None:
                 continue
             root_uid = '.'.join(di.SeriesUID.split('.')[:-1])
-            if di.NiftiName not in ruid_dict[root_uid]:
-                ruid_dict[root_uid][di.NiftiName] = []
-            ruid_dict[root_uid][di.NiftiName].append(di)
+            ruid_dict[root_uid].append(di)
         dyn_checks = {}
         for root_uid in ruid_dict:
-            dyn_checks[root_uid] = []
-            for name in ruid_dict[root_uid]:
-                if len(ruid_dict[root_uid][name]) > 1:
-                    for di in ruid_dict[root_uid][name]:
-                        dyn_checks[root_uid].append(di)
-                        dyn_num = dyn_checks[root_uid].index(di) + 1
-                        di.update_name(lambda x: x + ('-DYN%d' % dyn_num))
+            if len(ruid_dict[root_uid]) > 1:
+                dyn_checks[root_uid] = []
+                for di in ruid_dict[root_uid]:
+                    dyn_checks[root_uid].append(di)
+                    dyn_num = dyn_checks[root_uid].index(di) + 1
+                    di.update_name(lambda x: x + ('-DYN%d' % dyn_num))
 
         for dcm_uid, di_list in dyn_checks.items():
             non_matching = []
