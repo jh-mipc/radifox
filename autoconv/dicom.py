@@ -124,12 +124,13 @@ class DicomSet(BaseSet):
         super().__init__(source, output_root, metadata_obj, lut_obj, remove_identifiers, date_shift_days,
                          manual_names, input_hash)
 
+        logging.info('Loading DICOMs.')
         for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
-            logging.info('Processing %s' % dcmdir)
             self.SeriesList.append(DicomInfo(dcmdir))
 
         study_nums = {uid: i+1 for i, uid in enumerate(sorted(set([di.StudyUID for di in self.SeriesList])))}
         for di in self.SeriesList:
+            logging.info('Processing %s' % di.SourcePath)
             if di.should_convert():
                 di.create_image_name(self.Metadata.prefix_to_str(), study_nums[di.StudyUID],
                                      self.LookupTable, self.ManualNames)

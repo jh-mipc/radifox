@@ -94,12 +94,13 @@ class ParrecSet(BaseSet):
                          manual_names, input_hash)
         self.ManualArgs = manual_args
 
+        logging.info('Loading PARRECs.')
         for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):
-            logging.info('Processing %s' % parfile)
             self.SeriesList.append(ParrecInfo(parfile, self.ManualArgs))
 
         study_nums = {uid: i + 1 for i, uid in enumerate(sorted(set([di.StudyUID for di in self.SeriesList])))}
         for di in self.SeriesList:
+            logging.info('Processing %s' % di.SourcePath)
             if di.should_convert():
                 if di.ReconstructionNumber > 1:
                     other_recons = [other_di for other_di in self.SeriesList
