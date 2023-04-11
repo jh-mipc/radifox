@@ -239,7 +239,6 @@ class BaseInfo:
         body_part = 'BRAIN'
         body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
         study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
-
         # Define a list of tuples with regular expression patterns and corresponding body part values
         patterns = [
             (r'(brain|^br_)', 'BRAIN'),
@@ -253,17 +252,23 @@ class BaseInfo:
         ]
 
         # Iterate through patterns and match against relevant variables
+        found = False
         for search_str in [series_desc, body_part_ex, study_desc]:
             for pattern in patterns:
                 if re.search(pattern[0], search_str):
                     body_part = pattern[1]
                     if len(pattern) > 2 and re.search(pattern[2], study_desc):
                         body_part = pattern[3]
+                    found = True
                     break
+            if found:
+                break
+
         if re.search(r'\*?(me2d1r4|me3d1r3|me2d1r2)', seq_name):
             body_part = 'SPINE'
         if modality == 'DIFF' and orientation == 'SAGITTAL':
             body_part = 'SPINE'
+
         slice_sp = float(self.SliceThickness) if self.SliceSpacing is None \
             else float(self.SliceSpacing)
         if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
