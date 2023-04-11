@@ -126,10 +126,13 @@ class DicomSet(BaseSet):
 
         for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
             logging.info('Processing %s' % dcmdir)
-            di = DicomInfo(dcmdir)
+            self.SeriesList.append(DicomInfo(dcmdir))
+
+        study_nums = {uid: i+1 for i, uid in enumerate(sorted(set([si['StudyUID'] for si in self.SeriesList])))}
+        for di in self.SeriesList:
             if di.should_convert():
-                di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable, self.ManualNames)
-            self.SeriesList.append(di)
+                di.create_image_name(self.Metadata.prefix_to_str(), study_nums[di.StudyUID],
+                                     self.LookupTable, self.ManualNames)
 
         logging.info('Generating unique names')
         self.generate_unique_names()

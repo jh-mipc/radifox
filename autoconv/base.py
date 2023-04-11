@@ -222,7 +222,7 @@ class BaseInfo:
                 sequence = 'IR' + sequence
         if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
             sequence = sequence.replace('IR', 'IRF')
-        if sequence == 'IRFGRE':
+        if sequence == 'IRFGRE' or (sequence == 'IRFUNK' and modality == 'T1'):
             sequence = 'IRFSPGR'
         if modality == 'UNK':
             if sequence.endswith('SE'):
@@ -239,46 +239,28 @@ class BaseInfo:
         body_part = 'BRAIN'
         body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
         study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
-        if re.search('(brain|^br_)', series_desc):
-            body_part = 'BRAIN'
-        elif re.search(r'ct[ -]?spine', series_desc):
-            body_part = 'SPINE'
-        elif re.search(r'(cerv|c[ -]?sp|c.?spine|msma)', series_desc):
-            body_part = 'CSPINE'
-        elif re.search(r'(thor|t[ -]?sp|t.?spine)', series_desc):
-            body_part = 'TSPINE'
-        elif re.search(r'(lumb|l[ -]?sp|l.?spine)', series_desc):
-            body_part = 'LSPINE'
-        elif re.search(r'(me3d1r3|me2d1r2)', seq_name) or \
-                re.search(r'(\sc.?tl?(?:\s+|$)|^sp_)', series_desc) or \
-                re.search(r'(t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)', series_desc):
-            body_part = 'SPINE'
-        elif re.search(r'(orbit|thin|^on_)', series_desc):
-            body_part = 'ORBITS'
-        elif 'brain' in study_desc:
-            body_part = 'BRAIN'
-        elif re.search(r'(cerv|c[ -]?spine)', study_desc):
-            body_part = 'CSPINE'
-            if 'thor' in study_desc:
-                body_part = 'SPINE'
-        elif re.search(r'(thor|t[ -]?spine)', study_desc):
-            body_part = 'TSPINE'
-            if 'cerv' in study_desc:
-                body_part = 'SPINE'
-        elif re.search(r'(lumb|l[ -]?spine)', study_desc):
-            body_part = 'LSPINE'
-        elif 'orbit' in study_desc:
-            body_part = 'ORBITS'
-        elif 'brain' in body_part_ex:
-            body_part = 'BRAIN'
-        elif re.search(r'ct?spine', body_part_ex):
-            body_part = 'CSPINE'
-        elif re.search(r'tl?spine', body_part_ex):
-            body_part = 'TSPINE'
-        elif re.search(r'ls?spine', body_part_ex):
-            body_part = 'LSPINE'
-        elif 'spine' in series_desc or 'spine' in body_part_ex or \
-                'spine' in study_desc:
+
+        # Define a list of tuples with regular expression patterns and corresponding body part values
+        patterns = [
+            (r'(brain|^br_)', 'BRAIN'),
+            (r'ct[ -]?spine', 'SPINE'),
+            (r'(cerv|c[ -]?sp|c.?spine|msma)', 'CSPINE', r'(thor|t[ -]?sp|t.?spine)', 'SPINE'),
+            (r'(thor|t[ -]?sp|t.?spine)', 'TSPINE', r'(cerv|c[ -]?sp|c.?spine)', 'SPINE'),
+            (r'(lumb|l[ -]?sp|l.?spine)', 'LSPINE'),
+            (r'(\sc.?tl?(?:\s+|$)|^sp_|\(t1.ax.vibe|t1.vibe.tra|ax.t1.vibe\))', 'SPINE'),
+            (r'(orbit|thin|^on_)', 'ORBITS'),
+            (r'spine', 'SPINE'),
+        ]
+
+        # Iterate through patterns and match against relevant variables
+        for search_str in [series_desc, body_part_ex, study_desc]:
+            for pattern in patterns:
+                if re.search(pattern[0], search_str):
+                    body_part = pattern[1]
+                    if len(pattern) > 2 and re.search(pattern[2], study_desc):
+                        body_part = pattern[3]
+                    break
+        if re.search(r'\*?(me2d1r4|me3d1r3|me2d1r2)', seq_name):
             body_part = 'SPINE'
         if modality == 'DIFF' and orientation == 'SAGITTAL':
             body_part = 'SPINE'
@@ -300,7 +282,7 @@ class BaseInfo:
 
         return [body_part, modality, sequence, resolution, orientation, excontrast]
 
-    def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
+    def create_image_name(self, scan_str: str, study_num: int, lut_obj: LookupTable, manual_dict: dict) -> None:
         source_name = str(self.SourcePath)
         man_list = [None] * 6
         pred_list = [None] * 6
@@ -324,8 +306,11 @@ class BaseInfo:
             return
 
         for item_list in [pred_list, man_list, lut_list]:
-            if item_list[1] == 'DE':
-                item_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
+            if item_list[1] == 'ME':
+                if item_list[2].endswith('SE'):
+                    item_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
+                else:
+                    item_list[1] = 'T1' if self.EchoTime < 15 else 'T2STAR'
 
         self.ManualName = man_list
         self.LookupName = lut_list
@@ -338,7 +323,7 @@ class BaseInfo:
                       for i in range(len(final_list))]
         final_list = [self.PredictedName[i] if i < len(self.PredictedName) and final_list[i] is None else final_list[i]
                       for i in range(len(final_list))]
-        self.NiftiName = '_'.join([scan_str, '-'.join(final_list)])
+        self.NiftiName = '_'.join([scan_str, '%02d-%04d' % (study_num, int(self.SeriesNumber)),  '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
     def create_nii(self, output_dir: Path) -> None:
@@ -348,10 +333,13 @@ class BaseInfo:
         niidir = output_dir / 'nii'
         source = output_dir / self.SourcePath
         mkdir_p(niidir)
-        count = 1
-        while Path(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz').exists():
-            count += 1
-        self.update_name(lambda x: add_acq_num(x, count))
+        if Path(niidir, self.NiftiName + '.nii.gz').exists():
+            self.NiftiCreated = False
+            logging.warning('Naming failed for %s' % source)
+            logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
+            logging.warning('%s already exists.' % self.NiftiName)
+            logging.warning('Nifti creation failed.')
+            return
 
         success = True
         dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
@@ -359,6 +347,7 @@ class BaseInfo:
         result = run(dcm2niix_cmd, stdout=PIPE, stderr=STDOUT, text=True)
 
         if result.returncode != 0:
+            self.NiftiCreated = False
             logging.warning('dcm2niix failed for %s' % source)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
             logging.warning('dcm2niix return code: %d' % result.returncode)
@@ -404,9 +393,6 @@ class BaseInfo:
                 self.NiftiCreated = True
                 self.NiftiHash = hash_file_dir(niidir / (self.NiftiName + '.nii.gz'))
                 logging.info('Nifti created successfully at %s' % (niidir / (self.NiftiName + '.nii.gz')))
-                if '-ACQ3' in self.NiftiName:
-                    logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
-                                    'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
             else:
                 self.NiftiCreated = False
                 logging.warning('Nifti creation failed for %s' % source)
@@ -540,8 +526,8 @@ class BaseSet:
         for di in self.SeriesList:
             if di.NiftiName is None:
                 continue
-            if di.NiftiName.split('_')[2].split('-')[1] == 'T2STAR' and not \
-                    any([di.NiftiName.split('_')[2].split('-')[-1] == item for item in ['MAG', 'PHA', 'SWI']]):
+            if di.NiftiName.split('_')[-1].split('-')[1] == 'T2STAR' and not \
+                    any([di.NiftiName.split('_')[-1].split('-')[-1] == item for item in ['MAG', 'PHA', 'SWI']]):
                 comp = di.ComplexImageComponent[:3] if di.ComplexImageComponent is not None else 'MAG'
                 di.update_name(lambda x: x + '-' + comp)
 
