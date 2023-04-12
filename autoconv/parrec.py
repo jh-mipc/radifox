@@ -98,7 +98,7 @@ class ParrecSet(BaseSet):
         for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):
             self.SeriesList.append(ParrecInfo(parfile, self.ManualArgs))
 
-        study_nums = {uid: i + 1 for i, uid in enumerate(sorted(set([di.StudyUID for di in self.SeriesList])))}
+        study_nums, series_nums = self.get_unique_study_series()
         for di in self.SeriesList:
             logging.info('Processing %s' % di.SourcePath)
             if di.should_convert():
@@ -110,8 +110,8 @@ class ParrecSet(BaseSet):
                     elif not di.SeriesDescription.startswith('sWIP'):
                         di.ConvertImage = False
                 if di.ConvertImage:
-                    di.create_image_name(self.Metadata.prefix_to_str(), study_nums[di.StudyUID],
-                                         self.LookupTable, self.ManualNames)
+                    di.create_image_name(self.Metadata.prefix_to_str(), study_nums[di.SourcePath],
+                                         series_nums[di.SourcePath], self.LookupTable, self.ManualNames)
 
         logging.info('Generating unique names')
         self.generate_unique_names()

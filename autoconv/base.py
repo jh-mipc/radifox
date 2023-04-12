@@ -1,4 +1,5 @@
 from __future__ import annotations
+import datetime
 import json
 import logging
 from pathlib import Path
@@ -290,7 +291,8 @@ class BaseInfo:
 
         return [body_part, modality, sequence, resolution, orientation, excontrast]
 
-    def create_image_name(self, scan_str: str, study_num: int, lut_obj: LookupTable, manual_dict: dict) -> None:
+    def create_image_name(self, scan_str: str, study_num: int, series_num: int,
+                          lut_obj: LookupTable, manual_dict: dict) -> None:
         source_name = str(self.SourcePath)
         man_list = [None] * 6
         pred_list = [None] * 6
@@ -331,7 +333,7 @@ class BaseInfo:
                       for i in range(len(final_list))]
         final_list = [self.PredictedName[i] if i < len(self.PredictedName) and final_list[i] is None else final_list[i]
                       for i in range(len(final_list))]
-        self.NiftiName = '_'.join([scan_str, '%02d-%04d' % (study_num, int(self.SeriesNumber)),  '-'.join(final_list)])
+        self.NiftiName = '_'.join([scan_str, '%02d-%02d' % (study_num, series_num),  '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
     def create_nii(self, output_dir: Path) -> None:
@@ -432,6 +434,34 @@ class BaseSet:
 
     def __repr_json__(self) -> dict:
         return {key: value for key, value in self.__dict__.items() if key not in ['OutputRoot', 'DateShiftDays']}
+
+    def get_unique_study_series(self):
+        study_num = 1
+        study_nums = {}
+        series_nums = {}
+        for uid in set(di.StudyUID for di in self.SeriesList):
+            sorted_list = sorted([di for di in self.SeriesList if di.StudyUID == uid],
+                                 key=lambda x: (x.AcqDateTime, x.InstitutionName,
+                                                x.MagneticFieldStrength, x.ScannerModelName))
+            breaks = []
+            for i in range(1, len(sorted_list)):
+                if any([getattr(sorted_list[i], key) != getattr(sorted_list[i-1], key)
+                        for key in ['InstitutionName', 'MagneticFieldStrength', 'ScannerModelName']]):
+                    breaks.append(i)
+                    continue
+                t_diff = datetime.datetime.strptime(sorted_list[i].AcqDateTime, '%Y-%m-%d %H:%M:%S') - \
+                    datetime.datetime.strptime(sorted_list[i-1].AcqDateTime, '%Y-%m-%d %H:%M:%S')
+                if t_diff.total_seconds() > 1800:
+                    breaks.append(i)
+            breaks = [0] + breaks + [len(sorted_list)]
+            for i in range(1, len(breaks)):
+                sub_list = sorted_list[breaks[i-1]:breaks[i]]
+                sub_series = sorted(set([di.SeriesNumber for di in sub_list]))
+                for di in sorted_list[breaks[i-1]:breaks[i]]:
+                    study_nums[di.SourcePath] = study_num
+                    series_nums[di.SourcePath] = sub_series.index(di.SeriesNumber) + 1
+                study_num += 1
+        return study_nums, series_nums
 
     def generate_unique_names(self) -> None:
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
