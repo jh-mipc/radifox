@@ -253,11 +253,11 @@ class BaseInfo:
 
         # Iterate through patterns and match against relevant variables
         found = False
-        for search_str in [series_desc, body_part_ex, study_desc]:
+        for i, search_str in enumerate([series_desc, body_part_ex, study_desc]):
             for pattern in patterns:
                 if re.search(pattern[0], search_str):
                     body_part = pattern[1]
-                    if len(pattern) > 2 and re.search(pattern[2], study_desc):
+                    if i > 0 and len(pattern) > 2 and re.search(pattern[2], study_desc):
                         body_part = pattern[3]
                     found = True
                     break
