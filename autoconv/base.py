@@ -274,6 +274,9 @@ class BaseInfo:
         if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
             logging.info('This series is localizer, derived or processed image. Skipping.')
             return False
+        elif modality == 'DIFF' and (series_desc.endswith('_tracew') or series_desc.endswith('_fa')):
+            logging.info('This series is localizer, derived or processed image. Skipping.')
+            return False
         elif body_part == 'ORBITS' and self.NumFiles * slice_sp > 120:
             body_part = 'BRAIN'
         elif body_part == 'BRAIN' and self.NumFiles * slice_sp < 100 \
