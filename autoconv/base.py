@@ -246,7 +246,7 @@ class BaseInfo:
             (r'(cerv|c[ -]?sp|c.?spine|msma)', 'CSPINE', r'(thor|t[ -]?sp|t.?spine)', 'SPINE'),
             (r'(thor|t[ -]?sp|t.?spine)', 'TSPINE', r'(cerv|c[ -]?sp|c.?spine)', 'SPINE'),
             (r'(lumb|l[ -]?sp|l.?spine)', 'LSPINE'),
-            (r'(\sc.?tl?(?:\s+|$)|^sp_|\(t1.ax.vibe|t1.vibe.tra|ax.t1.vibe\))', 'SPINE'),
+            (r'(\sc.?tl?(?:\s+|$)|^sp_|t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)', 'SPINE'),
             (r'(orbit|thin|^on_)', 'ORBITS'),
             (r'spine', 'SPINE'),
         ]
