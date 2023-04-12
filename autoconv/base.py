@@ -17,7 +17,7 @@ from .lut import LookupTable
 from .metadata import Metadata
 from .qa.qaimage import create_qa_image
 # from .logging import WARNING_DEBUG
-from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list, add_acq_num,
+from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list,
                     find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date)
 
 
@@ -392,7 +392,6 @@ class BaseInfo:
                 new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph|real|imaginary)$', '', filename.name))
                 p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
                 filename = new_path
-        # TODO: Add a hash check to see if any previous ACQ# match exactly and remove if so
         if success:
             if (niidir / (self.NiftiName + '.nii.gz')).exists():
                 self.NiftiCreated = True
@@ -470,25 +469,33 @@ class BaseSet:
 
         # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
         spine_indexes = ['SPINE', 'CSPINE', 'TSPINE', 'LSPINE']
-        for series_description in set([di.SeriesDescription for di in self.SeriesList
-                                       if di.NiftiName is not None and
-                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
-                                       all([item is None for item in di.ManualName])]):
-            di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description and
-                              di.NiftiName is not None and 'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
-                              all([item is None for item in di.ManualName])],
-                             key=lambda x: x.ImagePositionPatient[2], reverse=True)
-            spine_idx = 0
-            for i, di in enumerate(di_list):
-                current_level = di.NiftiName.split('_')[-1].split('-')[0]
-                if i == 0:
-                    if current_level == 'SPINE':
-                        di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
-                    spine_idx = spine_indexes.index(di.NiftiName.split('_')[-1].split('-')[0])
-                    continue
-                if abs(di.ImagePositionPatient[2] - di_list[i - 1].ImagePositionPatient[2]) > 100:
-                    spine_idx = min(spine_idx + 1, len(spine_indexes) - 1)
-                di.update_name(lambda x: x.replace('_%s-' % current_level, '_%s-' % spine_indexes[spine_idx]))
+        for study_uid in set([di.StudyUID for di in self.SeriesList
+                              if di.NiftiName is not None and
+                              'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                              di.ManualName[0] is None]):
+            for series_description in set([di.SeriesDescription for di in self.SeriesList
+                                           if di.NiftiName is not None and
+                                           di.StudyUID == study_uid and
+                                           'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                                           di.ManualName[0] is None]):
+                di_list = sorted([di for di in self.SeriesList
+                                  if di.NiftiName is not None and
+                                  di.StudyUID == study_uid and
+                                  di.SeriesDescription == series_description and
+                                  'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                                  di.ManualName[0] is None],
+                                 key=lambda x: x.ImagePositionPatient[2], reverse=True)
+                spine_idx = 0
+                for i, di in enumerate(di_list):
+                    current_level = di.NiftiName.split('_')[-1].split('-')[0]
+                    if i == 0:
+                        if current_level == 'SPINE':
+                            di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
+                        spine_idx = spine_indexes.index(di.NiftiName.split('_')[-1].split('-')[0])
+                        continue
+                    if abs(di.ImagePositionPatient[2] - di_list[i - 1].ImagePositionPatient[2]) > 100:
+                        spine_idx = min(spine_idx + 1, len(spine_indexes) - 1)
+                    di.update_name(lambda x: x.replace('_%s-' % current_level, '_%s-' % spine_indexes[spine_idx]))
 
         ruid_set = set(['.'.join(di.SeriesUID.split('.')[:-1]) for di in self.SeriesList])
         ruid_dict = {ruid: [] for ruid in ruid_set}
