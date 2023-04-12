@@ -264,7 +264,7 @@ class BaseInfo:
             if found:
                 break
 
-        if re.search(r'\*?(me2d1r4|me3d1r3|me2d1r2)', seq_name):
+        if re.search(r'\*?(me2d1r)', seq_name):
             body_part = 'SPINE'
         if modality == 'DIFF' and orientation == 'SAGITTAL':
             body_part = 'SPINE'
