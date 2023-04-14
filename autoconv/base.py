@@ -18,7 +18,7 @@ from .lut import LookupTable
 from .metadata import Metadata
 from .qa.qaimage import create_qa_image
 # from .logging import WARNING_DEBUG
-from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list,
+from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list, none_to_float,
                     find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date)
 
 
@@ -435,14 +435,16 @@ class BaseSet:
     def __repr_json__(self) -> dict:
         return {key: value for key, value in self.__dict__.items() if key not in ['OutputRoot', 'DateShiftDays']}
 
-    def get_unique_study_series(self):
+    @staticmethod
+    def get_unique_study_series(series_list):
         study_num = 1
         study_nums = {}
         series_nums = {}
-        for uid in set(di.StudyUID for di in self.SeriesList):
-            sorted_list = sorted([di for di in self.SeriesList if di.StudyUID == uid],
+        for uid in set(di.StudyUID for di in series_list):
+            sorted_list = sorted([di for di in series_list if di.StudyUID == uid],
                                  key=lambda x: (x.AcqDateTime, x.InstitutionName,
-                                                x.MagneticFieldStrength, x.ScannerModelName))
+                                                none_to_float(x.MagneticFieldStrength),
+                                                x.ScannerModelName))
             breaks = []
             for i in range(1, len(sorted_list)):
                 if any([getattr(sorted_list[i], key) != getattr(sorted_list[i-1], key)

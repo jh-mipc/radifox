@@ -128,7 +128,7 @@ class DicomSet(BaseSet):
         for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
             self.SeriesList.append(DicomInfo(dcmdir))
 
-        study_nums, series_nums = self.get_unique_study_series()
+        study_nums, series_nums = self.get_unique_study_series(self.SeriesList)
         for di in self.SeriesList:
             logging.info('Processing %s' % di.SourcePath)
             if di.should_convert():

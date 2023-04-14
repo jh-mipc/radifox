@@ -314,3 +314,7 @@ def version_check(saved_version, current_version):
 def shift_date(datetime_str: Optional[str] = None, date_shift_days: int = 0):
     orig_date = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
     return (orig_date + timedelta(days=date_shift_days)).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def none_to_float(value):
+    return float('inf') if value is None else value

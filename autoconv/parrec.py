@@ -98,7 +98,7 @@ class ParrecSet(BaseSet):
         for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):
             self.SeriesList.append(ParrecInfo(parfile, self.ManualArgs))
 
-        study_nums, series_nums = self.get_unique_study_series()
+        study_nums, series_nums = self.get_unique_study_series(self.SeriesList)
         for di in self.SeriesList:
             logging.info('Processing %s' % di.SourcePath)
             if di.should_convert():
