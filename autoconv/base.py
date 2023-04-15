@@ -437,32 +437,31 @@ class BaseSet:
 
     @staticmethod
     def get_unique_study_series(series_list):
-        study_num = 1
         study_nums = {}
         series_nums = {}
-        for uid in dict((di.StudyUID, None) for di in sorted(series_list, key=lambda x: (x.AcqDateTime, x.StudyUID))):
-            sorted_list = sorted([di for di in series_list if di.StudyUID == uid],
-                                 key=lambda x: (x.AcqDateTime, x.InstitutionName,
-                                                none_to_float(x.MagneticFieldStrength),
-                                                x.ScannerModelName))
-            breaks = []
-            for i in range(1, len(sorted_list)):
-                if any([getattr(sorted_list[i], key) != getattr(sorted_list[i-1], key)
-                        for key in ['InstitutionName', 'MagneticFieldStrength', 'ScannerModelName']]):
-                    breaks.append(i)
-                    continue
-                t_diff = datetime.datetime.strptime(sorted_list[i].AcqDateTime, '%Y-%m-%d %H:%M:%S') - \
-                    datetime.datetime.strptime(sorted_list[i-1].AcqDateTime, '%Y-%m-%d %H:%M:%S')
-                if t_diff.total_seconds() > 1800:
-                    breaks.append(i)
-            breaks = [0] + breaks + [len(sorted_list)]
-            for i in range(1, len(breaks)):
-                sub_list = sorted_list[breaks[i-1]:breaks[i]]
-                sub_series = sorted(set([di.SeriesNumber for di in sub_list]))
-                for di in sorted_list[breaks[i-1]:breaks[i]]:
-                    study_nums[di.SourcePath] = study_num
-                    series_nums[di.SourcePath] = sub_series.index(di.SeriesNumber) + 1
-                study_num += 1
+        sorted_list = sorted(series_list,
+                             key=lambda x: (x.AcqDateTime, x.InstitutionName,
+                                            none_to_float(x.MagneticFieldStrength),
+                                            x.ScannerModelName))
+        breaks = []
+        for i in range(1, len(sorted_list)):
+            if any([getattr(sorted_list[i], key) != getattr(sorted_list[i-1], key)
+                    for key in ['InstitutionName', 'MagneticFieldStrength', 'ScannerModelName']]):
+                breaks.append(i)
+                continue
+            t_diff = datetime.datetime.strptime(sorted_list[i].AcqDateTime, '%Y-%m-%d %H:%M:%S') - \
+                datetime.datetime.strptime(sorted_list[i-1].AcqDateTime, '%Y-%m-%d %H:%M:%S')
+            if t_diff.total_seconds() > 1800:
+                breaks.append(i)
+        breaks = [0] + breaks + [len(sorted_list)]
+        break_nums = sum([[i] * (breaks[i]-breaks[i-1]) for i in range(1, len(breaks))], [])
+        study_tuples = [(break_nums[i], di.StudyUID) for i, di in enumerate(sorted_list)]
+        for i, tup in enumerate(dict((tup, None) for tup in study_tuples).keys()):
+            sub_list = [di for j, di in enumerate(sorted_list) if study_tuples[j] == tup]
+            sub_series = sorted(set([di.SeriesNumber for di in sub_list]))
+            for di in sub_list:
+                study_nums[di.SourcePath] = i + 1
+                series_nums[di.SourcePath] = sub_series.index(di.SeriesNumber) + 1
         return study_nums, series_nums
 
     def generate_unique_names(self) -> None:
