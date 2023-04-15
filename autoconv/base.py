@@ -440,7 +440,7 @@ class BaseSet:
         study_num = 1
         study_nums = {}
         series_nums = {}
-        for uid in set(di.StudyUID for di in series_list):
+        for uid in dict((di.StudyUID, None) for di in sorted(series_list, key=lambda x: (x.AcqDateTime, x.StudyUID))):
             sorted_list = sorted([di for di in series_list if di.StudyUID == uid],
                                  key=lambda x: (x.AcqDateTime, x.InstitutionName,
                                                 none_to_float(x.MagneticFieldStrength),
