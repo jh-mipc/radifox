@@ -445,6 +445,9 @@ class BaseSet:
                                             x.ScannerModelName))
         breaks = []
         for i in range(1, len(sorted_list)):
+            if any([getattr(sorted_list[i], key) is None for key in
+                    ['InstitutionName', 'MagneticFieldStrength', 'ScannerModelName']]):
+                continue
             if any([getattr(sorted_list[i], key) != getattr(sorted_list[i-1], key)
                     for key in ['InstitutionName', 'MagneticFieldStrength', 'ScannerModelName']]):
                 breaks.append(i)
