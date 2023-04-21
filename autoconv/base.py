@@ -440,7 +440,7 @@ class BaseSet:
         study_nums = {}
         series_nums = {}
         sorted_list = sorted(series_list,
-                             key=lambda x: (x.AcqDateTime, x.InstitutionName,
+                             key=lambda x: (x.AcqDateTime, x.SeriesNumber, x.InstitutionName,
                                             none_to_float(x.MagneticFieldStrength),
                                             x.ScannerModelName))
         breaks = []
@@ -461,10 +461,10 @@ class BaseSet:
         study_tuples = [(break_nums[i], di.StudyUID) for i, di in enumerate(sorted_list)]
         for i, tup in enumerate(dict((tup, None) for tup in study_tuples).keys()):
             sub_list = [di for j, di in enumerate(sorted_list) if study_tuples[j] == tup]
-            sub_series = sorted(set([di.SeriesNumber for di in sub_list]))
+            sub_series = list(dict(((di.SeriesNumber, di.SeriesDescription), None) for di in sub_list).keys())
             for di in sub_list:
                 study_nums[di.SourcePath] = i + 1
-                series_nums[di.SourcePath] = sub_series.index(di.SeriesNumber) + 1
+                series_nums[di.SourcePath] = sub_series.index((di.SeriesNumber, di.SeriesDescription)) + 1
         return study_nums, series_nums
 
     def generate_unique_names(self) -> None:
