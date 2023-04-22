@@ -26,7 +26,7 @@ DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
-                  'InversionTime', 'ComplexImageComponent']
+                  'InversionTime', 'ComplexImageComponent', 'ImageType']
 HASH_ITEMS = ['InstitutionName', 'DeviceIdentifier']
 SHIFT_ITEMS = ['AcqDateTime']
 DCM_ORIENT_PLANES = {0: 'sagittal', 1: 'coronal', 2: 'axial'}
