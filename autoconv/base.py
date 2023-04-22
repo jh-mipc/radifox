@@ -548,29 +548,38 @@ class BaseSet:
                 for di in ruid_dict[root_uid]:
                     dyn_checks[root_uid].append(di)
                     dyn_num = dyn_checks[root_uid].index(di) + 1
-                    di.update_name(lambda x: x + ('-DYN%d' % dyn_num))
+                    di.update_name(lambda x: x + ('-DYN%d' % dyn_num), 'Adding temporary DYN naming')
 
-        for dcm_uid, di_list in dyn_checks.items():
-            non_matching = []
-            for item in MATCHING_ITEMS:
+        for di_list in dyn_checks.values():
+            non_matching = set()
+            for item in set(MATCHING_ITEMS) - {'ImageType'}:
                 if any([getattr(di_list[0], item) != getattr(di_list[i], item) for i in range(len(di_list))]):
-                    non_matching.append(item)
-            if non_matching == ['ImageOrientationPatient']:
-                for di in di_list:
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
+                    non_matching.add(item)
+            if not non_matching:
                 continue
-            if non_matching == ['EchoTime']:
-                switch_t2star = any(['-T2STAR-' in di.NiftiName for di in di_list])
-                for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime if x.EchoTime is not None else 0)):
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
-                    if switch_t2star and '-T1-' in di.NiftiName:
-                        di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
-            if non_matching == ['ComplexImageComponent']:
+
+            for di in di_list:
+                di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Removing temporary DYN naming')
+
+            if 'EchoTime' in non_matching and any(['-T2STAR-' in di.NiftiName for di in di_list]):
+                for di in [di for di in di_list if '-T1-' in di.NiftiName]:
+                    di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
+
+            for attr_str, name_str in [('ImageOrientationPatient', 'POS'), ('EchoTime', 'ECHO')]:
+                if attr_str in non_matching:
+                    for i, val in enumerate(sorted(set(getattr(di, attr_str) for di in di_list))):
+                        for di in [di for di in di_list if getattr(di, attr_str) == val]:
+                            di.update_name(lambda x: x + ('-%s%d' % (name_str, i)))
+                    non_matching -= {attr_str}
+
+            if 'ComplexImageComponent' in non_matching:
                 for di in di_list:
-                    comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + [comp]))
-            else:
-                continue
+                    di.update_name(lambda x: x + '-' + di.ComplexImageComponent[:3])
+                non_matching -= {'ComplexImageComponent'}
+
+            if non_matching:
+                for i, di in enumerate(di_list):
+                    di.update_name(lambda x: x + x + ('-DYN%d' % i), 'Re-adding extra DYN naming')
 
         for di in self.SeriesList:
             if di.NiftiName is None:
