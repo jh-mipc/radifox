@@ -185,7 +185,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
                     valid_dcms.append((dcm_img, uid, dcm_ds.InstanceNumber,
                                        tuple([TruncatedImageValue(getattr(dcm_ds, item, None))
                                               if item == 'ImageOrientationPatient'
-                                              else extract_de(dcm_ds, item)
+                                              else extract_de(dcm_ds, item, uid)
                                               for item in MATCHING_ITEMS])))
             if decomp_count > 0:
                 logging.info('%d DICOM files were decompresssed' % decomp_count)
