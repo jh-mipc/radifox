@@ -569,7 +569,7 @@ class BaseSet:
                 if attr_str in non_matching:
                     for i, val in enumerate(sorted(set(getattr(di, attr_str) for di in di_list))):
                         for di in [di for di in di_list if getattr(di, attr_str) == val]:
-                            di.update_name(lambda x: x + ('-%s%d' % (name_str, i)))
+                            di.update_name(lambda x: x + ('-%s%d' % (name_str, i + 1)))
                     non_matching -= {attr_str}
 
             if 'ComplexImageComponent' in non_matching:
