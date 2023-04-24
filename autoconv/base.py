@@ -574,7 +574,9 @@ class BaseSet:
 
             if 'ComplexImageComponent' in non_matching:
                 for di in di_list:
-                    di.update_name(lambda x: x + '-' + di.ComplexImageComponent[:3])
+                    di.update_name(lambda x: x + '-' + getattr(di, 'ComplexImageComponent', 'MAG')[:3])
+                    if 'SUM' in di.ImageType:
+                        di.update_name(lambda x: x + '-SUM')
                 non_matching -= {'ComplexImageComponent'}
 
             if non_matching:
