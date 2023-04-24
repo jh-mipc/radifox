@@ -121,7 +121,8 @@ class BaseInfo:
         mip_ignore = 'mip' in series_desc or any([img_type.lower() == 'mnip' for img_type in self.ImageType]) or \
             any([img_type.lower() == 'maximum' for img_type in self.ImageType])
         processed_ignore = any(['adc' in img_type.lower() for img_type in self.ImageType]) or \
-            any([img_type.lower() == 'sub' for img_type in self.ImageType])
+            any([img_type.lower() == 'sub' for img_type in self.ImageType]) or \
+            any([img_type.lower() == 'sum' for img_type in self.ImageType])
         logging.debug('Derived:%s, Description:%s, MPR:%s, MIP:%s, Processed:%s' %
                       (not type_status, desc_ignore, mpr_ignore, mip_ignore, processed_ignore))
         self.ConvertImage = type_status and not desc_ignore and not mpr_ignore \
@@ -574,9 +575,7 @@ class BaseSet:
 
             if 'ComplexImageComponent' in non_matching:
                 for di in di_list:
-                    di.update_name(lambda x: x + '-' + getattr(di, 'ComplexImageComponent', 'MAG')[:3])
-                    if 'SUM' in di.ImageType:
-                        di.update_name(lambda x: x + '-SUM')
+                    di.update_name(lambda x: x + '-' + di.ComplexImageComponent[:3])
                 non_matching -= {'ComplexImageComponent'}
 
             if non_matching:
