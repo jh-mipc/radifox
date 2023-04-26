@@ -569,7 +569,7 @@ class BaseSet:
             if 'ImageOrientationPatient' in non_matching:
                 for i, val in enumerate(sorted(set(di.ImagePositionPatient for di in di_list), key=lambda x: x[2])):
                     for di in [di for di in di_list if di.ImagePositionPatient == val]:
-                        di.update_name(lambda x: x + ('-%s%d' % (name_str, i + 1)))
+                        di.update_name(lambda x: x + ('-POS%d' % (i + 1)))
                     non_matching -= {'ImageOrientationPatient'}
 
             for attr_str, name_str in [('InversionTime', 'INV'), ('EchoTime', 'ECHO')]:
