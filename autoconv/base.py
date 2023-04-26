@@ -562,7 +562,7 @@ class BaseSet:
             for di in di_list:
                 di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Removing temporary DYN naming')
 
-            if len(set(di.NiftiName.split('_')[0].split('-')[0] for di in di_list)) == len(di_list):
+            if len(set(di.NiftiName.split('_')[-1].split('-')[0] for di in di_list)) == len(di_list):
                 continue
 
             if 'EchoTime' in non_matching and any(['-T2STAR-' in di.NiftiName for di in di_list]):
