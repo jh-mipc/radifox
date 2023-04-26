@@ -562,12 +562,16 @@ class BaseSet:
             for di in di_list:
                 di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Removing temporary DYN naming')
 
+            if len(set(di.NiftiName.split('_')[0].split('-')[0] for di in di_list)) == len(di_list):
+                continue
+
             if 'EchoTime' in non_matching and any(['-T2STAR-' in di.NiftiName for di in di_list]):
                 for di in [di for di in di_list if '-T1-' in di.NiftiName]:
                     di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
 
             if 'ImageOrientationPatient' in non_matching:
-                for i, val in enumerate(sorted(set(di.ImagePositionPatient for di in di_list), key=lambda x: x[2])):
+                for i, val in enumerate(sorted(set(di.ImagePositionPatient for di in di_list),
+                                               key=lambda x: x[2], reverse=True)):
                     for di in [di for di in di_list if di.ImagePositionPatient == val]:
                         di.update_name(lambda x: x + ('-POS%d' % (i + 1)))
                     non_matching -= {'ImageOrientationPatient'}
