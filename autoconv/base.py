@@ -1,4 +1,5 @@
 from __future__ import annotations
+import datetime
 import json
 import logging
 from pathlib import Path
@@ -17,7 +18,7 @@ from .lut import LookupTable
 from .metadata import Metadata
 from .qa.qaimage import create_qa_image
 # from .logging import WARNING_DEBUG
-from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list, add_acq_num,
+from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list, none_to_float,
                     find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date)
 
 
@@ -25,7 +26,7 @@ DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
                   'RepetitionTime', 'FlipAngle', 'EchoTime',
-                  'InversionTime', 'ComplexImageComponent']
+                  'InversionTime', 'ComplexImageComponent', 'ImageType']
 HASH_ITEMS = ['InstitutionName', 'DeviceIdentifier']
 SHIFT_ITEMS = ['AcqDateTime']
 DCM_ORIENT_PLANES = {0: 'sagittal', 1: 'coronal', 2: 'axial'}
@@ -120,7 +121,8 @@ class BaseInfo:
         mip_ignore = 'mip' in series_desc or any([img_type.lower() == 'mnip' for img_type in self.ImageType]) or \
             any([img_type.lower() == 'maximum' for img_type in self.ImageType])
         processed_ignore = any(['adc' in img_type.lower() for img_type in self.ImageType]) or \
-            any([img_type.lower() == 'sub' for img_type in self.ImageType])
+            any([img_type.lower() == 'sub' for img_type in self.ImageType]) or \
+            any([img_type.lower() == 'sum' for img_type in self.ImageType])
         logging.debug('Derived:%s, Description:%s, MPR:%s, MIP:%s, Processed:%s' %
                       (not type_status, desc_ignore, mpr_ignore, mip_ignore, processed_ignore))
         self.ConvertImage = type_status and not desc_ignore and not mpr_ignore \
@@ -222,7 +224,7 @@ class BaseInfo:
                 sequence = 'IR' + sequence
         if sequence.startswith('IR') and resolution == '3D' and 'F' not in sequence:
             sequence = sequence.replace('IR', 'IRF')
-        if sequence == 'IRFGRE':
+        if sequence == 'IRFGRE' or (sequence == 'IRFUNK' and modality == 'T1'):
             sequence = 'IRFSPGR'
         if modality == 'UNK':
             if sequence.endswith('SE'):
@@ -239,52 +241,42 @@ class BaseInfo:
         body_part = 'BRAIN'
         body_part_ex = '' if self.BodyPartExamined is None else self.BodyPartExamined.lower()
         study_desc = ('' if self.StudyDescription is None else self.StudyDescription.lower().replace(' ', ''))
-        if re.search('(brain|^br_)', series_desc):
-            body_part = 'BRAIN'
-        elif re.search(r'ct[ -]?spine', series_desc):
-            body_part = 'SPINE'
-        elif re.search(r'(cerv|c[ -]?sp|c.?spine|msma)', series_desc):
-            body_part = 'CSPINE'
-        elif re.search(r'(thor|t[ -]?sp|t.?spine)', series_desc):
-            body_part = 'TSPINE'
-        elif re.search(r'(lumb|l[ -]?sp|l.?spine)', series_desc):
-            body_part = 'LSPINE'
-        elif re.search(r'(me3d1r3|me2d1r2)', seq_name) or \
-                re.search(r'(\sc.?tl?(?:\s+|$)|^sp_)', series_desc) or \
-                re.search(r'(t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)', series_desc):
-            body_part = 'SPINE'
-        elif re.search(r'(orbit|thin|^on_)', series_desc):
-            body_part = 'ORBITS'
-        elif 'brain' in study_desc:
-            body_part = 'BRAIN'
-        elif re.search(r'(cerv|c[ -]?spine)', study_desc):
-            body_part = 'CSPINE'
-            if 'thor' in study_desc:
-                body_part = 'SPINE'
-        elif re.search(r'(thor|t[ -]?spine)', study_desc):
-            body_part = 'TSPINE'
-            if 'cerv' in study_desc:
-                body_part = 'SPINE'
-        elif re.search(r'(lumb|l[ -]?spine)', study_desc):
-            body_part = 'LSPINE'
-        elif 'orbit' in study_desc:
-            body_part = 'ORBITS'
-        elif 'brain' in body_part_ex:
-            body_part = 'BRAIN'
-        elif re.search(r'ct?spine', body_part_ex):
-            body_part = 'CSPINE'
-        elif re.search(r'tl?spine', body_part_ex):
-            body_part = 'TSPINE'
-        elif re.search(r'ls?spine', body_part_ex):
-            body_part = 'LSPINE'
-        elif 'spine' in series_desc or 'spine' in body_part_ex or \
-                'spine' in study_desc:
+        # Define a list of tuples with regular expression patterns and corresponding body part values
+        patterns = [
+            (r'(brain|^br_)', 'BRAIN'),
+            (r'ct[ -]?spine', 'SPINE'),
+            (r'(cerv|c[ -]?sp|c.?spine|msma)', 'CSPINE', r'(thor|t[ -]?sp|t.?spine)', 'SPINE'),
+            (r'(thor|t[ -]?sp|t.?spine)', 'TSPINE', r'(cerv|c[ -]?sp|c.?spine)', 'SPINE'),
+            (r'(lumb|l[ -]?sp|l.?spine)', 'LSPINE'),
+            (r'(\sc.?tl?(?:\s+|$)|^sp_|t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)', 'SPINE'),
+            (r'(orbit|thin|^on_)', 'ORBITS'),
+            (r'spine', 'SPINE'),
+        ]
+
+        # Iterate through patterns and match against relevant variables
+        found = False
+        for i, search_str in enumerate([series_desc, body_part_ex, study_desc]):
+            for pattern in patterns:
+                if re.search(pattern[0], search_str):
+                    body_part = pattern[1]
+                    if i > 0 and len(pattern) > 2 and re.search(pattern[2], study_desc):
+                        body_part = pattern[3]
+                    found = True
+                    break
+            if found:
+                break
+
+        if re.search(r'\*?(me2d1r)', seq_name):
             body_part = 'SPINE'
         if modality == 'DIFF' and orientation == 'SAGITTAL':
             body_part = 'SPINE'
+
         slice_sp = float(self.SliceThickness) if self.SliceSpacing is None \
             else float(self.SliceSpacing)
         if self.NumFiles < 10 and body_part == 'BRAIN' and modality in ['T1', 'T2', 'T2STAR', 'FLAIR']:
+            logging.info('This series is localizer, derived or processed image. Skipping.')
+            return False
+        elif modality == 'DIFF' and (series_desc.endswith('_tracew') or series_desc.endswith('_fa')):
             logging.info('This series is localizer, derived or processed image. Skipping.')
             return False
         elif body_part == 'ORBITS' and self.NumFiles * slice_sp > 120:
@@ -300,7 +292,8 @@ class BaseInfo:
 
         return [body_part, modality, sequence, resolution, orientation, excontrast]
 
-    def create_image_name(self, scan_str: str, lut_obj: LookupTable, manual_dict: dict) -> None:
+    def create_image_name(self, scan_str: str, study_num: int, series_num: int,
+                          lut_obj: LookupTable, manual_dict: dict) -> None:
         source_name = str(self.SourcePath)
         man_list = [None] * 6
         pred_list = [None] * 6
@@ -324,8 +317,11 @@ class BaseInfo:
             return
 
         for item_list in [pred_list, man_list, lut_list]:
-            if item_list[1] == 'DE':
-                item_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
+            if item_list[1] == 'ME':
+                if item_list[2].endswith('SE'):
+                    item_list[1] = 'PD' if self.EchoTime < 30 else 'T2'
+                else:
+                    item_list[1] = 'T1' if self.EchoTime < 15 else 'T2STAR'
 
         self.ManualName = man_list
         self.LookupName = lut_list
@@ -338,7 +334,7 @@ class BaseInfo:
                       for i in range(len(final_list))]
         final_list = [self.PredictedName[i] if i < len(self.PredictedName) and final_list[i] is None else final_list[i]
                       for i in range(len(final_list))]
-        self.NiftiName = '_'.join([scan_str, '-'.join(final_list)])
+        self.NiftiName = '_'.join([scan_str, '%02d-%02d' % (study_num, series_num),  '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
     def create_nii(self, output_dir: Path) -> None:
@@ -348,10 +344,13 @@ class BaseInfo:
         niidir = output_dir / 'nii'
         source = output_dir / self.SourcePath
         mkdir_p(niidir)
-        count = 1
-        while Path(niidir, add_acq_num(self.NiftiName, count) + '.nii.gz').exists():
-            count += 1
-        self.update_name(lambda x: add_acq_num(x, count))
+        if Path(niidir, self.NiftiName + '.nii.gz').exists():
+            self.NiftiCreated = False
+            logging.warning('Naming failed for %s' % source)
+            logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
+            logging.warning('%s already exists.' % self.NiftiName)
+            logging.warning('Nifti creation failed.')
+            return
 
         success = True
         dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
@@ -359,6 +358,7 @@ class BaseInfo:
         result = run(dcm2niix_cmd, stdout=PIPE, stderr=STDOUT, text=True)
 
         if result.returncode != 0:
+            self.NiftiCreated = False
             logging.warning('dcm2niix failed for %s' % source)
             logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
             logging.warning('dcm2niix return code: %d' % result.returncode)
@@ -398,15 +398,11 @@ class BaseInfo:
                 new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph|real|imaginary)$', '', filename.name))
                 p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
                 filename = new_path
-        # TODO: Add a hash check to see if any previous ACQ# match exactly and remove if so
         if success:
             if (niidir / (self.NiftiName + '.nii.gz')).exists():
                 self.NiftiCreated = True
                 self.NiftiHash = hash_file_dir(niidir / (self.NiftiName + '.nii.gz'))
                 logging.info('Nifti created successfully at %s' % (niidir / (self.NiftiName + '.nii.gz')))
-                if '-ACQ3' in self.NiftiName:
-                    logging.warning('%s has 3 or more acquisitions of the same name. This is uncommon and '
-                                    'should be checked.' % self.NiftiName.replace('-ACQ3', ''))
             else:
                 self.NiftiCreated = False
                 logging.warning('Nifti creation failed for %s' % source)
@@ -439,6 +435,38 @@ class BaseSet:
 
     def __repr_json__(self) -> dict:
         return {key: value for key, value in self.__dict__.items() if key not in ['OutputRoot', 'DateShiftDays']}
+
+    @staticmethod
+    def get_unique_study_series(series_list):
+        study_nums = {}
+        series_nums = {}
+        sorted_list = sorted(series_list,
+                             key=lambda x: (x.AcqDateTime, x.SeriesNumber, x.InstitutionName,
+                                            none_to_float(x.MagneticFieldStrength),
+                                            x.ScannerModelName))
+        breaks = []
+        for i in range(1, len(sorted_list)):
+            if any([getattr(sorted_list[i], key) is None or getattr(sorted_list[i-1], key) is None for key in
+                    ['InstitutionName', 'MagneticFieldStrength', 'ScannerModelName']]):
+                continue
+            if any([getattr(sorted_list[i], key) != getattr(sorted_list[i-1], key)
+                    for key in ['InstitutionName', 'MagneticFieldStrength', 'ScannerModelName']]):
+                breaks.append(i)
+                continue
+            t_diff = datetime.datetime.strptime(sorted_list[i].AcqDateTime, '%Y-%m-%d %H:%M:%S') - \
+                datetime.datetime.strptime(sorted_list[i-1].AcqDateTime, '%Y-%m-%d %H:%M:%S')
+            if t_diff.total_seconds() > 1800:
+                breaks.append(i)
+        breaks = [0] + breaks + [len(sorted_list)]
+        break_nums = sum([[i] * (breaks[i]-breaks[i-1]) for i in range(1, len(breaks))], [])
+        study_tuples = [(break_nums[i], di.StudyUID) for i, di in enumerate(sorted_list)]
+        for i, tup in enumerate(dict((tup, None) for tup in study_tuples).keys()):
+            sub_list = [di for j, di in enumerate(sorted_list) if study_tuples[j] == tup]
+            sub_series = list(dict(((di.SeriesNumber, di.SeriesDescription), None) for di in sub_list).keys())
+            for di in sub_list:
+                study_nums[di.SourcePath] = i + 1
+                series_nums[di.SourcePath] = sub_series.index((di.SeriesNumber, di.SeriesDescription)) + 1
+        return study_nums, series_nums
 
     def generate_unique_names(self) -> None:
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
@@ -479,72 +507,96 @@ class BaseSet:
 
         # Change generic spine into CSPINE/TSPINE/LSPINE based on previous image
         spine_indexes = ['SPINE', 'CSPINE', 'TSPINE', 'LSPINE']
-        for series_description in set([di.SeriesDescription for di in self.SeriesList
-                                       if di.NiftiName is not None and
-                                       'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
-                                       all([item is None for item in di.ManualName])]):
-            di_list = sorted([di for di in self.SeriesList if di.SeriesDescription == series_description and
-                              di.NiftiName is not None and 'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
-                              all([item is None for item in di.ManualName])],
-                             key=lambda x: x.ImagePositionPatient[2], reverse=True)
-            spine_idx = 0
-            for i, di in enumerate(di_list):
-                current_level = di.NiftiName.split('_')[-1].split('-')[0]
-                if i == 0:
-                    if current_level == 'SPINE':
-                        di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
-                    spine_idx = spine_indexes.index(di.NiftiName.split('_')[-1].split('-')[0])
-                    continue
-                if abs(di.ImagePositionPatient[2] - di_list[i - 1].ImagePositionPatient[2]) > 100:
-                    spine_idx = min(spine_idx + 1, len(spine_indexes) - 1)
-                di.update_name(lambda x: x.replace('_%s-' % current_level, '_%s-' % spine_indexes[spine_idx]))
+        for study_uid in set([di.StudyUID for di in self.SeriesList
+                              if di.NiftiName is not None and
+                              'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                              di.ManualName[0] is None]):
+            for series_description in set([di.SeriesDescription for di in self.SeriesList
+                                           if di.NiftiName is not None and
+                                           di.StudyUID == study_uid and
+                                           'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                                           di.ManualName[0] is None]):
+                di_list = sorted([di for di in self.SeriesList
+                                  if di.NiftiName is not None and
+                                  di.StudyUID == study_uid and
+                                  di.SeriesDescription == series_description and
+                                  'SPINE' in di.NiftiName.split('_')[-1].split('-')[0] and
+                                  di.ManualName[0] is None],
+                                 key=lambda x: x.ImagePositionPatient[2], reverse=True)
+                spine_idx = 0
+                for i, di in enumerate(di_list):
+                    current_level = di.NiftiName.split('_')[-1].split('-')[0]
+                    if i == 0:
+                        if current_level == 'SPINE':
+                            di.update_name(lambda x: x.replace('_SPINE-', '_CSPINE-'))
+                        spine_idx = spine_indexes.index(di.NiftiName.split('_')[-1].split('-')[0])
+                        continue
+                    if abs(di.ImagePositionPatient[2] - di_list[i - 1].ImagePositionPatient[2]) > 100:
+                        spine_idx = min(spine_idx + 1, len(spine_indexes) - 1)
+                    di.update_name(lambda x: x.replace('_%s-' % current_level, '_%s-' % spine_indexes[spine_idx]))
 
         ruid_set = set(['.'.join(di.SeriesUID.split('.')[:-1]) for di in self.SeriesList])
-        ruid_dict = {ruid: {} for ruid in ruid_set}
+        ruid_dict = {ruid: [] for ruid in ruid_set}
         for di in self.SeriesList:
             if di.NiftiName is None:
                 continue
             root_uid = '.'.join(di.SeriesUID.split('.')[:-1])
-            if di.NiftiName not in ruid_dict[root_uid]:
-                ruid_dict[root_uid][di.NiftiName] = []
-            ruid_dict[root_uid][di.NiftiName].append(di)
+            ruid_dict[root_uid].append(di)
         dyn_checks = {}
         for root_uid in ruid_dict:
-            dyn_checks[root_uid] = []
-            for name in ruid_dict[root_uid]:
-                if len(ruid_dict[root_uid][name]) > 1:
-                    for di in ruid_dict[root_uid][name]:
-                        dyn_checks[root_uid].append(di)
-                        dyn_num = dyn_checks[root_uid].index(di) + 1
-                        di.update_name(lambda x: x + ('-DYN%d' % dyn_num))
+            if len(ruid_dict[root_uid]) > 1:
+                dyn_checks[root_uid] = []
+                for di in ruid_dict[root_uid]:
+                    dyn_checks[root_uid].append(di)
+                    dyn_num = dyn_checks[root_uid].index(di) + 1
+                    di.update_name(lambda x: x + ('-DYN%d' % dyn_num), 'Adding temporary DYN naming')
 
-        for dcm_uid, di_list in dyn_checks.items():
-            non_matching = []
-            for item in MATCHING_ITEMS:
+        for di_list in dyn_checks.values():
+            non_matching = set()
+            for item in set(MATCHING_ITEMS) - {'ImageType'}:
                 if any([getattr(di_list[0], item) != getattr(di_list[i], item) for i in range(len(di_list))]):
-                    non_matching.append(item)
-            if non_matching == ['ImageOrientationPatient']:
-                for di in di_list:
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Undoing name adjustment')
+                    non_matching.add(item)
+            if not non_matching:
                 continue
-            if non_matching == ['EchoTime']:
-                switch_t2star = any(['-T2STAR-' in di.NiftiName for di in di_list])
-                for i, di in enumerate(sorted(di_list, key=lambda x: x.EchoTime if x.EchoTime is not None else 0)):
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + ['ECHO%d' % (i + 1)]))
-                    if switch_t2star and '-T1-' in di.NiftiName:
-                        di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
-            if non_matching == ['ComplexImageComponent']:
-                for di in di_list:
-                    comp = 'MAG' if 'mag' in di.ComplexImageComponent.lower() else 'PHA'
-                    di.update_name(lambda x: '-'.join(x.split('-')[:-1] + [comp]))
-            else:
+
+            for di in di_list:
+                di.update_name(lambda x: '-'.join(x.split('-')[:-1]), 'Removing temporary DYN naming')
+
+            if len(set(di.NiftiName.split('_')[-1].split('-')[0] for di in di_list)) == len(di_list):
                 continue
+
+            if 'EchoTime' in non_matching and any(['-T2STAR-' in di.NiftiName for di in di_list]):
+                for di in [di for di in di_list if '-T1-' in di.NiftiName]:
+                    di.update_name(lambda x: x.replace('-T1-', '-T2STAR-'))
+
+            if 'ImageOrientationPatient' in non_matching:
+                for i, val in enumerate(sorted(set(di.ImagePositionPatient for di in di_list),
+                                               key=lambda x: x[2], reverse=True)):
+                    for di in [di for di in di_list if di.ImagePositionPatient == val]:
+                        di.update_name(lambda x: x + ('-POS%d' % (i + 1)))
+                    non_matching -= {'ImageOrientationPatient'}
+
+            for attr_str, name_str in [('InversionTime', 'INV'), ('EchoTime', 'ECHO')]:
+                if attr_str in non_matching:
+                    for i, val in enumerate(sorted(set(getattr(di, attr_str) for di in di_list))):
+                        for di in [di for di in di_list if getattr(di, attr_str) == val]:
+                            di.update_name(lambda x: x + ('-%s%d' % (name_str, i + 1)))
+                    non_matching -= {attr_str}
+
+            if 'ComplexImageComponent' in non_matching:
+                for di in di_list:
+                    di.update_name(lambda x: x + '-' + di.ComplexImageComponent[:3])
+                non_matching -= {'ComplexImageComponent'}
+
+            if non_matching:
+                for i, di in enumerate(di_list):
+                    di.update_name(lambda x: x + x + ('-DYN%d' % i), 'Re-adding extra DYN naming')
 
         for di in self.SeriesList:
             if di.NiftiName is None:
                 continue
-            if di.NiftiName.split('_')[2].split('-')[1] == 'T2STAR' and not \
-                    any([di.NiftiName.split('_')[2].split('-')[-1] == item for item in ['MAG', 'PHA', 'SWI']]):
+            if di.NiftiName.split('_')[-1].split('-')[1] == 'T2STAR' and not \
+                    any([di.NiftiName.split('_')[-1].split('-')[-1] == item for item in ['MAG', 'PHA', 'SWI']]):
                 comp = di.ComplexImageComponent[:3] if di.ComplexImageComponent is not None else 'MAG'
                 di.update_name(lambda x: x + '-' + comp)
 

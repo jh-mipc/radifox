@@ -23,11 +23,3 @@ build_tag:
     TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
   only:
     - tags
-
-build_branch:
-  extends: .build_image
-  variables:
-    TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_BRANCH
-  only:
-    - main
-    - support/*

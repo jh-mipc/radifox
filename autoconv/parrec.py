@@ -94,11 +94,13 @@ class ParrecSet(BaseSet):
                          manual_names, input_hash)
         self.ManualArgs = manual_args
 
+        logging.info('Loading PARRECs.')
         for parfile in sorted((output_root / self.Metadata.dir_to_str() / 'mr-parrec').rglob('*.par')):
-            logging.info('Processing %s' % parfile)
             self.SeriesList.append(ParrecInfo(parfile, self.ManualArgs))
 
+        study_nums, series_nums = self.get_unique_study_series(self.SeriesList)
         for di in self.SeriesList:
+            logging.info('Processing %s' % di.SourcePath)
             if di.should_convert():
                 if di.ReconstructionNumber > 1:
                     other_recons = [other_di for other_di in self.SeriesList
@@ -108,7 +110,8 @@ class ParrecSet(BaseSet):
                     elif not di.SeriesDescription.startswith('sWIP'):
                         di.ConvertImage = False
                 if di.ConvertImage:
-                    di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable, self.ManualNames)
+                    di.create_image_name(self.Metadata.prefix_to_str(), study_nums[di.SourcePath],
+                                         series_nums[di.SourcePath], self.LookupTable, self.ManualNames)
 
         logging.info('Generating unique names')
         self.generate_unique_names()

@@ -124,12 +124,16 @@ class DicomSet(BaseSet):
         super().__init__(source, output_root, metadata_obj, lut_obj, remove_identifiers, date_shift_days,
                          manual_names, input_hash)
 
+        logging.info('Loading DICOMs.')
         for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
-            logging.info('Processing %s' % dcmdir)
-            di = DicomInfo(dcmdir)
+            self.SeriesList.append(DicomInfo(dcmdir))
+
+        study_nums, series_nums = self.get_unique_study_series(self.SeriesList)
+        for di in self.SeriesList:
+            logging.info('Processing %s' % di.SourcePath)
             if di.should_convert():
-                di.create_image_name(self.Metadata.prefix_to_str(), self.LookupTable, self.ManualNames)
-            self.SeriesList.append(di)
+                di.create_image_name(self.Metadata.prefix_to_str(), study_nums[di.SourcePath],
+                                     series_nums[di.SourcePath], self.LookupTable, self.ManualNames)
 
         logging.info('Generating unique names')
         self.generate_unique_names()
@@ -181,7 +185,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
                     valid_dcms.append((dcm_img, uid, dcm_ds.InstanceNumber,
                                        tuple([TruncatedImageValue(getattr(dcm_ds, item, None))
                                               if item == 'ImageOrientationPatient'
-                                              else getattr(dcm_ds, item, None)
+                                              else extract_de(dcm_ds, item, uid)
                                               for item in MATCHING_ITEMS])))
             if decomp_count > 0:
                 logging.info('%d DICOM files were decompresssed' % decomp_count)
