@@ -590,7 +590,7 @@ class BaseSet:
 
             if non_matching:
                 for i, di in enumerate(di_list):
-                    di.update_name(lambda x: x + x + ('-DYN%d' % i), 'Re-adding extra DYN naming')
+                    di.update_name(lambda x: x + ('-DYN%d' % i), 'Re-adding extra DYN naming')
 
         for di in self.SeriesList:
             if di.NiftiName is None:
