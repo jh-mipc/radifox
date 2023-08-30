@@ -28,6 +28,7 @@ DCM_HEADER_ATTRS = [
     'RepetitionTime',
     'EchoTime',
     'InversionTime',
+    'TriggerTime',
     'EchoTrainLength',
     'AcquisitionMatrix',
     ('ScanningSequence', 'SequenceType'),
@@ -87,6 +88,9 @@ class DicomInfo(BaseInfo):
                 self.InversionTime = float(ds[(0x2001, 0x101b)].value)
             except ValueError:
                 pass
+            if self.TriggerTime is not None and 'mp2rage' in self.SeriesDescription.lower():
+                self.InversionTime = self.TriggerTime
+                self.TriggerTime = None
         if self.AcquisitionMatrix is not None:
             # noinspection PyUnresolvedReferences
             self.AcquisitionMatrix = [self.AcquisitionMatrix[0], self.AcquisitionMatrix[3]] \

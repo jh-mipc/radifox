@@ -25,7 +25,7 @@ from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain']
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
-                  'RepetitionTime', 'FlipAngle', 'EchoTime',
+                  'RepetitionTime', 'FlipAngle', 'EchoTime', 'TriggerTime',
                   'InversionTime', 'ComplexImageComponent', 'ImageType']
 HASH_ITEMS = ['InstitutionName', 'DeviceIdentifier']
 SHIFT_ITEMS = ['AcqDateTime']
@@ -57,6 +57,7 @@ class BaseInfo:
         self.RepetitionTime = None
         self.EchoTime = None
         self.InversionTime = None
+        self.TriggerTime = None
         self.EchoTrainLength = None
         self.EPIFactor = None
         self.AcquisitionMatrix = []
