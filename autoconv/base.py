@@ -22,10 +22,10 @@ from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_
                     find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date)
 
 
-DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain']
+DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain', 'pride']
 POSTGAD_DESC = ['post', '+c', 'gad', 'gd', 'pstc', '+ c', 'c+']
 MATCHING_ITEMS = ['ImageOrientationPatient',
-                  'RepetitionTime', 'FlipAngle', 'EchoTime',
+                  'RepetitionTime', 'FlipAngle', 'EchoTime', 'TriggerTime',
                   'InversionTime', 'ComplexImageComponent', 'ImageType']
 HASH_ITEMS = ['InstitutionName', 'DeviceIdentifier']
 SHIFT_ITEMS = ['AcqDateTime']
@@ -57,6 +57,7 @@ class BaseInfo:
         self.RepetitionTime = None
         self.EchoTime = None
         self.InversionTime = None
+        self.TriggerTime = None
         self.EchoTrainLength = None
         self.EPIFactor = None
         self.AcquisitionMatrix = []
@@ -246,7 +247,7 @@ class BaseInfo:
             (r'(brain|^br_)', 'BRAIN'),
             (r'ct[ -]?spine', 'SPINE'),
             (r'(cerv|c[ -]?sp|c.?spine|msma)', 'CSPINE', r'(thor|t[ -]?sp|t.?spine)', 'SPINE'),
-            (r'(thor|t[ -]?sp|t.?spine)', 'TSPINE', r'(cerv|c[ -]?sp|c.?spine)', 'SPINE'),
+            (r'(thor|t[ -]?sp|t.?spine)', 'TSPINE', r'(cerv|(?<!ci)c[ -]?sp|(?<!ci)c.?spine)', 'SPINE'),
             (r'(lumb|l[ -]?sp|l.?spine)', 'LSPINE'),
             (r'(\sc.?tl?(?:\s+|$)|^sp_|t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)', 'SPINE'),
             (r'(orbit|thin|^on_)', 'ORBITS'),
@@ -394,8 +395,9 @@ class BaseInfo:
             if 'DIFF' in filename.name and p_add(filename, '_ADC.nii.gz').exists():
                 logging.info('Additional ADC images produced by dcm2niix. Removing.')
                 p_add(filename, '_ADC.nii.gz').unlink()
-            while re.search(r'_(e[0-9]+|ph|real|imaginary)$', filename.name):
-                new_path = filename.parent / (re.sub(r'_(e[0-9]+|ph|real|imaginary)$', '', filename.name))
+            while re.search(r'_(e[0-9]+)?_?(ph|real|imaginary)?_?(t[0-9]+)?$', filename.name):
+                new_path = (filename.parent /
+                            (re.sub(r'_(e[0-9]+)?_?(ph|real|imaginary)?_?(t[0-9]+)?$', '', filename.name)))
                 p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
                 filename = new_path
         if success:
@@ -590,7 +592,7 @@ class BaseSet:
 
             if non_matching:
                 for i, di in enumerate(di_list):
-                    di.update_name(lambda x: x + x + ('-DYN%d' % i), 'Re-adding extra DYN naming')
+                    di.update_name(lambda x: x + ('-DYN%d' % i), 'Re-adding extra DYN naming')
 
         for di in self.SeriesList:
             if di.NiftiName is None:
