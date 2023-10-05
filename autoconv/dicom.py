@@ -69,7 +69,8 @@ class DicomInfo(BaseInfo):
         for item in DCM_HEADER_ATTRS:
             get_item, set_item = item if isinstance(item, tuple) else (item, item)
             setattr(self, set_item, extract_de(ds, get_item, self.SeriesUID, get_item in DCM_HEADER_LISTS))
-        self.SeriesDescription = '' if self.SeriesDescription is None else self.SeriesDescription
+        if self.SeriesDescription is None:
+            self.SeriesDescription = ds.ProtocolName if hasattr(ds, 'ProtocolName') else ''
         series_date = extract_de(ds, 'SeriesDate', self.SeriesUID, False)
         series_time = extract_de(ds, 'SeriesTime', self.SeriesUID, False)
         self.AcqDateTime = ' '.join([str(series_date) if series_date is not None else '0000-00-00',
