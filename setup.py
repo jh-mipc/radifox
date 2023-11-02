@@ -52,6 +52,7 @@ setup(
       'numpy',
       'pillow',
       'scipy',
+      'resize @ git+https://gitlab.com/iacl/resize@v0.3.0',
     ],
     package_data={'autoconv': ['parrec_templates/*.txt']},
     cmdclass=cmdclass,

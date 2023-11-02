@@ -2,11 +2,10 @@
 """
 Reslicing functions and classes
 """
-import warnings
 
 import nibabel as nib
 import numpy as np
-from scipy.ndimage import affine_transform
+from resize.scipy import resize
 
 
 class Reslicer:
@@ -35,7 +34,8 @@ class Reslicer:
                 interpolation, 1 for linear interpolation, etc.)
         """
         # noinspection PyTypeChecker
-        self.data: np.ndarray = reslice(nii_obj, (vox_res,)*3, order).get_fdata()
+        data = nii_obj.get_fdata() if len(nii_obj.shape) == 3 else nib.four_to_three(nii_obj)[0].get_fdata()
+        self.data: np.ndarray = resize(data, [vox_res/s for s in nii_obj.header.get_zooms()], order=order)
         self.orient = nib.aff2axcodes(nii_obj.affine)
 
     def get_num_slices(self, plane='axial'):
@@ -60,26 +60,3 @@ class Reslicer:
                                         self.data.shape[i] - slice_num))
         sel_slice = np.squeeze(self.data[tuple(slices)])
         return sel_slice if tuple(dirs) == self.inplane_dirs[plane][0] else sel_slice.T
-
-
-def reslice(nii_obj, new_zooms, order=0, mode='constant', cval=0):
-    # We are suppressing warnings emitted by scipy >= 0.18,
-    # described in https://github.com/dipy/dipy/issues/1107.
-    # These warnings are not relevant to us, as long as our offset
-    # input to scipy's affine_transform is [0, 0, 0]
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', message='.*scipy.*18.*',
-                                category=UserWarning)
-        new_zooms = np.array(new_zooms, dtype='f8')
-        zooms = np.array(nii_obj.header.get_zooms(), dtype='f8')[:3]
-        R = new_zooms / zooms
-        new_shape = zooms / new_zooms * np.array(nii_obj.shape[:3])
-        new_shape = tuple(np.round(new_shape).astype('i8'))
-        kwargs = {'matrix': R, 'output_shape': new_shape, 'order': order,
-                  'mode': mode, 'cval': cval}
-        data = nii_obj.get_fdata() if len(nii_obj.shape) == 3 else nib.four_to_three(nii_obj)[0].get_fdata()
-        data2 = affine_transform(input=data, **kwargs)
-        Rx = np.eye(4)
-        Rx[:3, :3] = np.diag(R)
-        affine2 = np.dot(nii_obj.affine, Rx)
-    return nib.Nifti1Image(data2, affine2, nii_obj.header)
