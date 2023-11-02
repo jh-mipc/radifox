@@ -41,7 +41,8 @@ setup(
     keywords="mri conversion",
     entry_points={
       'console_scripts': [
-          'autoconv=autoconv.cli:cli'
+          'autoconv-convert=autoconv.cli:convert',
+          'autoconv-update=autoconv.cli:update',
       ]
     },
     python_requires='>=3.8.2',
@@ -51,7 +52,6 @@ setup(
       'numpy',
       'pillow',
       'scipy',
-      'click',
     ],
     package_data={'autoconv': ['parrec_templates/*.txt']},
     cmdclass=cmdclass,

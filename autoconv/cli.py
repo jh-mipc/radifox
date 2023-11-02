@@ -1,113 +1,88 @@
+import argparse
 import json
 import logging
 from pathlib import Path
 import shutil
-
-import click
+from typing import List, Optional
 
 from ._version import __version__
-from .base import BaseInfo
 from .exec import run_autoconv, ExecError
-from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
 from .utils import hash_file_dir, silentremove, mkdir_p, version_check
 
 
-def abs_path(ctx, param, value) -> Path:
-    if value is not None:
-        return Path(value).expanduser().resolve()
+def convert(args: Optional[List[str]] = None) -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('source', type=Path, help='Source directory/file to convert.')
+    parser.add_argument('-o', '--output-root', type=Path, help='Output root directory.', required=True)
+    parser.add_argument('-l', '--lut-file', type=Path, help='Lookup table file.')
+    parser.add_argument('-p', '--project-id', type=str, help='Project ID.')
+    parser.add_argument('-a', '--subject-id', type=str, help='Subject ID.')
+    parser.add_argument('-s', '--session-id', type=str, help='Session ID.')
+    parser.add_argument('--site-id', type=str, help='Site ID.')
+    parser.add_argument('--project-shortname', type=str, help='Project shortname.')
+    parser.add_argument('--tms-metafile', type=Path, help='TMS metadata file.')
+    parser.add_argument('--verbose', action='store_true', help='Verbose output.')
+    parser.add_argument('--force', action='store_true', help='Force run even if it would be skipped.')
+    parser.add_argument('--reckless', action='store_true', help='Force run and overwrite existing data.')
+    parser.add_argument('--safe', action='store_true', help='Add -N to session ID, if session exists.')
+    parser.add_argument('--no-project-subdir', action='store_true', help='Do not create project subdirectory.')
+    parser.add_argument('--parrec', action='store_true', help='Source is PARREC.')
+    parser.add_argument('--symlink', action='store_true',
+                        help='Create symbolic links to source data instead of copying.')
+    parser.add_argument('--hardlink', action='store_true', help='Create hard links to source data instead of copying.')
+    parser.add_argument('--institution', type=str, help='Institution name.')
+    parser.add_argument('--field-strength', type=int, help='Magnetic field strength.')
+    parser.add_argument('--modality', type=str, help='Modality.', default='mr')
+    parser.add_argument('--anonymize', action='store_true', help='Anonymize DICOM data.')
+    parser.add_argument('--date-shift-days', type=int, help='Number of days to shift dates.')
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
+    args = parser.parse_args(args)
 
-def parse_manual_args(ctx, param, value) -> dict:
-    arg_converter = {'int': int, 'float': float, 'str': str}
-    template = BaseInfo(Path('/dev/null'))
-    out_args = {}
-    for argstr in value:
-        arg_arr = argstr.split(':')
-        if len(arg_arr) not in [2, 3]:
-            raise ValueError('Manual argument is improperly formatted (%s).' % argstr)
-        if arg_arr[0] not in template.__dict__:
-            raise ValueError('Manual argument does not match an info argument (%s)' % argstr)
-        if len(arg_arr) == 3:
-            out_args[arg_arr[0]] = arg_converter.get(arg_arr[2], str)(arg_arr[1])
-        elif len(arg_arr) == 2:
-            out_args[arg_arr[0]] = str(arg_arr[1])
-    return out_args
+    for argname in ['source', 'output_root', 'lut_file', 'tms_metafile']:
+        if getattr(args, argname) is not None:
+            setattr(args, argname, getattr(args, argname).resolve())
 
-
-@click.group()
-@click.version_option(__version__)
-def cli():
-    pass
-
-
-@cli.command()
-@click.argument('source', type=click.Path(exists=True), callback=abs_path)
-@click.option('-o', '--output-root', type=click.Path(), callback=abs_path, required=True)
-@click.option('-l', '--lut-file', type=click.Path(exists=True), callback=abs_path)
-@click.option('-p', '--project-id', type=str)
-@click.option('-a', '--patient-id', type=str)
-@click.option('-s', '--site-id', type=str)
-@click.option('-t', '--time-id', type=str)
-@click.option('-r', '--project-shortname', type=str)
-@click.option('-m', '--tms-metafile', type=click.Path(exists=True), callback=abs_path)
-@click.option('-v', '--verbose', is_flag=True)
-@click.option('--force', is_flag=True)
-@click.option('--reckless', is_flag=True)
-@click.option('--append', is_flag=True)
-@click.option('--no-project-subdir', is_flag=True)
-@click.option('--parrec', is_flag=True)
-@click.option('--symlink', is_flag=True)
-@click.option('--hardlink', is_flag=True)
-@click.option('--institution', type=str)
-@click.option('--field-strength', type=int, default=3)
-@click.option('--modality', type=str, default='mr')
-@click.option('--anonymize', is_flag=True)
-@click.option('--date-shift-days', type=int, default=0)
-@click.option('--manual-arg', type=str, multiple=True, callback=parse_manual_args)
-def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, patient_id: str, site_id: str,
-            time_id: str, project_shortname: str, tms_metafile: Path, verbose: bool, force: bool, reckless: bool,
-            append: bool, no_project_subdir: bool, parrec: bool, symlink: bool, hardlink: bool, institution: str,
-            field_strength: int, modality: str, anonymize: bool, date_shift_days: int, manual_arg: dict) -> None:
-
-    if hardlink and symlink:
+    if args.hardlink and args.symlink:
         raise ValueError('Only one of --symlink and --hardlink can be used.')
-    linking = 'hardlink' if hardlink else ('symlink' if symlink else None)
+    linking = 'hardlink' if args.hardlink else ('symlink' if args.symlink else None)
 
-    mapping = {'patient_id': 'PatientID', 'time_id': 'TimeID', 'site_id': 'SiteID'}
-    if tms_metafile:
-        metadata = Metadata.from_tms_metadata(tms_metafile, no_project_subdir)
-        for arg in ['patient_id', 'time_id', 'site_id']:
-            if locals().get(arg) is not None:
-                setattr(metadata, mapping[arg], locals().get(arg))
+    mapping = {'subject_id': 'SubjectID', 'session_id': 'SessionID', 'site_id': 'SiteID'}
+    if args.tms_metafile:
+        metadata = Metadata.from_tms_metadata(args.tms_metafile, args.no_project_subdir)
+        for argname in ['subject_id', 'session_id', 'site_id']:
+            if getattr(args, argname) is not None:
+                setattr(metadata, mapping[argname], getattr(args, argname))
     else:
-        for item in ['project_id', 'patient_id', 'time_id']:
-            if locals().get(item) is None:
-                raise ValueError('%s is a required argument when no metadata file is provided.' % mapping[item])
-        metadata = Metadata(project_id, patient_id, time_id, site_id, project_shortname, no_project_subdir)
+        for argname in ['project_id', 'subject_id', 'session_id']:
+            if getattr(args, argname) is None:
+                raise ValueError('%s is a required argument when no metadata file is provided.' % argname)
+        metadata = Metadata(args.project_id, args.subject_id, args.session_id, args.site_id,
+                            args.project_shortname, args.no_project_subdir)
 
-    if lut_file is None:
-        lut_file = (output_root / (metadata.ProjectID + '-lut.csv')) if no_project_subdir else \
-            (output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv'))
+    if args.lut_file is None:
+        lut_file = (args.output_root / (metadata.ProjectID + '-lut.csv')) if args.no_project_subdir else \
+            (args.output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv'))
+    else:
+        lut_file = args.lut_file
 
-    manual_json_file = (output_root / metadata.dir_to_str() /
-                        (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
+    manual_json_file = (args.output_root / metadata.dir_to_str() /
+                        (metadata.prefix_to_str() + '_%s-ManualNaming.json' % args.modality.upper()))
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
-    type_dirname = (modality + '-' + ('parrec' if parrec else 'dcm'))
-    type_dir = output_root / metadata.dir_to_str() / type_dirname
-    if type_dir.exists():
+    type_dirname = '%s-%s' % (args.modality, 'parrec' if args.parrec else 'dcm')
+    if (args.output_root / metadata.dir_to_str() / type_dirname).exists():
         # TODO: Add checks to see if data has moved (warn and update? error?)
-        if append:
+        if args.safe:
             metadata.AttemptNum = 2
-            while (output_root / metadata.dir_to_str() / type_dirname).exists():
+            while (args.output_root / metadata.dir_to_str() / type_dirname).exists():
                 metadata.AttemptNum += 1
-            type_dir = output_root / metadata.dir_to_str() / type_dirname
-        elif force or reckless:
-            if not reckless:
-                json_file = output_root / metadata.dir_to_str() / (metadata.prefix_to_str() +
-                                                                   '_%s-UnconvertedInfo.json' % modality.upper())
+        elif args.force or args.reckless:
+            if not args.reckless:
+                json_file = (args.output_root / metadata.dir_to_str() /
+                             (metadata.prefix_to_str() + '_%s-UnconvertedInfo.json' % args.modality.upper()))
                 if not json_file.exists():
                     raise ValueError('Unconverted info file (%s) does not exist for consistency checking. '
                                      'Cannot use --force, use --reckless instead.' % json_file)
@@ -122,129 +97,104 @@ def convert(source: Path, output_root: Path, lut_file: Path, project_id: str, pa
                 elif json_obj['Metadata']['TMSMetaFileHash'] is None and metadata.TMSMetaFileHash is not None:
                     raise ValueError('Previous conversion used a TMS metadata file, '
                                      'run with --reckless to ignore this error.')
-                if hash_file_dir(source, False) != json_obj['InputHash']:
+                if hash_file_dir(args.source, False) != json_obj['InputHash']:
                     raise ValueError('Source file(s) have changed since last conversion, '
                                      'run with --reckless to ignore this error.')
-            shutil.rmtree(type_dir)
+            shutil.rmtree(args.output_root / metadata.dir_to_str() / type_dirname)
             # TODO: Need a way to distinguish nii files created for this modality
-            silentremove(output_root / metadata.dir_to_str() / 'nii')
-            for filepath in (output_root / metadata.dir_to_str() / 'logs').glob('autoconv-*.log'):
+            silentremove(args.output_root / metadata.dir_to_str() / 'nii')
+            for filepath in (args.output_root / metadata.dir_to_str() / 'logs').glob('autoconv-*.log'):
                 silentremove(filepath)
-            for filepath in (output_root / metadata.dir_to_str()).glob('%s-*.json' % modality.upper()):
+            for filepath in (args.output_root / metadata.dir_to_str()).glob('%s-*.json' % args.modality.upper()):
                 silentremove(filepath)
         else:
             raise RuntimeError('Output directory exists, run with --force to remove outputs and re-run.')
 
-    manual_arg['MagneticFieldStrength'] = field_strength
-    manual_arg['InstitutionName'] = institution
+    manual_arg = {'MagneticiFieldStrength': args.field_strength, 'InstitutionName': args.institution}
 
-    run_autoconv(source, output_root, metadata, lut_file, verbose, modality, parrec, False, linking, manual_arg,
-                 anonymize, date_shift_days, manual_names, None)
+    run_autoconv(args.source, args.output_root, metadata, lut_file, args.verbose, args.modality, args.parrec,
+                 False, linking, manual_arg, args.anonymize, args.date_shift_days, manual_names, None)
 
 
-@cli.command()
-@click.argument('directory', type=click.Path(exists=True), callback=abs_path)
-@click.option('-l', '--lut-file', type=click.Path(exists=True), callback=abs_path)
-@click.option('--force', is_flag=True)
-@click.option('--parrec', is_flag=True)
-@click.option('--modality', type=str, default='mr')
-@click.option('-v', '--verbose', is_flag=True)
-def update(directory: Path, lut_file: Path, force: bool, parrec: bool, modality: str, verbose: bool) -> None:
-    session_id = directory.name
-    subj_id = directory.parent.name
+def update(args: Optional[List[str]] = None) -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('directory', type=Path, help='Existing AutoConv Directory to update.')
+    parser.add_argument('-l', '--lut-file', type=Path, help='Lookup table file.')
+    parser.add_argument('--force', action='store_true', help='Force run even if it would be skipped.')
+    parser.add_argument('--parrec', action='store_true', help='Source is PARREC.')
+    parser.add_argument('--modality', type=str, help='Modality.', default='mr')
+    parser.add_argument('--verbose', action='store_true', help='Verbose output.')
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
-    json_file = directory / '_'.join([subj_id, session_id, '%s-UnconvertedInfo.json' % modality.upper()])
+    args = parser.parse_args(args)
+
+    session_id = args.directory.name
+    subj_id = args.directory.parent.name
+
+    json_file = args.directory / '_'.join([subj_id, session_id, '%s-UnconvertedInfo.json' % args.modality.upper()])
     if not json_file.exists():
-        att_json_file = directory / '_'.join([subj_id, '-'.join(session_id.split('-')[:-1]),
-                                              '%s-UnconvertedInfo.json' % modality.upper()])
-        if not att_json_file.exists():
+        safe_json_file = args.directory / '_'.join([subj_id, '-'.join(session_id.split('-')[:-1]),
+                                                    '%s-UnconvertedInfo.json' % args.modality.upper()])
+        if not safe_json_file.exists():
             raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
-        json_file = att_json_file
+        json_file = safe_json_file
     json_obj = json.loads(json_file.read_text())
 
     metadata = Metadata.from_dict(json_obj['Metadata'])
-    if session_id != metadata.TimeID:
+    if session_id != metadata.SessionID:
         metadata.AttemptNum = int(session_id.split('-')[-1])
     # noinspection PyProtectedMember
-    output_root = Path(*directory.parts[:-2]) if metadata._NoProjectSubdir else Path(*directory.parts[:-3])
+    output_root = Path(*args.directory.parts[:-2]) if metadata._NoProjectSubdir else Path(*args.directory.parts[:-3])
 
-    if lut_file is None:
+    if args.lut_file is None:
         # noinspection PyProtectedMember
         if metadata._NoProjectSubdir:
             lut_file = output_root / (metadata.ProjectID + '-lut.csv')
         else:
             lut_file = output_root / metadata.ProjectID / (metadata.ProjectID + '-lut.csv')
+    else:
+        lut_file = args.lut_file
     lookup_dict = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID).LookupDict if lut_file.exists() else {}
 
-    manual_json_file = (directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % modality.upper()))
+    manual_json_file = (args.directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % args.modality.upper()))
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
-    if not force and (version_check(json_obj['AutoConvVersion'], __version__) and
-                      json_obj['LookupTable']['LookupDict'] == lookup_dict and
-                      json_obj['ManualNames'] == manual_names):
-        print('No action required. Software version, LUT dictionary and naming dictionary match for %s.' % directory)
+    if not args.force and (version_check(json_obj['AutoConvVersion'], __version__) and
+                           json_obj['LookupTable']['LookupDict'] == lookup_dict and
+                           json_obj['ManualNames'] == manual_names):
+        print('No action required. Software version, LUT dictionary and naming dictionary match for %s.'
+              % args.directory)
         return
 
-    type_dir = directory / ('%s-%s' % (modality, 'parrec' if parrec else 'dcm'))
-    if parrec and not (directory / ('%s-parrec' % modality)).exists():
-        raise ValueError('Update source was specified as PARREC, but '
-                         '%s-parrec source directory does not exist.' % modality)
-    elif not parrec and not (directory / ('%s-dcm' % modality)).exists():
-        raise ValueError('Update source was specified as DICOM, but '
-                         '%s-dcm source directory does not exist.' % modality)
+    parrec = (args.directory / ('%s-parrec' % args.modality)).exists()
+    type_dir = args.directory / ('%s-%s' % (args.modality, 'parrec' if args.parrec else 'dcm'))
 
-    mkdir_p(directory / 'prev')
+    mkdir_p(args.directory / 'prev')
     for filename in ['nii', 'qa', json_file.name]:
-        if (directory / filename).exists():
-            (directory / filename).rename(directory / 'prev' / filename)
-    mkdir_p(directory / 'prev' / 'logs')
-    for filepath in (directory / 'logs').glob('autoconv-*.log*'):
+        if (args.directory / filename).exists():
+            (args.directory / filename).rename(args.directory / 'prev' / filename)
+    mkdir_p(args.directory / 'prev' / 'logs')
+    for filepath in (args.directory / 'logs').glob('autoconv-*.log*'):
         if filepath.name.endswith('.log'):
-            filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.01'))
+            filepath.rename(args.directory / 'prev' / 'logs' / (filepath.name + '.01'))
         else:
             num = int(filepath.name.split('.')[-1]) + 1
-            filepath.rename(directory / 'prev' / 'logs' / (filepath.name + '.%02d' % num))
+            filepath.rename(args.directory / 'prev' / 'logs' / (filepath.name + '.%02d' % num))
     try:
-        run_autoconv(type_dir, output_root, metadata, lut_file, verbose, modality,
+        run_autoconv(type_dir, output_root, metadata, lut_file, args.verbose, args.modality,
                      parrec, True, None, json_obj.get('ManualArgs', {}), False, 0,
                      manual_names, json_obj['InputHash'])
     except ExecError:
         logging.info('Exception caught during update. Resetting to previous state.')
         for filename in ['nii', 'qa', json_file.name]:
-            silentremove(directory / filename)
-            if (directory / 'prev' / filename).exists():
-                (directory / 'prev' / filename).rename(directory / filename)
-        for filepath in (directory / 'prev' / 'logs').glob('autoconv-*.log*'):
-            filepath.rename(directory / 'logs' / filepath.name)
+            silentremove(args.directory / filename)
+            if (args.directory / 'prev' / filename).exists():
+                (args.directory / 'prev' / filename).rename(args.directory / filename)
+        for filepath in (args.directory / 'prev' / 'logs').glob('autoconv-*.log*'):
+            filepath.rename(args.directory / 'logs' / filepath.name)
     else:
-        for filepath in (directory / 'logs').glob('autoconv-*.log.*'):
+        for filepath in (args.directory / 'logs').glob('autoconv-*.log.*'):
             silentremove(filepath)
-    silentremove(directory / 'prev')
+    silentremove(args.directory / 'prev')
 
-
-@cli.command('name')
-@click.argument('directory', type=click.Path(exists=True), callback=abs_path)
-@click.argument('source', type=str)
-@click.argument('name', type=str)
-@click.option('--modality', type=str, default='mr')
-def set_manual_name(directory: Path, source: str, name: str, modality: str):
-    session_id = directory.name
-    subj_id = directory.parent.name
-
-    if not (directory / Path(source)).exists():
-        raise ValueError('Source directory/file does not exist.')
-
-    json_file = directory / '_'.join([subj_id, session_id, '%s-ManualNaming.json' % modality.upper()])
-    json_obj = json.loads(json_file.read_text()) if json_file.exists() else {}
-
-    if source in json_obj:
-        print('Updating manual name for %s (%s to %s)' % (source, '-'.join(json_obj[source]), name))
-    else:
-        print('Adding manual name for %s (%s)' % (source, name))
-
-    json_obj[source] = name.split('-')
-
-    for key in json_obj:
-        json_obj[key] = NoIndent(json_obj[key])
-
-    json_file.write_text(json.dumps(json_obj, indent=4, sort_keys=True, cls=JSONObjectEncoder))
+# TODO: Add "rename" command to rename sessions
