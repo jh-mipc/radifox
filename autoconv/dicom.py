@@ -150,11 +150,6 @@ def convert_emf(dcmpath: Path) -> List[Path]:
     return sorted(dcmpath.parent.glob(dcmpath.name + '-*'))
 
 
-def decompress_jpeg(dcm_filename: Path) -> None:
-    run([shutil.which('dcmdjpeg'), str(dcm_filename), str(dcm_filename) + '.decompress'])
-    Path(str(dcm_filename) + '.decompress').rename(dcm_filename)
-
-
 def sort_dicoms(dcm_dir: Path) -> None:
     logging.info('Sorting DICOMs')
     valid_dcms = []
@@ -179,12 +174,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
                             for dcm_file in dcm_files]
             else:
                 dcm_cand = [(curr_dcm_img, ds)]
-            decomp_count = 0
             for dcm_img, dcm_ds in dcm_cand:
-                if dcm_ds.file_meta.TransferSyntaxUID == '1.2.840.10008.1.2.4.51' and dcm_ds.BitsAllocated == 16:
-                    logging.debug('%s requires decompression of the imaging data. Decompressing now.' % dcm_img)
-                    decompress_jpeg(dcm_img)
-                    decomp_count += 1
                 uid = getattr(dcm_ds, 'SeriesInstanceUID', None)
                 if uid is not None:
                     valid_dcms.append((dcm_img, uid, dcm_ds.InstanceNumber,
@@ -192,8 +182,6 @@ def sort_dicoms(dcm_dir: Path) -> None:
                                               if item == 'ImageOrientationPatient'
                                               else extract_de(dcm_ds, item, uid)
                                               for item in MATCHING_ITEMS])))
-            if decomp_count > 0:
-                logging.info('%d DICOM files were decompresssed' % decomp_count)
     if mf_count > 0:
         logging.info('%d Enhanced DICOM files were converted to classic DICOM' % mf_count)
 
