@@ -74,7 +74,6 @@ def convert(args: Optional[List[str]] = None) -> None:
 
     type_dirname = '%s-%s' % (args.modality, 'parrec' if args.parrec else 'dcm')
     if (args.output_root / metadata.dir_to_str() / type_dirname).exists():
-        # TODO: Add checks to see if data has moved (warn and update? error?)
         if args.safe:
             metadata.AttemptNum = 2
             while (args.output_root / metadata.dir_to_str() / type_dirname).exists():
@@ -101,7 +100,6 @@ def convert(args: Optional[List[str]] = None) -> None:
                     raise ValueError('Source file(s) have changed since last conversion, '
                                      'run with --reckless to ignore this error.')
             shutil.rmtree(args.output_root / metadata.dir_to_str() / type_dirname)
-            # TODO: Need a way to distinguish nii files created for this modality
             silentremove(args.output_root / metadata.dir_to_str() / 'nii')
             for filepath in (args.output_root / metadata.dir_to_str() / 'logs').glob('autoconv-*.log'):
                 silentremove(filepath)
@@ -173,13 +171,12 @@ def update(args: Optional[List[str]] = None) -> None:
     for filename in ['nii', 'qa', json_file.name]:
         if (args.directory / filename).exists():
             (args.directory / filename).rename(args.directory / 'prev' / filename)
-    mkdir_p(args.directory / 'prev' / 'logs')
     for filepath in (args.directory / 'logs').glob('autoconv-*.log*'):
         if filepath.name.endswith('.log'):
-            filepath.rename(args.directory / 'prev' / 'logs' / (filepath.name + '.01'))
+            filepath.rename(args.directory / 'logs' / (filepath.name + '.01'))
         else:
             num = int(filepath.name.split('.')[-1]) + 1
-            filepath.rename(args.directory / 'prev' / 'logs' / (filepath.name + '.%02d' % num))
+            filepath.rename(args.directory / 'logs' / (filepath.name + '.%02d' % num))
     try:
         run_autoconv(type_dir, output_root, metadata, lut_file, args.verbose, args.modality,
                      parrec, True, None, json_obj.get('ManualArgs', {}), False, 0,
@@ -190,11 +187,10 @@ def update(args: Optional[List[str]] = None) -> None:
             silentremove(args.directory / filename)
             if (args.directory / 'prev' / filename).exists():
                 (args.directory / 'prev' / filename).rename(args.directory / filename)
-        for filepath in (args.directory / 'prev' / 'logs').glob('autoconv-*.log*'):
-            filepath.rename(args.directory / 'logs' / filepath.name)
     else:
-        for filepath in (args.directory / 'logs').glob('autoconv-*.log.*'):
-            silentremove(filepath)
+        for dirname in ['stage', 'proc']:
+            if (args.directory / dirname).exists():
+                (args.directory / dirname / 'CHECK').touch()
     silentremove(args.directory / 'prev')
 
 # TODO: Add "rename" command to rename sessions
