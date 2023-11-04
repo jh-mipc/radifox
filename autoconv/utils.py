@@ -11,7 +11,7 @@ from subprocess import check_output
 from typing import Union, Any, List, Optional
 
 import nibabel as nib
-from pydicom.dataset import FileDataset
+from pydicom.dataset import Dataset, FileDataset, Tag
 
 
 ORIENT_CODES = {'sagittal': 'PIL', 'coronal': 'LIP', 'axial': 'LPS'}
@@ -97,7 +97,7 @@ vr_corr = {
 }
 
 
-def extract_de(ds: FileDataset, label: str, series_uid, keep_list: bool = False) -> \
+def extract_de(ds: Dataset | FileDataset, label: str, series_uid, keep_list: bool = False) -> \
         Union[None, tuple, float, int, str]:
     if label not in ds:
         return tuple() if keep_list else None
@@ -127,7 +127,7 @@ def is_intstr(test_str: str) -> bool:
 
 def reorient(input_file: Path, orientation: str) -> bool:
     # noinspection PyTypeChecker
-    input_obj = nib.load(input_file)
+    input_obj = nib.Nifti1Image.load(input_file)
     input_orient = ''.join(nib.aff2axcodes(input_obj.affine))
     target_orient = ORIENT_CODES[orientation]
     logging.debug('Reorienting %s from %s to %s.' %
@@ -318,3 +318,91 @@ def shift_date(datetime_str: Optional[str] = None, date_shift_days: int = 0):
 
 def none_to_float(value):
     return float('inf') if value is None else value
+
+
+def get_flattened_dataset(dataset):
+    return Dataset({de.tag: de for de in dataset.iterall() if de.VR != 'SQ'})
+
+
+EXCLUDE_TAGS = [
+    Tag('SharedFunctionalGroupsSequence'),
+    Tag('PerFrameFunctionalGroupsSequence'),
+    Tag('DimensionIndexSequence'),
+    Tag('NumberOfFrames'),
+    Tag('SourceImageEvidenceSequence'),
+    Tag('ReferencedImageEvidenceSequence'),
+    Tag('PixelData')
+]
+
+
+def fix_sf_headers(dataset):
+    if 'EffectiveEchoTime' in dataset:
+        dataset.EchoTime = dataset.EffectiveEchoTime
+    scan_seq: list = (dataset.ScanningSequence if dataset['ScanningSequence'].VM > 1 else [dataset.ScanningSequence]) \
+        if 'ScanningSequence' in dataset else []
+    if 'EchoPulseSequence' in dataset:
+        if dataset.EchoPulseSequence != 'SPIN':
+            scan_seq.append('GR')
+        if dataset.EchoPulseSequence != 'GRADIENT':
+            scan_seq.append('GR')
+    if dataset.get('InversionRecovery', 'NO') == 'YES':
+        scan_seq.append('IR')
+    if dataset.get('EchoPlanarPulseSequence', 'NO') == 'YES':
+        scan_seq.append('EP')
+    dataset.ScanningSequence = list(set(scan_seq))
+
+    seq_var: list = (dataset.SequenceVariant if dataset['SequenceVariant'].VM > 1 else [dataset.SequenceVariant]) \
+        if 'SequenceVariant' in dataset else []
+    if dataset.get('SegmentedKSpaceTraversal', 'SINGLE') != 'SINGLE':
+        seq_var.append('SK')
+    if dataset.get('MagnetizationTransfer', 'NONE') != 'NONE':
+        seq_var.append('MTC')
+    if dataset.get('SteadyStatePulseSequence', 'NONE') != 'NONE':
+        seq_var.append('TRSS' if dataset.SteadyStatePulseSequence == 'TIME_REVERSED' else 'SS')
+    if dataset.get('Spoiling', 'NONE') != 'NONE':
+        seq_var.append('SP')
+    if dataset.get('OversamplingPhase', 'NONE') != 'NONE':
+        seq_var.append('OSP')
+    if len(seq_var) == 0:
+        seq_var.append('NONE')
+    dataset.SequenceVariant = list(set(seq_var))
+
+    scan_opts: list = (dataset.ScanOptions if dataset['ScanOptions'].VM > 1 else [dataset.ScanOptions]) \
+        if 'ScanOptions' in dataset else []
+    if dataset.get('RectilinearPhaseEncodeReordering', 'LINEAR') != 'LINEAR':
+        scan_opts.append('PER')
+    frame_type3 = dataset.FrameType[2]
+    if frame_type3 == 'ANGIO':
+        dataset.AngioFlag = 'Y'
+    if frame_type3.startswith('CARD'):
+        scan_opts.append('CG')
+    if frame_type3.endswith('RESP_GATED'):
+        scan_opts.append('RG')
+    if 'PartialFourierDirection' in dataset:
+        if dataset.PartialFourierDirection == 'PHASE':
+            scan_opts.append('PFP')
+        elif dataset.PartialFourierDirection == 'FREQUENCY':
+            scan_opts.append('PFF')
+    if dataset.get('SpatialPresaturation', 'NONE') != 'NONE':
+        scan_opts.append('SP')
+    if dataset.get('SpectrallySelectedSuppression', 'NONE').startswith('FAT'):
+        scan_opts.append('FS')
+    if dataset.get('FlowCompensation', 'NONE') != 'NONE':
+        scan_opts.append('FC')
+    dataset.ScanOptions = list(set(scan_opts))
+    return dataset
+
+
+def create_sf_headers(dataset):
+    shared_ds = Dataset({de.tag: de for de in dataset if de.tag not in EXCLUDE_TAGS})
+    shared_ds.file_meta = dataset.file_meta
+    shared_ds.update(get_flattened_dataset(dataset.SharedFunctionalGroupsSequence[0]))
+    flattened_frame_ds_list = [get_flattened_dataset(dataset.PerFrameFunctionalGroupsSequence[i])
+                               for i in range(len(dataset.PerFrameFunctionalGroupsSequence))]
+
+    sf_ds_list = []
+    for flat_frame_ds in flattened_frame_ds_list:
+        sf_ds = Dataset({de.tag: de for de in shared_ds})
+        sf_ds.update(flat_frame_ds)
+        sf_ds_list.append(fix_sf_headers(sf_ds))
+    return sf_ds_list

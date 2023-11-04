@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import defaultdict
 import datetime
 import json
 import logging
@@ -9,7 +10,6 @@ import shutil
 from subprocess import run, PIPE, STDOUT
 from typing import Callable, List, Tuple, Union, Any, Optional
 
-import nibabel as nib
 import numpy as np
 
 from ._version import __version__
@@ -43,6 +43,7 @@ class BaseInfo:
         self.SeriesUID = None
         self.StudyUID = None
         self.NumFiles = None
+        self.MultiFrame = None
         self.InstitutionName = None
         self.Manufacturer = None
         self.ScannerModelName = None
@@ -339,81 +340,6 @@ class BaseInfo:
         self.NiftiName = '_'.join([scan_str, '%02d-%02d' % (study_num, series_num),  '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
-    def create_nii(self, output_dir: Path) -> None:
-        if not self.ConvertImage:
-            return
-
-        niidir = output_dir / 'nii'
-        source = output_dir / self.SourcePath
-        mkdir_p(niidir)
-        if Path(niidir, self.NiftiName + '.nii.gz').exists():
-            self.NiftiCreated = False
-            logging.warning('Naming failed for %s' % source)
-            logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
-            logging.warning('%s already exists.' % self.NiftiName)
-            logging.warning('Nifti creation failed.')
-            return
-
-        success = True
-        dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
-                        self.NiftiName, '-o', niidir, source]
-        result = run(dcm2niix_cmd, stdout=PIPE, stderr=STDOUT, text=True)
-
-        if result.returncode != 0:
-            self.NiftiCreated = False
-            logging.warning('dcm2niix failed for %s' % source)
-            logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
-            logging.warning('dcm2niix return code: %d' % result.returncode)
-            logging.warning('dcm2niix output:\n' + str(result.stdout))
-            for filename in parse_dcm2niix_filenames(str(result.stdout)):
-                remove_created_files(filename)
-            logging.warning('Nifti creation failed.')
-            return
-
-        filenames = parse_dcm2niix_filenames(str(result.stdout))
-        if len(filenames) > 1:
-            filename_check = re.compile(str(filenames[0]) + r'_t[0-9]+$')
-            if all([filename_check.match(str(item)) is not None for item in filenames[1:]]):
-                nib.concat_images([nib.load(str(item) + '.nii.gz') for item in filenames])\
-                    .to_filename(str(filenames[0]) + '.nii.gz')
-                for filename in filenames[1:]:
-                    p_add(filename, '.nii.gz').unlink()
-                filenames = [filenames[0]]
-        for filename in filenames:
-            if not success:
-                remove_created_files(filename)
-            if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
-                remove_created_files(filename)
-                logging.warning('Slices missing for DICOM UID %s, not converted.' % self.SeriesUID)
-                logging.warning('Nifti creation failed.')
-                success = False
-                continue
-            reo_result = reorient(p_add(filename, '.nii.gz'), self.SliceOrientation)
-            if not reo_result:
-                remove_created_files(filename)
-                success = False
-                continue
-            if 'DIFF' in filename.name and p_add(filename, '_ADC.nii.gz').exists():
-                logging.info('Additional ADC images produced by dcm2niix. Removing.')
-                p_add(filename, '_ADC.nii.gz').unlink()
-            while re.search(r'_(e[0-9]+)?_?(ph|real|imaginary)?_?(t[0-9]+)?$', filename.name):
-                new_path = (filename.parent /
-                            (re.sub(r'_(e[0-9]+)?_?(ph|real|imaginary)?_?(t[0-9]+)?$', '', filename.name)))
-                p_add(filename, '.nii.gz').rename(p_add(new_path, '.nii.gz'))
-                filename = new_path
-        if success:
-            if (niidir / (self.NiftiName + '.nii.gz')).exists():
-                self.NiftiCreated = True
-                self.NiftiHash = hash_file_dir(niidir / (self.NiftiName + '.nii.gz'))
-                logging.info('Nifti created successfully at %s' % (niidir / (self.NiftiName + '.nii.gz')))
-            else:
-                self.NiftiCreated = False
-                logging.warning('Nifti creation failed for %s' % source)
-                logging.warning('Attempted to create %s.nii.gz' % self.NiftiName)
-                logging.warning('dcm2niix return code: %d' % result.returncode)
-                logging.warning('dcm2niix output:\n' + str(result.stdout))
-                logging.warning('Nifti creation failed.')
-
 
 class BaseSet:
     def __init__(self, source: Path, output_root: Path, metadata_obj: Metadata, lut_obj: LookupTable,
@@ -614,13 +540,17 @@ class BaseSet:
     def create_all_nii(self) -> None:
         if self.RemoveIdentifiers:
             self.anonymize()
+        source_dict = defaultdict(list)
         for di in self.SeriesList:
-            if di.ConvertImage:
-                logging.info('Creating Nifti for %s' % di.SeriesUID)
-                di.create_nii(self.OutputRoot / self.Metadata.dir_to_str())
-                self.generate_sidecar(di)
-                if di.NiftiCreated:
-                    self.generate_qa_image(di)
+            source_dict[di.SourcePath].append(di)
+        for source_path, di_list in source_dict:
+            if any(di.ConvertImage for di in di_list):
+                logging.info('Creating Nifti for %s' % source_path)
+                create_nii(self.OutputRoot / self.Metadata.dir_to_str(), source_path, di_list)
+                for di in di_list:
+                    self.generate_sidecar(di)
+                    if di.NiftiCreated:
+                        self.generate_qa_image(di)
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: x.ConvertImage, reverse=True)
 
@@ -630,7 +560,7 @@ class BaseSet:
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in 'SeriesList'}
         out_dict['SeriesInfo'] = di_obj
         if self.RemoveIdentifiers:
-            out_dict['SeriesInfo'].SourcePath = None
+            setattr(out_dict['SeriesInfo'], 'SourcePath', None)
         sidecar_file.write_text(json.dumps(out_dict, indent=4, sort_keys=True, cls=JSONObjectEncoder))
 
     def generate_qa_image(self, di_obj: BaseInfo) -> None:
@@ -666,6 +596,107 @@ class BaseSet:
             di.StudyUID = anon_study_ids[di.StudyUID]
             di.anonymize(self.DateShiftDays)
         self.LookupTable.anonymize()
+
+
+def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> None:
+    source = output_dir / source_path
+
+    # Create the nii directory if it doesn't exist
+    niidir = output_dir / 'nii'
+    mkdir_p(niidir)
+
+    # If the file already exists, we won't overwrite it, just warn
+    exists_list = [Path(niidir, di.NiftiName + '.nii.gz').exists() for di in di_list]
+    if any(exists_list):
+        logging.warning('Naming failed for %s' % source)
+        for di, exists in zip(di_list, exists_list):
+            di.NiftiCreated = False
+            if exists:
+                logging.warning('Attempted to create %s.nii.gz' % di.NiftiName)
+                logging.warning('%s already exists.' % di.NiftiName)
+        logging.warning('Nifti creation failed.')
+        return
+
+    # Run dcm2niix
+    dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
+                    di_list[0].NiftiName, '-o', niidir, source]
+    result = run(dcm2niix_cmd, stdout=PIPE, stderr=STDOUT, text=True)
+    success = result.returncode == 0
+
+    # If dcm2niix failed, remove the created files and warn
+    if not success:
+        logging.warning('dcm2niix failed for %s' % source)
+        for di in di_list:
+            di.NiftiCreated = False
+            logging.warning('Attempted to create %s.nii.gz' % di.NiftiName)
+        logging.warning('dcm2niix return code: %d' % result.returncode)
+        logging.warning('dcm2niix output:\n' + str(result.stdout))
+        for filename in parse_dcm2niix_filenames(str(result.stdout)):
+            remove_created_files(filename)
+        logging.warning('Nifti creation failed.')
+        return
+
+    # Parse the output for filenames
+    filenames = parse_dcm2niix_filenames(str(result.stdout))
+
+    # Check for the right number of files
+    if len(filenames) != len(di_list):
+        logging.warning(f'Number of dcm2niix outputs ({len(filenames)}) '
+                        f'did not match number expected ({len(di_list)}).')
+        logging.warning('dcm2niix return code: %d' % result.returncode)
+        logging.warning('dcm2niix output:\n' + str(result.stdout))
+        logging.warning('Nifti creation failed.')
+        success = False
+
+    # Match filenames to dicom info objects
+    if len(filenames) > 1:
+        suffixes = {filename.name.replace(di_list[0].NiftiName, ''): filename for filename in filenames}
+        extras = ['_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
+        extras = [extra.replace('ECHO', 'e').replace('_MAG', '') for extra in extras]
+        extras = [extra.replace('PHA', 'ph').replace('_REA', 'real').replace('IMA', 'imaginary') for extra in extras]
+        if any('INV' in extra for extra in extras):
+            inv_times = sorted([int(str(re.search(r'_t[0-9]+', suffix)[0]).replace('_t', ''))
+                                for suffix in suffixes.keys()])
+            extra_inv = [str(re.search(r'INV[0-9]+', extra)[0]) for extra in extras]
+            extras = [extra.replace(ex_inv, '_t%d' % inv_times[int(ex_inv.replace('INV', '')) - 1])
+                      for extra, ex_inv in zip(extras, extra_inv)]
+        filenames = [suffixes[extra] for extra in extras]
+
+    for filename, di in zip(filenames, di_list):
+        if not success:
+            break
+        if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
+            remove_created_files(filename)
+            logging.warning('Slices missing for DICOM UID %s, not converted.' % di.SeriesUID)
+            logging.warning('Nifti creation failed.')
+            success = False
+            break
+        reo_result = reorient(p_add(filename, '.nii.gz'), di.SliceOrientation)
+        if not reo_result:
+            remove_created_files(filename)
+            success = False
+            break
+        if p_add(filename, '_ADC.nii.gz').exists():
+            logging.info('Additional ADC images produced by dcm2niix. Removing.')
+            p_add(filename, '_ADC.nii.gz').unlink()
+        if re.search(r'_(e[0-9]+)?_?(ph|real|imaginary)?_?(t[0-9]+)?$', filename.name):
+            filename.rename(niidir / (di.NiftiName + '.nii.gz'))
+
+    if success:
+        for di in di_list:
+            if (niidir / (di.NiftiName + '.nii.gz')).exists():
+                di.NiftiCreated = True
+                di.NiftiHash = hash_file_dir(niidir / (di.NiftiName + '.nii.gz'))
+                logging.info('Nifti created successfully at %s' % (niidir / (di.NiftiName + '.nii.gz')))
+            else:
+                di.NiftiCreated = False
+                logging.warning('Nifti file missing: %s.nii.gz' % di.NiftiName)
+                logging.warning('Nifti creation failed.')
+    else:
+        for di in di_list:
+            di.NiftiCreated = False
+        for filename in filenames:
+            remove_created_files(filename)
 
 
 class TruncatedImageValue:

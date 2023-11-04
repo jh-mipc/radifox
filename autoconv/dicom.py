@@ -1,17 +1,17 @@
 import logging
+from collections import defaultdict
 from pathlib import Path
 import shutil
-from subprocess import run
-from typing import List, Optional
+from typing import Optional
 
-import pydicom as dicom
+from pydicom import dcmread, Dataset, FileDataset
 from pydicom.errors import InvalidDicomError
 from pydicom.dicomdir import DicomDir
 
 from .base import BaseInfo, BaseSet, ImageOrientation, TruncatedImageValue, MATCHING_ITEMS
 from .lut import LookupTable
 from .metadata import Metadata
-from .utils import mkdir_p, extract_de
+from .utils import mkdir_p, extract_de, create_sf_headers
 
 
 DCM_HEADER_ATTRS = [
@@ -60,12 +60,13 @@ DCM_HEADER_LISTS = [
 
 class DicomInfo(BaseInfo):
 
-    def __init__(self, dcmdir: Path) -> None:
-        super().__init__(dcmdir)
-        ds = dicom.dcmread(str(sorted(dcmdir.glob('*'))[0]), stop_before_pixels=True)
-        self.SeriesUID = dcmdir.name
+    def __init__(self, source_path: Path, ds: Dataset | FileDataset, series_uid: str,
+                 num_frames: int, multiframe: bool) -> None:
+        super().__init__(source_path)
+        self.SeriesUID = series_uid
         self.StudyUID = getattr(ds, 'StudyInstanceUID', None)
-        self.NumFiles = len(list(dcmdir.glob('*')))
+        self.NumFiles = num_frames
+        self.MultiFrame = multiframe
         for item in DCM_HEADER_ATTRS:
             get_item, set_item = item if isinstance(item, tuple) else (item, item)
             setattr(self, set_item, extract_de(ds, get_item, self.SeriesUID, get_item in DCM_HEADER_LISTS))
@@ -73,7 +74,7 @@ class DicomInfo(BaseInfo):
             self.SeriesDescription = ds.ProtocolName if hasattr(ds, 'ProtocolName') else ''
         series_date = extract_de(ds, 'SeriesDate', self.SeriesUID, False)
         series_time = extract_de(ds, 'SeriesTime', self.SeriesUID, False)
-        self.AcqDateTime = ' '.join([str(series_date) if series_date is not None else '0000-00-00',
+        self.AcqDateTime = ' '.join([str(series_date) if series_date is not None else '0001-01-01',
                                      str(series_time) if series_date is not None else '00:00:00'])
         self.Manufacturer = '' if self.Manufacturer is None else self.Manufacturer.upper().split(' ')[0]
         if (0x2005, 0x1444) in ds:
@@ -131,7 +132,23 @@ class DicomSet(BaseSet):
 
         logging.info('Loading DICOMs.')
         for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
-            self.SeriesList.append(DicomInfo(dcmdir))
+            ds = dcmread(str(sorted(dcmdir.glob('*'))[0]), stop_before_pixels=True)
+            if ds.SOPClassUID == '1.2.840.10008.5.1.4.1.1.4.1':
+                sfds_dict = defaultdict(list)
+                for sfds in sorted(create_sf_headers(ds), key=lambda x: x.InstanceNumber):
+                    sfds_dict[get_intra_series_meta(sfds)].append(sfds)
+                for i, sfds_list in enumerate(sfds_dict.values()):
+                    self.SeriesList.append(
+                        DicomInfo(
+                            dcmdir,
+                            sfds_list[0],
+                            sfds_list[0].SeriesInstanceUID + ('.%02d' % i),
+                            len(sfds_list),
+                            True
+                        )
+                    )
+            else:
+                self.SeriesList.append(DicomInfo(dcmdir, ds, dcmdir.name, len(list(dcmdir.glob('*'))), False))
 
         study_nums, series_nums = self.get_unique_study_series(self.SeriesList)
         for di in self.SeriesList:
@@ -144,66 +161,78 @@ class DicomSet(BaseSet):
         self.generate_unique_names()
 
 
-def convert_emf(dcmpath: Path) -> List[Path]:
-    run([shutil.which('emf2sf'), '--out-dir', str(dcmpath.parent), str(dcmpath)])
-    dcmpath.unlink()
-    return sorted(dcmpath.parent.glob(dcmpath.name + '-*'))
+def get_intra_series_meta(ds: Dataset) -> tuple:
+    return tuple(
+        ImageOrientation(getattr(ds, item, None))
+        if item == 'ImageOrientationPatient'
+        else extract_de(ds, item, ds.SeriesInstanceUID)
+        for item in MATCHING_ITEMS
+    )
 
 
 def sort_dicoms(dcm_dir: Path) -> None:
     logging.info('Sorting DICOMs')
     valid_dcms = []
-    mf_count = 0
-    for item in dcm_dir.rglob('*'):
-        if item.is_file():
-            curr_dcm_img = item
+    for filepath in dcm_dir.rglob('*'):
+        if filepath.is_file():
             try:
-                ds = dicom.dcmread(str(curr_dcm_img), stop_before_pixels=True)
+                ds = dcmread(str(filepath), stop_before_pixels=True)
             except (InvalidDicomError, KeyError):
                 continue
             if isinstance(ds, DicomDir):
                 continue
             if ds.SOPClassUID not in ['1.2.840.10008.5.1.4.1.1.4', '1.2.840.10008.5.1.4.1.1.4.1']:
                 continue
+            if getattr(ds, 'SeriesInstanceUID', None) is None:
+                continue
             if ds.SOPClassUID == '1.2.840.10008.5.1.4.1.1.4.1':
-                logging.debug('%s is an Enhanced DICOM file, converting to classic '
-                              'DICOM for consistent processing' % curr_dcm_img)
-                dcm_files = convert_emf(curr_dcm_img)
-                mf_count += 1
-                dcm_cand = [(dcm_file, dicom.dcmread(str(dcm_file), stop_before_pixels=True))
-                            for dcm_file in dcm_files]
+                valid_dcms.extend((filepath, sf) for sf in create_sf_headers(ds))
             else:
-                dcm_cand = [(curr_dcm_img, ds)]
-            for dcm_img, dcm_ds in dcm_cand:
-                uid = getattr(dcm_ds, 'SeriesInstanceUID', None)
-                if uid is not None:
-                    valid_dcms.append((dcm_img, uid, dcm_ds.InstanceNumber,
-                                       tuple([TruncatedImageValue(getattr(dcm_ds, item, None))
-                                              if item == 'ImageOrientationPatient'
-                                              else extract_de(dcm_ds, item, uid)
-                                              for item in MATCHING_ITEMS])))
-    if mf_count > 0:
-        logging.info('%d Enhanced DICOM files were converted to classic DICOM' % mf_count)
+                valid_dcms.append((filepath, ds))
+    if not valid_dcms:
+        return
 
-    unique_scans = set([(item[1], item[3]) for item in valid_dcms])
-    unique_change = {}
-    unique_lists = {uid: [] for uid in set([item[0] for item in unique_scans])}
-    for scan in unique_scans:
-        unique_lists[scan[0]].append(scan)
-        unique_change[scan] = scan[0] + ('.%02d' % len(unique_lists[scan[0]]))
-    for new_dcm_dir in unique_change.values():
+    # Sort valid DICOMs according to series and intra-series metadata
+    valid_dcms = sorted(valid_dcms, key=lambda x: (x[1].SeriesInstanceUID, x[1].InstanceNumber))
+    dicom_sort_dict = {}
+    for dcm_file, dcm_ds in valid_dcms:
+        uid = dcm_ds.SeriesInstanceUID
+        intra_series = get_intra_series_meta(dcm_ds)
+        if (uid, intra_series) not in dicom_sort_dict:
+            dicom_sort_dict[(uid, intra_series)] = []
+        dicom_sort_dict[(uid, intra_series)].append((dcm_file, dcm_ds))
+
+    # Get new series (based on series/intra-series metadata)
+    new_series_uids = {}
+    count_dict = defaultdict(int)
+    for scan in dicom_sort_dict:
+        count_dict[scan[0]] += 1
+        new_series_uids[scan] = scan[0] + ('.%02d' % count_dict[scan[0]])
+
+    # Find new series that have scans that share DICOM files (multi-frame)
+    uids_by_files = defaultdict(list)
+    for scan, dcm_list in dicom_sort_dict.items():
+        uids_by_files[tuple(dcm[0] for dcm in dcm_list)].append((scan, new_series_uids[scan]))
+    # Merge new series uids that share DICOM files
+    for scans, uids in zip(*uids_by_files.values()):
+        if len(scans) > 1:
+            for scan in scans:
+                new_series_uids[scan] = '.'.join(uids.split('.'[:-1]))
+
+    for new_dcm_dir in new_series_uids.values():
         mkdir_p(dcm_dir / new_dcm_dir)
-    inst_nums = {}
-    for dcm_tuple in valid_dcms:
-        output_dir = dcm_dir / unique_change[(dcm_tuple[1], dcm_tuple[3])]
-        dcm_tuple[0].rename(output_dir / dcm_tuple[0].name)
-        if not unique_change[(dcm_tuple[1], dcm_tuple[3])] in inst_nums:
-            inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]] = {}
-        if not dcm_tuple[2] in inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]]:
-            inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]][dcm_tuple[2]] = []
-        inst_nums[unique_change[(dcm_tuple[1], dcm_tuple[3])]][dcm_tuple[2]].append(output_dir / dcm_tuple[0].name)
+    inst_nums = defaultdict(lambda: defaultdict(list))
+    moved = set()
+    for scan, dcm_tuples in dicom_sort_dict.items():
+        output_dir = dcm_dir / new_series_uids[scan]
+        for dcm_file, dcm_ds in dcm_tuples:
+            if dcm_file in moved:
+                continue
+            dcm_file.rename(output_dir / dcm_file.name)
+            moved.add(dcm_file)
+            inst_nums[new_series_uids[scan]][dcm_ds.InstanceNumber].append(output_dir / dcm_file.name)
 
-    new_dirs = list(unique_change.values())
+    new_dirs = list(new_series_uids.values())
     for item in dcm_dir.glob('*'):
         if item.name not in new_dirs:
             if item.is_dir():
@@ -221,11 +250,9 @@ def sort_dicoms(dcm_dir: Path) -> None:
 
 
 def remove_duplicates(dcmdir: Path) -> None:
-    inst_nums = {}  # type: dict
+    inst_nums = defaultdict(list)
     for dcmfile in dcmdir.glob('*'):
-        ds = dicom.dcmread(str(dcmfile), stop_before_pixels=True)
-        if ds.InstanceNumber not in inst_nums:
-            inst_nums[ds.InstanceNumber] = []
+        ds = dcmread(str(dcmfile), stop_before_pixels=True)
         inst_nums[ds.InstanceNumber].append((dcmfile, ds))
     count = 0
     for num in inst_nums:
@@ -233,19 +260,18 @@ def remove_duplicates(dcmdir: Path) -> None:
         for i in range(len(inst_nums[num])-1):
             for j in range(i+1, len(inst_nums[num])):
                 diff_keys = []
-                for key in inst_nums[num][i][1]._dict.keys():
-                    if key not in inst_nums[num][j][1]._dict.keys() and \
-                            key not in [(0x0008, 0x0013), (0x0008, 0x0018)]:
-                        diff_keys.append(key)
-                    elif inst_nums[num][i][1]._dict[key].value != inst_nums[num][j][1]._dict[key].value and \
-                            key not in [(0x0008, 0x0013), (0x0008, 0x0018)]:
+                dcmfile1, ds1 = inst_nums[num][i]
+                dcmfile2, ds2 = inst_nums[num][j]
+                for key in ds1.keys():
+                    if key in [(0x0008, 0x0013), (0x0008, 0x0018)]:
+                        continue
+                    if (key not in ds2.keys()) or (ds1[key].value != ds2[key].value):
                         diff_keys.append(key)
                 if len(diff_keys) == 0:
-                    if (dicom.dcmread(str(inst_nums[num][i][0])).PixelData ==
-                            dicom.dcmread(str(inst_nums[num][i][0])).PixelData):
-                        logging.debug('Found duplicate of %s' % inst_nums[num][j][0])
-                        logging.debug('Removing duplicate file %s' % inst_nums[num][i][0])
-                        inst_nums[num][i][0].unlink()
+                    if dcmread(str(dcmfile1)).PixelData == dcmread(str(dcmfile2)).PixelData:
+                        logging.debug('Found duplicate of %s' % dcmfile1)
+                        logging.debug('Removing duplicate file %s' % dcmfile2)
+                        dcmfile2.unlink()
                         count += 1
                         break
     if count > 0:
