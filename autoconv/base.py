@@ -650,7 +650,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
 
     # Match filenames to dicom info objects
     if len(filenames) > 1:
-        suffixes = {filename.name.replace(di_list[0].NiftiName, '').replace('.nii.gz', ''): filename
+        suffixes = {filename.name.replace(di_list[0].NiftiName, ''): filename
                     for filename in filenames}
         extras = ['_' + '_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
         extras = [extra.replace('ECHO', 'e').replace('_MAG', '') for extra in extras]
@@ -681,7 +681,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             logging.info('Additional ADC images produced by dcm2niix. Removing.')
             p_add(filename, '_ADC.nii.gz').unlink()
         if re.search(r'_(e[0-9]+)?_?(ph|real|imaginary)?_?(t[0-9]+)?$', filename.name):
-            filename.rename(niidir / (di.NiftiName + '.nii.gz'))
+            p_add(filename, '.nii.gz').rename(niidir / (di.NiftiName + '.nii.gz'))
 
     if success:
         for di in di_list:
