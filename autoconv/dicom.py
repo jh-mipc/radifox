@@ -217,7 +217,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
     for scans in uids_by_files.values():
         if len(scans) > 1:
             for scan in scans:
-                new_series_uids[scan] = '.'.join(new_series_uids[scan].split('.'[:-1]))
+                new_series_uids[scan] = '.'.join(new_series_uids[scan].split('.')[:-1])
 
     for new_dcm_dir in new_series_uids.values():
         mkdir_p(dcm_dir / new_dcm_dir)
