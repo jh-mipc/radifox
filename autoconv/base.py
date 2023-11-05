@@ -543,7 +543,7 @@ class BaseSet:
         source_dict = defaultdict(list)
         for di in self.SeriesList:
             source_dict[di.SourcePath].append(di)
-        for source_path, di_list in source_dict:
+        for source_path, di_list in source_dict.items():
             if any(di.ConvertImage for di in di_list):
                 logging.info('Creating Nifti for %s' % source_path)
                 create_nii(self.OutputRoot / self.Metadata.dir_to_str(), source_path, di_list)
