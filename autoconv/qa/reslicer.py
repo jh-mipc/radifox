@@ -34,8 +34,9 @@ class Reslicer:
                 interpolation, 1 for linear interpolation, etc.)
         """
         # noinspection PyTypeChecker
-        data = nii_obj.get_fdata() if len(nii_obj.shape) == 3 else nib.four_to_three(nii_obj)[0].get_fdata()
-        self.data: np.ndarray = resize(data, [vox_res/s for s in nii_obj.header.get_zooms()], order=order)
+        obj_3d = nii_obj if len(nii_obj.shape) == 3 else nib.four_to_three(nii_obj)[0]
+        data = obj_3d.get_fdata()
+        self.data: np.ndarray = resize(data, [vox_res/s for s in obj_3d.header.get_zooms()], order=order)
         self.orient = nib.aff2axcodes(nii_obj.affine)
 
     def get_num_slices(self, plane='axial'):
