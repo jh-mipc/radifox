@@ -212,12 +212,12 @@ def sort_dicoms(dcm_dir: Path) -> None:
     # Find new series that have scans that share DICOM files (multi-frame)
     uids_by_files = defaultdict(list)
     for scan, dcm_list in dicom_sort_dict.items():
-        uids_by_files[tuple(dcm[0] for dcm in dcm_list)].append((scan, new_series_uids[scan]))
+        uids_by_files[tuple(dcm[0] for dcm in dcm_list)].append(scan)
     # Merge new series uids that share DICOM files
-    for scans, uids in zip(*uids_by_files.values()):
+    for scans in uids_by_files.values():
         if len(scans) > 1:
             for scan in scans:
-                new_series_uids[scan] = '.'.join(uids.split('.'[:-1]))
+                new_series_uids[scan] = '.'.join(new_series_uids[scan].split('.'[:-1]))
 
     for new_dcm_dir in new_series_uids.values():
         mkdir_p(dcm_dir / new_dcm_dir)
