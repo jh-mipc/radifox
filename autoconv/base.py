@@ -650,8 +650,9 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
 
     # Match filenames to dicom info objects
     if len(filenames) > 1:
-        suffixes = {filename.name.replace(di_list[0].NiftiName, ''): filename for filename in filenames}
-        extras = ['_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
+        suffixes = {filename.name.replace(di_list[0].NiftiName, '').replace('.nii.gz', ''): filename
+                    for filename in filenames}
+        extras = ['_' + '_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
         extras = [extra.replace('ECHO', 'e').replace('_MAG', '') for extra in extras]
         extras = [extra.replace('PHA', 'ph').replace('_REA', 'real').replace('IMA', 'imaginary') for extra in extras]
         if any('INV' in extra for extra in extras):
