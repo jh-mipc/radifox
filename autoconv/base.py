@@ -549,9 +549,10 @@ class BaseSet:
                 logging.info('Creating Nifti for %s' % source_path)
                 create_nii(self.OutputRoot / self.Metadata.dir_to_str(), source_path, di_list)
                 for di in di_list:
-                    self.generate_sidecar(di)
-                    if di.NiftiCreated:
-                        self.generate_qa_image(di)
+                    if di.ConvertImage:
+                        self.generate_sidecar(di)
+                        if di.NiftiCreated:
+                            self.generate_qa_image(di)
         self.SeriesList = sorted(sorted(self.SeriesList, key=lambda x: (x.StudyUID, x.SeriesNumber, x.SeriesUID)),
                                  key=lambda x: x.ConvertImage, reverse=True)
 
