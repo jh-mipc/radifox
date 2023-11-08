@@ -649,7 +649,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
     removes = []
     for i, filename in enumerate(filenames):
         removes.append(False)
-        if '_e' in filename:
+        if '_e' in filename.name:
             bids_dict = json.load(open(p_add(filename, '.json')))
             if 'EchoTime' not in bids_dict:
                 removes[i] = True
