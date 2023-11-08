@@ -406,7 +406,7 @@ def create_sf_headers(dataset):
     return sf_ds_list
 
 
-def parse_dcm2niix_suffixes(filenames: list[Path], base: str) -> list[set[str]]:
+def parse_dcm2niix_suffixes(filenames: list[Path], base: str) -> list[tuple[str]]:
     suffixes = [filename.name.replace(base, '') for filename in filenames]
     for i in range(len(suffixes)):
         suffixes[i] = suffixes[i].replace('_e', '_ECHO')
@@ -425,4 +425,11 @@ def parse_dcm2niix_suffixes(filenames: list[Path], base: str) -> list[set[str]]:
         if re.search(r'_DYN(\d+)', suffixes[i]) is not None:
             dyn_idx = dyn_nums.index(int(re.search(r'_DYN(\d+)', suffixes[i]).group(1))) + 1
             suffixes[i] = re.sub(r'_DYN(\d+)', '_DYN%d' % dyn_idx, suffixes[i])
+    # Do the same for echoes
+    echo_nums = sorted({int(re.search(r'_ECHO(\d+)', suffix).group(1)) for suffix in suffixes
+                       if re.search(r'_ECHO(\d+)', suffix) is not None})
+    for i in range(len(suffixes)):
+        if re.search(r'_ECHO(\d+)', suffixes[i]) is not None:
+            dyn_idx = echo_nums.index(int(re.search(r'_ECHO(\d+)', suffixes[i]).group(1))) + 1
+            suffixes[i] = re.sub(r'_ECHO(\d+)', '_ECHO%d' % dyn_idx, suffixes[i])
     return [tuple(sorted(suffix[1:].split('_'))) for suffix in suffixes]
