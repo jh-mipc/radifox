@@ -126,7 +126,7 @@ class BaseInfo:
         processed_ignore = any(['adc' in img_type.lower() for img_type in self.ImageType]) or \
             any([img_type.lower() == 'sub' for img_type in self.ImageType]) or \
             any([img_type.lower() == 'sum' for img_type in self.ImageType]) or \
-            any([img_type.lower() == 't2_map' for img_type in self.ImageType])
+            any([re.search(r't2.?map', img_type.lower()) for img_type in self.ImageType])
         logging.debug('Derived:%s, Description:%s, MPR:%s, MIP:%s, Processed:%s' %
                       (not type_status, desc_ignore, mpr_ignore, mip_ignore, processed_ignore))
         self.ConvertImage = type_status and not desc_ignore and not mpr_ignore \
