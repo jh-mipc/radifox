@@ -211,7 +211,7 @@ class BaseInfo:
             sequence = 'SE'
         if any(['ep' == seq for seq in seq_type]) or 'epi' in seq_name or \
                 (self.EPIFactor is not None and self.EPIFactor > 1):
-            sequence = 'EPI'
+            sequence = 'GRASE' if seq_name == 'grase' else 'EPI'
         if re.search(r'(t1.?[tf]fe|fl3d1)', seq_name):
             sequence = 'SPGR'
         if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
