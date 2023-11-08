@@ -19,7 +19,8 @@ from .metadata import Metadata
 from .qa import create_qa_image
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list, none_to_float,
-                    find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date)
+                    find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date,
+                    parse_dcm2niix_suffixes)
 
 
 DESCRIPTION_IGNORE = ['loc', 'survey', 'scout', '3-pl', 'scanogram', 'smartbrain', 'pride']
@@ -650,21 +651,21 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
 
     # Match filenames to dicom info objects
     if len(filenames) > 1:
-        suffixes = {filename.name.replace(di_list[0].NiftiName, ''): filename
-                    for filename in filenames}
-        extras = ['_' + '_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
-        extras = [extra.replace('ECHO', 'e').replace('_MAG', '') for extra in extras]
-        extras = [extra.replace('_PHA', '_ph').replace('_REA', '_real').replace('_IMA', '_imaginary') for extra in extras]
-        if any('INV' in extra for extra in extras):
-            inv_times = sorted([int(str(re.search(r'_t[0-9]+', suffix)[0]).replace('_t', ''))
-                                for suffix in suffixes.keys()])
-            extra_inv = [str(re.search(r'INV[0-9]+', extra)[0]) for extra in extras]
-            extras = [extra.replace(ex_inv, 't%d' % inv_times[int(ex_inv.replace('INV', '')) - 1])
-                      for extra, ex_inv in zip(extras, extra_inv)]
+        suffixes = parse_dcm2niix_suffixes(filenames, di_list[0].NiftiName)
+        suffixes = {suffix: filename for suffix, filename in zip(suffixes, filenames)}
+        extras = ['_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
+        if any([sum(dyn in extra for dyn in ['POS', 'INV', 'DYN']) > 1 for extra in extras]):
+            logging.warning('Multiple dynamic image types detected. '
+                            'Cannot match to filenames. Removing created files.')
+            logging.warning('Nifti creation failed.')
+            success = False
+        else:
+            extras = [set(extra.replace('INV', 'DYN').replace('POS', 'DYN').split('_')) for extra in extras]
         filenames = [suffixes[extra] for extra in extras]
 
     for filename, di in zip(filenames, di_list):
         if not success:
+            remove_created_files(filename)
             break
         if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
             remove_created_files(filename)

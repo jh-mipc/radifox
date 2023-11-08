@@ -404,3 +404,25 @@ def create_sf_headers(dataset):
         sf_ds.update(flat_frame_ds)
         sf_ds_list.append(fix_sf_headers(sf_ds))
     return sf_ds_list
+
+
+def parse_dcm2niix_suffixes(filenames: list[Path], base: str) -> list[set[str]]:
+    suffixes = [filename.name.replace(base, '') for filename in filenames]
+    for i in range(len(suffixes)):
+        suffixes[i] = suffixes[i].replace('_e', '_ECHO')
+        suffixes[i] = suffixes[i].replace('_ph', '_PHA')
+        suffixes[i] = suffixes[i].replace('_real', '_REA')
+        suffixes[i] = suffixes[i].replace('_imaginary', '_IMA')
+        suffixes[i] = suffixes[i].replace('_t', '_DYN')
+    if any([cplx in suffix for suffix in suffixes for cplx in ['PHA', 'REA', 'IMA']]):
+        for i in range(len(suffixes)):
+            if not any([cplx in suffixes[i] for cplx in ['PHA', 'REA', 'IMA']]):
+                suffixes[i] += '_MAG'
+    # Replace numbers after DYN with 1,2,3... in order of original number
+    dyn_nums = sorted({int(re.search(r'_DYN(\d+)', suffix).group(1)) for suffix in suffixes
+                       if re.search(r'_DYN(\d+)', suffix) is not None})
+    for i in range(len(suffixes)):
+        if re.search(r'_DYN(\d+)', suffixes[i]) is not None:
+            dyn_idx = dyn_nums.index(int(re.search(r'_DYN(\d+)', suffixes[i]).group(1))) + 1
+            suffixes[i] = re.sub(r'_DYN(\d+)', '_DYN%d' % dyn_idx, suffixes[i])
+    return [set(suffix[1:].split('_')) for suffix in suffixes]
