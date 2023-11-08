@@ -217,9 +217,9 @@ class BaseInfo:
         if sequence == 'GRE' and (any([variant == 'sp' for variant in seq_var]) or
                                   any([variant == 'ss' for variant in seq_var])):
             sequence = 'SPGR'
-        if sequence != 'EPI' and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
+        if sequence not in ['EPI', 'GRASE'] and (etl > 1 or 'fast_gems' in scan_opts or 'fse' in seq_name):
             sequence = 'F' + sequence
-        if sequence != 'EPI' and 'IR' not in sequence:
+        if sequence not in ['EPI', 'GRASE'] and 'IR' not in sequence:
             if (self.InversionTime is not None and self.InversionTime > 50) or \
                     any([seq == 'ir' for seq in seq_type]) or \
                     any([variant == 'mp' for variant in seq_var]) or \
