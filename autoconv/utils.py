@@ -231,7 +231,7 @@ def find_closest(target: int, to_check: List[int]) -> Optional[int]:
     return candidates[0] if len(candidates) == 1 else min(candidates)
 
 
-def hash_update_from_file(filename: Path, hash_func: Any = hashlib.md5, include_names: bool = True) -> str:
+def hash_file(filename: Path, include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
     hash_obj = hash_func()
     if include_names:
         hash_obj.update(filename.name.encode())
@@ -241,47 +241,30 @@ def hash_update_from_file(filename: Path, hash_func: Any = hashlib.md5, include_
     return str(hash_obj.hexdigest())
 
 
-def hash_file(filename: Path, hash_type: Any = hashlib.md5, include_names: bool = True) -> str:
-    return hash_update_from_file(filename, hash_type, include_names)
-
-
-def hash_update_from_dir(directory: Path, hash_func: Any = hashlib.md5, include_names: bool = True,
-                         existing_hashes: Optional[list] = None) -> list:
-    if existing_hashes is None:
-        existing_hashes = []
+def hash_dir(directory, include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
+    hash_obj = hash_func()
     if include_names:
-        existing_hashes.append(directory.name)
+        hash_obj.update(directory.name.encode())
     for path in sorted(directory.iterdir(), key=lambda p: str(p).lower()):
-        if path.is_file():
-            existing_hashes.append(hash_update_from_file(path, hash_func, include_names))
-        elif path.is_dir():
-            existing_hashes.extend(hash_update_from_dir(path, hash_func, include_names))
-    return existing_hashes
-
-
-def hash_dir(directory, outer_hash_func: Any = hashlib.sha256,
-             inner_hash_func: Any = hashlib.md5, include_names: bool = True) -> str:
-    hashobj = outer_hash_func()
-    for item in sorted(hash_update_from_dir(directory, inner_hash_func, include_names)):
-        hashobj.update(item.encode())
-    return str(hashobj.hexdigest())
-
-
-def hash_file_dir(file_dir: Path, include_names: bool = True) -> str:
-    if file_dir.is_file():
-        return hash_file(file_dir, hashlib.sha256, include_names=include_names)
-    elif file_dir.is_dir():
-        return hash_dir(file_dir, include_names=include_names)
-
-
-def hash_file_list(file_list: List[Path], include_names: bool = True) -> str:
-    hash_obj = hashlib.sha256()
-    for path in file_list:
-        hash_obj.update(hash_file_dir(path, include_names).encode())
+        hash_obj.update(hash_file_dir(path, include_names, hash_func).encode())
     return str(hash_obj.hexdigest())
 
 
-def hash_value(value: str, hash_func: Any = hashlib.sha256) -> Optional[str]:
+def hash_file_dir(file_dir: Path, include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
+    if file_dir.is_file():
+        return hash_file(file_dir, include_names=include_names, hash_func=hash_func)
+    elif file_dir.is_dir():
+        return hash_dir(file_dir, include_names=include_names, hash_func=hash_func)
+
+
+def hash_file_list(file_list: list[Path], include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
+    hash_obj = hash_func()
+    for path in file_list:
+        hash_obj.update(hash_file(path, include_names, hash_func).encode())
+    return str(hash_obj.hexdigest())
+
+
+def hash_value(value: str | None, hash_func: Any = hashlib.sha256) -> str | None:
     if value is None:
         return None
     m = hash_func()
