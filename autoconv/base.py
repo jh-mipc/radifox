@@ -661,28 +661,27 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             success = False
         else:
             extras = [tuple(sorted(extra.replace('INV', 'DYN').replace('POS', 'DYN').split('_'))) for extra in extras]
-        filenames = [suffixes[extra] for extra in extras]
+            filenames = [suffixes[extra] for extra in extras]
 
     for filename, di in zip(filenames, di_list):
         if not success:
-            remove_created_files(filename)
             break
         if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
-            remove_created_files(filename)
             logging.warning('Slices missing for DICOM UID %s, not converted.' % di.SeriesUID)
             logging.warning('Nifti creation failed.')
             success = False
             break
         reo_result = reorient(p_add(filename, '.nii.gz'), di.SliceOrientation)
         if not reo_result:
-            remove_created_files(filename)
             success = False
             break
         if p_add(filename, '_ADC.nii.gz').exists():
             logging.info('Additional ADC images produced by dcm2niix. Removing.')
             p_add(filename, '_ADC.nii.gz').unlink()
-        if re.search(r'_(e[0-9]+)?_?(ph|real|imaginary)?_?(t[0-9]+)?$', filename.name):
-            p_add(filename, '.nii.gz').rename(niidir / (di.NiftiName + '.nii.gz'))
+        if filename.name != di.NiftiName:
+            for file in filename.parent.glob(filename.name + '.*'):
+                ext = ''.join(file.suffixes)
+                file.rename(niidir / (di.NiftiName + ext))
 
     if success:
         for di in di_list:
