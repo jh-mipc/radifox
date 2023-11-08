@@ -347,7 +347,7 @@ def fix_sf_headers(dataset):
         scan_seq.append('IR')
     if dataset.get('EchoPlanarPulseSequence', 'NO') == 'YES':
         scan_seq.append('EP')
-    dataset.ScanningSequence = list(set(scan_seq))
+    dataset.ScanningSequence = sorted(set(scan_seq))
 
     seq_var: list = (dataset.SequenceVariant if dataset['SequenceVariant'].VM > 1 else [dataset.SequenceVariant]) \
         if 'SequenceVariant' in dataset else []
@@ -363,7 +363,7 @@ def fix_sf_headers(dataset):
         seq_var.append('OSP')
     if len(seq_var) == 0:
         seq_var.append('NONE')
-    dataset.SequenceVariant = list(set(seq_var))
+    dataset.SequenceVariant = sorted(set(seq_var))
 
     scan_opts: list = (dataset.ScanOptions if dataset['ScanOptions'].VM > 1 else [dataset.ScanOptions]) \
         if 'ScanOptions' in dataset else []
@@ -387,7 +387,7 @@ def fix_sf_headers(dataset):
         scan_opts.append('FS')
     if dataset.get('FlowCompensation', 'NONE') != 'NONE':
         scan_opts.append('FC')
-    dataset.ScanOptions = list(set(scan_opts))
+    dataset.ScanOptions = sorted(set(scan_opts))
     return dataset
 
 
