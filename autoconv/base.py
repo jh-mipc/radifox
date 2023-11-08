@@ -655,10 +655,9 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             if 'EchoTime' not in bids_dict:
                 removes[i] = True
                 p_add(filename, '.nii.gz').unlink()
-    filenames = [filename for filename, remove in zip(filenames, removes) if not remove]
-    # Cleanup dcm2niix json files
-    for filename in filenames:
+        # Cleanup dcm2niix json files
         p_add(filename, '.json').unlink()
+    filenames = [filename for filename, remove in zip(filenames, removes) if not remove]
 
     # Check for the right number of files
     if len(filenames) != len(convert_di):
