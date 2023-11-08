@@ -645,7 +645,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
     # Parse the output for filenames
     filenames = parse_dcm2niix_filenames(str(result.stdout))
 
-    # Remove images that have an _e# without and EchoTime
+    # Remove images that have an _e# without an EchoTime
     removes = []
     for i, filename in enumerate(filenames):
         removes.append(False)
