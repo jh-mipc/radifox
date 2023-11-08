@@ -342,7 +342,7 @@ def fix_sf_headers(dataset):
         if dataset.EchoPulseSequence != 'SPIN':
             scan_seq.append('GR')
         if dataset.EchoPulseSequence != 'GRADIENT':
-            scan_seq.append('GR')
+            scan_seq.append('SE')
     if dataset.get('InversionRecovery', 'NO') == 'YES':
         scan_seq.append('IR')
     if dataset.get('EchoPlanarPulseSequence', 'NO') == 'YES':
