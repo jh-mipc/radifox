@@ -660,7 +660,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             logging.warning('Nifti creation failed.')
             success = False
         else:
-            extras = [set(extra.replace('INV', 'DYN').replace('POS', 'DYN').split('_')) for extra in extras]
+            extras = [tuple(sorted(extra.replace('INV', 'DYN').replace('POS', 'DYN').split('_'))) for extra in extras]
         filenames = [suffixes[extra] for extra in extras]
 
     for filename, di in zip(filenames, di_list):
