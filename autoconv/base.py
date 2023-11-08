@@ -654,7 +654,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
                     for filename in filenames}
         extras = ['_' + '_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
         extras = [extra.replace('ECHO', 'e').replace('_MAG', '') for extra in extras]
-        extras = [extra.replace('PHA', 'ph').replace('_REA', 'real').replace('IMA', 'imaginary') for extra in extras]
+        extras = [extra.replace('_PHA', '_ph').replace('_REA', '_real').replace('_IMA', '_imaginary') for extra in extras]
         if any('INV' in extra for extra in extras):
             inv_times = sorted([int(str(re.search(r'_t[0-9]+', suffix)[0]).replace('_t', ''))
                                 for suffix in suffixes.keys()])
