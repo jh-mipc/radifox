@@ -659,7 +659,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             inv_times = sorted([int(str(re.search(r'_t[0-9]+', suffix)[0]).replace('_t', ''))
                                 for suffix in suffixes.keys()])
             extra_inv = [str(re.search(r'INV[0-9]+', extra)[0]) for extra in extras]
-            extras = [extra.replace(ex_inv, '_t%d' % inv_times[int(ex_inv.replace('INV', '')) - 1])
+            extras = [extra.replace(ex_inv, 't%d' % inv_times[int(ex_inv.replace('INV', '')) - 1])
                       for extra, ex_inv in zip(extras, extra_inv)]
         filenames = [suffixes[extra] for extra in extras]
 
