@@ -601,16 +601,21 @@ class BaseSet:
 
 def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> None:
     source = output_dir / source_path
+    convert_di = [di for di in di_list if di.ConvertImage]
+    for di in di_list:
+        if not di.ConvertImage:
+            di.NiftiCreated = False
+            logging.info('Skipping %s' % di.SeriesUID)
 
     # Create the nii directory if it doesn't exist
     niidir = output_dir / 'nii'
     mkdir_p(niidir)
 
     # If the file already exists, we won't overwrite it, just warn
-    exists_list = [Path(niidir, di.NiftiName + '.nii.gz').exists() for di in di_list]
+    exists_list = [Path(niidir, di.NiftiName + '.nii.gz').exists() for di in convert_di]
     if any(exists_list):
         logging.warning('Naming failed for %s' % source)
-        for di, exists in zip(di_list, exists_list):
+        for di, exists in zip(convert_di, exists_list):
             di.NiftiCreated = False
             if exists:
                 logging.warning('Attempted to create %s.nii.gz' % di.NiftiName)
@@ -619,15 +624,15 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
         return
 
     # Run dcm2niix
-    dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'n', '-z', 'y', '-f',
-                    di_list[0].NiftiName, '-o', niidir, source]
+    dcm2niix_cmd = [shutil.which('dcm2niix'), '-b', 'y', '-z', 'y', '-f',
+                    convert_di[0].NiftiName, '-o', niidir, source]
     result = run(dcm2niix_cmd, stdout=PIPE, stderr=STDOUT, text=True)
     success = result.returncode == 0
 
     # If dcm2niix failed, remove the created files and warn
     if not success:
         logging.warning('dcm2niix failed for %s' % source)
-        for di in di_list:
+        for di in convert_di:
             di.NiftiCreated = False
             logging.warning('Attempted to create %s.nii.gz' % di.NiftiName)
         logging.warning('dcm2niix return code: %d' % result.returncode)
@@ -640,10 +645,24 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
     # Parse the output for filenames
     filenames = parse_dcm2niix_filenames(str(result.stdout))
 
+    # Remove images that have an _e# without and EchoTime
+    removes = []
+    for i, filename in enumerate(filenames):
+        removes.append(False)
+        if '_e' in filename:
+            bids_dict = json.load(open(p_add(filename, '.json')))
+            if 'EchoTime' not in bids_dict:
+                removes[i] = True
+                p_add(filename, '.nii.gz').unlink()
+    filenames = [filename for filename, remove in zip(filenames, removes) if not remove]
+    # Cleanup dcm2niix json files
+    for filename in filenames:
+        p_add(filename, '.json').unlink()
+
     # Check for the right number of files
-    if len(filenames) != len(di_list):
+    if len(filenames) != len(convert_di):
         logging.warning(f'Number of dcm2niix outputs ({len(filenames)}) '
-                        f'did not match number expected ({len(di_list)}).')
+                        f'did not match number expected ({len(convert_di)}).')
         logging.warning('dcm2niix return code: %d' % result.returncode)
         logging.warning('dcm2niix output:\n' + str(result.stdout))
         logging.warning('Nifti creation failed.')
@@ -651,9 +670,9 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
 
     # Match filenames to dicom info objects
     if len(filenames) > 1:
-        suffixes = parse_dcm2niix_suffixes(filenames, di_list[0].NiftiName)
+        suffixes = parse_dcm2niix_suffixes(filenames, convert_di[0].NiftiName)
         suffixes = {suffix: filename for suffix, filename in zip(suffixes, filenames)}
-        extras = ['_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in di_list]
+        extras = ['_'.join(di.NiftiName.split('_')[-1].split('-')[6:]) for di in convert_di]
         if any([sum(dyn in extra for dyn in ['POS', 'INV', 'DYN']) > 1 for extra in extras]):
             logging.warning('Multiple dynamic image types detected. '
                             'Cannot match to filenames. Removing created files.')
@@ -663,7 +682,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             extras = [tuple(sorted(extra.replace('INV', 'DYN').replace('POS', 'DYN').split('_'))) for extra in extras]
             filenames = [suffixes[extra] for extra in extras]
 
-    for filename, di in zip(filenames, di_list):
+    for filename, di in zip(filenames, convert_di):
         if not success:
             break
         if len(list(filename.parent.glob(filename.name + '_Eq*.nii.gz'))) > 0:
@@ -684,7 +703,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
                 file.rename(niidir / (di.NiftiName + ext))
 
     if success:
-        for di in di_list:
+        for di in convert_di:
             if (niidir / (di.NiftiName + '.nii.gz')).exists():
                 di.NiftiCreated = True
                 di.NiftiHash = hash_file_dir(niidir / (di.NiftiName + '.nii.gz'))
@@ -694,7 +713,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
                 logging.warning('Nifti file missing: %s.nii.gz' % di.NiftiName)
                 logging.warning('Nifti creation failed.')
     else:
-        for di in di_list:
+        for di in convert_di:
             di.NiftiCreated = False
         for filename in filenames:
             remove_created_files(filename)
