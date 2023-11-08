@@ -35,8 +35,8 @@ PARREC_ORIENTATIONS = {1: 'axial', 2: 'sagittal', 3: 'coronal'}
 
 
 class BaseInfo:
-
     # TODO: Type consistent defaults? Type checking?
+    # This can be done using type hints and defaults in the class definition
     def __init__(self, path: Path) -> None:
         self.SourcePath = Path(path.parent.name) / path.name
         self.SourceHash = hash_file_list([path, path.with_suffix('.rec')], include_names=False) \
