@@ -53,7 +53,7 @@ class ProcessingModule(ABC):
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
             f"Container: {lbls['ci.image']}:{lbls['ci.tag']} ({lbls['ci.commit']}) "
-            f"sha256:{lbls['ci.digest']}\n"
+            f"{lbls['ci.digest']}\n"
             f"User: {user}\n"
             f"TimeStamp: {datetime.datetime.utcnow().isoformat()}\n"
             f"Inputs: \n"
