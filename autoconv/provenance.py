@@ -13,7 +13,7 @@ class ProcessingModule(ABC):
     name: str = None
     version: str = None
 
-    def __init(self, args: list[str] | None = None) -> None:
+    def __init__(self, args: list[str] | None = None) -> None:
         self.verify_container()
         self.cli_call = " ".join(args)
         self.parsed_args = self.cli(args)
