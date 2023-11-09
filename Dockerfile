@@ -29,8 +29,9 @@ RUN echo -e "{\n \
 }" > /opt/manifest.json
 
 # Copy package and install
-COPY . /tmp/autoconv-src/
+COPY requirements.txt /tmp/autoconv-src/requirements.txt
 RUN pip install -r /tmp/autoconv-src/requirements.txt
+COPY . /tmp/autoconv-src/
 RUN pip install /tmp/autoconv-src/ && \
     rm -rf /tmp/autoconv-src/
 
