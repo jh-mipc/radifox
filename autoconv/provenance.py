@@ -40,7 +40,7 @@ class ProcessingModule(ABC):
     def verify_container() -> None:
         if Path("/.singularity.d/labels.json").exists():
             labels = ProcessingModule.get_container_labels()
-            if any(lbl not in labels for lbl in ["image", "tag", "commit", "digest"]):
+            if any(lbl not in labels for lbl in ["ci.image", "ci.tag", "ci.commit", "ci.digest"]):
                 raise ValueError("Container is missing required labels.")
         else:
             raise ValueError("Container labels not found. Running outside of container?")
@@ -49,7 +49,8 @@ class ProcessingModule(ABC):
         lbls = self.get_container_labels()
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
-            f"Container: {lbls['image']}:{lbls['tag']} ({lbls['commit']}) sha256:{lbls['digest']}\n"
+            f"Container: {lbls['ci.image']}:{lbls['ci.tag']} ({lbls['ci.commit']}) "
+            f"sha256:{lbls['ci.digest']}\n"
             f"User: {os.environ['USER']}\n"
             f"TimeStamp: {datetime.datetime.utcnow().isoformat()}\n"
             f"Inputs: \n"
