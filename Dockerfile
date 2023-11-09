@@ -30,9 +30,9 @@ RUN echo -e "{\n \
 
 # Copy package and install
 COPY requirements.txt /tmp/autoconv-src/requirements.txt
-RUN pip install -r /tmp/autoconv-src/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/autoconv-src/requirements.txt
 COPY . /tmp/autoconv-src/
-RUN pip install /tmp/autoconv-src/ && \
+RUN pip install --no-cache-dir /tmp/autoconv-src/ && \
     rm -rf /tmp/autoconv-src/
 
 ENTRYPOINT 'autoconv-convert'
