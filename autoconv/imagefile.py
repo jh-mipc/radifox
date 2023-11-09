@@ -13,6 +13,9 @@ class ImageFile:
         self._path = Path(path).resolve()
         self._info = None
 
+    def open(self, mode: str = "r"):
+        return self._path.open(mode)
+
     @property
     def info(self) -> ImageInfo:
         if self._info is None:
