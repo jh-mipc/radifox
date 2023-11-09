@@ -19,9 +19,9 @@ class ProcessingModule(ABC):
         self.outputs = self.run(**self.parsed_args)
         self.write_prov()
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def cli(cls, args: list[str] | None = None) -> dict[str, Any]:
+    def cli(args: list[str] | None = None) -> dict[str, Any]:
         raise NotImplementedError
 
     @staticmethod
