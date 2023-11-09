@@ -338,6 +338,7 @@ class BaseInfo:
                       for i in range(len(final_list))]
         final_list = [self.PredictedName[i] if i < len(self.PredictedName) and final_list[i] is None else final_list[i]
                       for i in range(len(final_list))]
+        final_list = [item.upper() if item is not None else 'UNK' for item in final_list]
         self.NiftiName = '_'.join([scan_str, '%02d-%02d' % (study_num, series_num),  '-'.join(final_list)])
         logging.debug('Predicted name: %s' % self.NiftiName)
 
