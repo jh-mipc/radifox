@@ -45,7 +45,7 @@ setup(
           'autoconv-update=autoconv.cli:update',
       ]
     },
-    python_requires='>=3.8.2',
+    python_requires='>=3.9',
     install_requires=[
       'nibabel',
       'pydicom',
