@@ -14,7 +14,10 @@ class ImageFile:
         self._info = None
 
     def open(self, mode: str = "r"):
-        return self._path.open(mode)
+        return self.path.open(mode)
+
+    def __str__(self):
+        return str(self.path)
 
     @property
     def info(self) -> ImageInfo:
@@ -45,8 +48,12 @@ class ImageFile:
         return self.path.name.split(".")[0]
 
     @property
+    def suffixes(self) -> list[str]:
+        return self.path.suffixes
+
+    @property
     def ext(self) -> str:
-        return "".join(self.path.suffixes)
+        return "".join(self.suffixes)
 
     @cached_property
     def _name_arr(self) -> list[str]:

@@ -67,18 +67,18 @@ class ProcessingModule(ABC):
             for k, v in inputs.items():
                 v_list = v if isinstance(v, list) else [v]
                 for item in v_list:
-                    prov_str += f"  - {k}:{item}:sha256:{hash_file(item, include_names=False)}\n"
+                    prov_str += f"  - {k}:{str(item)}:sha256:{hash_file(item, include_names=False)}\n"
         prov_str += f"Outputs: \n"
         if len(outputs) > 0:
             for k, v in outputs.items():
                 v_list = v if isinstance(v, list) else [v]
                 for item in v_list:
-                    prov_str += f"  - {k}:{item}:sha256:{hash_file(item, include_names=False)}\n"
+                    prov_str += f"  - {k}:{str(item)}:sha256:{hash_file(item, include_names=False)}\n"
         params = {k: v for k, v in args.items() if k not in inputs}
         prov_str += f"Parameters: \n"
         if len(params) > 0:
             for k, v in params.items():
-                prov_str += f"  - {k}:{v}\n"
+                prov_str += f"  - {k}:{str(v)}\n"
         prov_str += f"Command: {self.cli_call}\n"
         prov_str += f"---\n"
         return prov_str
@@ -92,7 +92,7 @@ class ProcessingModule(ABC):
             if j == 0:
                 session_dir = output.parent.parent
                 session_file = "_".join(
-                    [session_dir.parent.name, session_dir.name, "_Provenance.txt"]
+                    [session_dir.parent.name, session_dir.name, "Provenance.txt"]
                 )
                 with open(session_dir / session_file, "a") as f:
                     f.write(prov_str)
