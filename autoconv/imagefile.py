@@ -154,9 +154,13 @@ class ImageFilter:
         for key in kwargs.keys():
             if key not in self.allowed_keys:
                 raise ValueError(
-                    f"Invalid key provided {key}. Allowed keys are: {', '.join(self.allowed_keys)}"
+                    f"Invalid key provided {key}. Allowed keys are: {', '.join(self.allowed_keys)}\n"
+                    f"Keys provided: {', '.join(kwargs.keys())}"
                 )
         self._filter_dict = kwargs
+
+    def __str__(self):
+        return ";".join([f"{key}={str(value)}" for key, value in self._filter_dict.items()])
 
     @classmethod
     def from_string(cls, filter_str) -> ImageFilter:
