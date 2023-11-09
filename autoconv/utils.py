@@ -8,7 +8,6 @@ from pathlib import Path
 import re
 import shutil
 from subprocess import check_output
-from typing import Union, Any, List, Optional
 
 import nibabel as nib
 from pydicom.dataset import Dataset, FileDataset, Tag
@@ -22,7 +21,7 @@ def mkdir_p(path: Path, mode: int = 0o777) -> None:
     path.mkdir(mode=mode, parents=True, exist_ok=True)
 
 
-def copytree_link(source: Path, dest: Path, symlink: bool):
+def copytree_link(source: Path, dest: Path, symlink: bool) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     for path in source.glob('*'):
         if path.is_file():
@@ -49,7 +48,7 @@ def silentremove(filename: Path) -> None:
             raise  # re-raise exception if a different error occurred
 
 
-def read_csv(csv_filename: Path) -> (dict, str):
+def read_csv(csv_filename: Path) -> dict[str, list[str]]:
     data = csv_filename.read_bytes()
     codec = 'UTF-8-SIG' if data.startswith(BOM_UTF8) else 'UTF-8'
     data = data.decode(codec)
@@ -98,7 +97,7 @@ vr_corr = {
 
 
 def extract_de(ds: Dataset | FileDataset, label: str, series_uid, keep_list: bool = False) -> \
-        Union[None, tuple, float, int, str]:
+        None | tuple | float | int | str:
     if label not in ds:
         return tuple() if keep_list else None
     de = ds[label]
@@ -147,7 +146,7 @@ def reorient(input_file: Path, orientation: str) -> bool:
             return False
 
 
-def allowed_archives() -> (List[str], List[str]):
+def allowed_archives() -> (list[str], list[str]):
     allowed_exts = []
     allowed_names = []
     for names, extensions, _ in shutil.get_unpack_formats():
@@ -166,7 +165,7 @@ def extract_archive(input_zipfile: Path, output_dir: Path) -> None:
     logging.info('Extraction complete')
 
 
-def make_tuple(item: Union[bytes, str, Sequence]) -> tuple:
+def make_tuple(item: bytes | str | Sequence) -> tuple:
     if isinstance(item, (bytes, str)):
         return tuple([item])
     return tuple(item) if isinstance(item, Sequence) else tuple([item])
@@ -178,7 +177,7 @@ def remove_created_files(filename: Path) -> None:
         imgname.unlink()
 
 
-def parse_dcm2niix_filenames(stdout: str) -> List[Path]:
+def parse_dcm2niix_filenames(stdout: str) -> list[Path]:
     filenames = []
     for line in stdout.split("\n"):
         if line.startswith("Convert "):  # output
@@ -218,7 +217,7 @@ def recursive_chmod(directory: Path, dir_octal: int = DIR_OCTAL,
                 item.chmod(file_octal)
 
 
-def find_closest(target: int, to_check: List[int]) -> Optional[int]:
+def find_closest(target: int, to_check: list[int]) -> int | None:
     if len(to_check) < 1:
         return None
     elif len(to_check) == 1:
@@ -231,43 +230,49 @@ def find_closest(target: int, to_check: List[int]) -> Optional[int]:
     return candidates[0] if len(candidates) == 1 else min(candidates)
 
 
-def hash_file(filename: Path, include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
-    hash_obj = hash_func()
+def hash_file(filename: Path, include_names: bool = True, hashfunc: str = 'sha256', *, _bufsize=2**18) -> str:
+    hashobj = hashlib.new(hashfunc)
     if include_names:
-        hash_obj.update(filename.name.encode())
+        hashobj.update(filename.name.encode())
     with filename.open('rb') as fp:
-        for chunk in iter(lambda: fp.read(4096), b""):
-            hash_obj.update(chunk)
-    return str(hash_obj.hexdigest())
+        buf = bytearray(_bufsize)  # Reusable buffer to reduce allocations.
+        view = memoryview(buf)
+        while True:
+            # noinspection PyUnresolvedReferences
+            size = fp.readinto(buf)
+            if size == 0:
+                break  # EOF
+            hashobj.update(view[:size])
+    return str(hashobj.hexdigest())
 
 
-def hash_dir(directory, include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
-    hash_obj = hash_func()
-    if include_names:
-        hash_obj.update(directory.name.encode())
+def hash_dir(directory, include_names: bool = True, hashfunc: str = 'sha256') -> str:
+    hashobj = hashlib.new(hashfunc)
     for path in sorted(directory.iterdir(), key=lambda p: str(p).lower()):
-        hash_obj.update(hash_file_dir(path, include_names, hash_func).encode())
-    return str(hash_obj.hexdigest())
+        hashobj.update(hash_file_dir(path, include_names, hashfunc).encode())
+    if include_names:
+        hashobj.update(directory.name.encode())
+    return str(hashobj.hexdigest())
 
 
-def hash_file_dir(file_dir: Path, include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
+def hash_file_dir(file_dir: Path, include_names: bool = True, hashfunc: str = 'sha256') -> str:
     if file_dir.is_file():
-        return hash_file(file_dir, include_names=include_names, hash_func=hash_func)
+        return hash_file(file_dir, include_names=include_names, hashfunc=hashfunc)
     elif file_dir.is_dir():
-        return hash_dir(file_dir, include_names=include_names, hash_func=hash_func)
+        return hash_dir(file_dir, include_names=include_names, hashfunc=hashfunc)
 
 
-def hash_file_list(file_list: list[Path], include_names: bool = True, hash_func: Any = hashlib.sha256) -> str:
-    hash_obj = hash_func()
+def hash_file_list(file_list: list[Path], include_names: bool = True, hashfunc: str = 'sha256') -> str:
+    hashobj = hashlib.new(hashfunc)
     for path in file_list:
-        hash_obj.update(hash_file(path, include_names, hash_func).encode())
-    return str(hash_obj.hexdigest())
+        hashobj.update(hash_file(path, include_names, hashfunc).encode())
+    return str(hashobj.hexdigest())
 
 
-def hash_value(value: str | None, hash_func: Any = hashlib.sha256) -> str | None:
+def hash_value(value: str | None, hashfunc: str = 'sha256') -> str | None:
     if value is None:
         return None
-    m = hash_func()
+    m = hashlib.new(hashfunc)
     m.update(value.encode())
     return str(m.hexdigest())
 
@@ -276,12 +281,12 @@ def p_add(path: Path, extra: str) -> Path:
     return path.parent / (path.name + extra)
 
 
-def get_software_versions():
+def get_software_versions() -> dict[str, str]:
     dcm2niix_version = check_output('dcm2niix --version; exit 0', shell=True).decode().strip().split('\n')[-1].strip()
     return {'dcm2niix': dcm2niix_version}
 
 
-def version_check(saved_version, current_version):
+def version_check(saved_version: str, current_version: str) -> bool:
     if 'dev' in saved_version or 'dev' in current_version:
         return False
     saved_arr = saved_version.split('-')[0].split('.')
@@ -292,16 +297,16 @@ def version_check(saved_version, current_version):
     return True
 
 
-def shift_date(datetime_str: Optional[str] = None, date_shift_days: int = 0):
+def shift_date(datetime_str: str, date_shift_days: int = 0) -> str:
     orig_date = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
     return (orig_date + timedelta(days=date_shift_days)).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def none_to_float(value):
+def none_to_float(value: float | None) -> float:
     return float('inf') if value is None else value
 
 
-def get_flattened_dataset(dataset):
+def get_flattened_dataset(dataset: FileDataset | Dataset) -> Dataset:
     return Dataset({de.tag: de for de in dataset.iterall() if de.VR != 'SQ'})
 
 
@@ -316,7 +321,7 @@ EXCLUDE_TAGS = [
 ]
 
 
-def fix_sf_headers(dataset):
+def fix_sf_headers(dataset: Dataset) -> Dataset:
     if 'EffectiveEchoTime' in dataset:
         dataset.EchoTime = dataset.EffectiveEchoTime
     scan_seq: list = (dataset.ScanningSequence if dataset['ScanningSequence'].VM > 1 else [dataset.ScanningSequence]) \
@@ -374,7 +379,7 @@ def fix_sf_headers(dataset):
     return dataset
 
 
-def create_sf_headers(dataset):
+def create_sf_headers(dataset: Dataset | FileDataset) -> list[Dataset]:
     shared_ds = Dataset({de.tag: de for de in dataset if de.tag not in EXCLUDE_TAGS})
     shared_ds.file_meta = dataset.file_meta
     shared_ds.update(get_flattened_dataset(dataset.SharedFunctionalGroupsSequence[0]))
