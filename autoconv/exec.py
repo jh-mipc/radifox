@@ -18,7 +18,7 @@ class ExecError(Exception):
 
 
 def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, lut_file: Path,
-                 verbose: bool, modality: str, parrec: bool, rerun: bool, link: Optional[str],
+                 verbose: bool, parrec: bool, rerun: bool, link: Optional[str],
                  manual_args: dict, remove_identifiers: bool, date_shift_days: int, manual_names: dict,
                  input_hash: Optional[str] = None) -> None:
     session_path = output_root / metadata.dir_to_str()
@@ -47,7 +47,7 @@ def run_autoconv(source: Optional[Path], output_root: Path, metadata: Metadata, 
             logging.info('PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d' %
                          (inst_name, manual_args['MagneticFieldStrength']))
         logging.info('AutoConv starting: %s' % metadata.dir_to_str())
-        type_folder = session_path / (modality + '-' + ('parrec' if parrec else 'dcm'))
+        type_folder = session_path / ('parrec' if parrec else 'dcm')
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
             if source.is_dir():

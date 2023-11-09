@@ -34,7 +34,6 @@ def convert(args: Optional[List[str]] = None) -> None:
     parser.add_argument('--hardlink', action='store_true', help='Create hard links to source data instead of copying.')
     parser.add_argument('--institution', type=str, help='Institution name.')
     parser.add_argument('--field-strength', type=int, help='Magnetic field strength.')
-    parser.add_argument('--modality', type=str, help='Modality.', default='mr')
     parser.add_argument('--anonymize', action='store_true', help='Anonymize DICOM data.')
     parser.add_argument('--date-shift-days', type=int, help='Number of days to shift dates.')
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
@@ -69,10 +68,10 @@ def convert(args: Optional[List[str]] = None) -> None:
         lut_file = args.lut_file
 
     manual_json_file = (args.output_root / metadata.dir_to_str() /
-                        (metadata.prefix_to_str() + '_%s-ManualNaming.json' % args.modality.upper()))
+                        (metadata.prefix_to_str() + '_ManualNaming.json'))
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
-    type_dirname = '%s-%s' % (args.modality, 'parrec' if args.parrec else 'dcm')
+    type_dirname = '%s' % 'parrec' if args.parrec else 'dcm'
     if (args.output_root / metadata.dir_to_str() / type_dirname).exists():
         if args.safe:
             metadata.AttemptNum = 2
@@ -81,7 +80,7 @@ def convert(args: Optional[List[str]] = None) -> None:
         elif args.force or args.reckless:
             if not args.reckless:
                 json_file = (args.output_root / metadata.dir_to_str() /
-                             (metadata.prefix_to_str() + '_%s-UnconvertedInfo.json' % args.modality.upper()))
+                             (metadata.prefix_to_str() + '_UnconvertedInfo.json'))
                 if not json_file.exists():
                     raise ValueError('Unconverted info file (%s) does not exist for consistency checking. '
                                      'Cannot use --force, use --reckless instead.' % json_file)
@@ -103,14 +102,14 @@ def convert(args: Optional[List[str]] = None) -> None:
             silentremove(args.output_root / metadata.dir_to_str() / 'nii')
             for filepath in (args.output_root / metadata.dir_to_str() / 'logs').glob('autoconv-*.log'):
                 silentremove(filepath)
-            for filepath in (args.output_root / metadata.dir_to_str()).glob('%s-*.json' % args.modality.upper()):
+            for filepath in (args.output_root / metadata.dir_to_str()).glob('*.json'):
                 silentremove(filepath)
         else:
             raise RuntimeError('Output directory exists, run with --force to remove outputs and re-run.')
 
     manual_arg = {'MagneticiFieldStrength': args.field_strength, 'InstitutionName': args.institution}
 
-    run_autoconv(args.source, args.output_root, metadata, lut_file, args.verbose, args.modality, args.parrec,
+    run_autoconv(args.source, args.output_root, metadata, lut_file, args.verbose, args.parrec,
                  False, linking, manual_arg, args.anonymize, args.date_shift_days, manual_names, None)
 
 
@@ -119,8 +118,6 @@ def update(args: Optional[List[str]] = None) -> None:
     parser.add_argument('directory', type=Path, help='Existing AutoConv Directory to update.')
     parser.add_argument('-l', '--lut-file', type=Path, help='Lookup table file.')
     parser.add_argument('--force', action='store_true', help='Force run even if it would be skipped.')
-    parser.add_argument('--parrec', action='store_true', help='Source is PARREC.')
-    parser.add_argument('--modality', type=str, help='Modality.', default='mr')
     parser.add_argument('--verbose', action='store_true', help='Verbose output.')
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
@@ -129,10 +126,10 @@ def update(args: Optional[List[str]] = None) -> None:
     session_id = args.directory.name
     subj_id = args.directory.parent.name
 
-    json_file = args.directory / '_'.join([subj_id, session_id, '%s-UnconvertedInfo.json' % args.modality.upper()])
+    json_file = args.directory / '_'.join([subj_id, session_id, '_UnconvertedInfo.json'])
     if not json_file.exists():
         safe_json_file = args.directory / '_'.join([subj_id, '-'.join(session_id.split('-')[:-1]),
-                                                    '%s-UnconvertedInfo.json' % args.modality.upper()])
+                                                    '_UnconvertedInfo.json'])
         if not safe_json_file.exists():
             raise ValueError('Unconverted info file (%s) does not exist.' % json_file)
         json_file = safe_json_file
@@ -154,7 +151,7 @@ def update(args: Optional[List[str]] = None) -> None:
         lut_file = args.lut_file
     lookup_dict = LookupTable(lut_file, metadata.ProjectID, metadata.SiteID).LookupDict if lut_file.exists() else {}
 
-    manual_json_file = (args.directory / (metadata.prefix_to_str() + '_%s-ManualNaming.json' % args.modality.upper()))
+    manual_json_file = (args.directory / (metadata.prefix_to_str() + '_ManualNaming.json'))
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
     if not args.force and (version_check(json_obj['AutoConvVersion'], __version__) and
@@ -164,8 +161,8 @@ def update(args: Optional[List[str]] = None) -> None:
               % args.directory)
         return
 
-    parrec = (args.directory / ('%s-parrec' % args.modality)).exists()
-    type_dir = args.directory / ('%s-%s' % (args.modality, 'parrec' if args.parrec else 'dcm'))
+    parrec = (args.directory / 'parrec').exists()
+    type_dir = args.directory / ('%s' % 'parrec' if parrec else 'dcm')
 
     mkdir_p(args.directory / 'prev')
     for filename in ['nii', 'qa', json_file.name]:
@@ -178,7 +175,7 @@ def update(args: Optional[List[str]] = None) -> None:
             num = int(filepath.name.split('.')[-1]) + 1
             filepath.rename(args.directory / 'logs' / (filepath.name + '.%02d' % num))
     try:
-        run_autoconv(type_dir, output_root, metadata, lut_file, args.verbose, args.modality,
+        run_autoconv(type_dir, output_root, metadata, lut_file, args.verbose,
                      parrec, True, None, json_obj.get('ManualArgs', {}), False, 0,
                      manual_names, json_obj['InputHash'])
     except ExecError:

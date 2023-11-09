@@ -131,7 +131,7 @@ class DicomSet(BaseSet):
                          manual_names, input_hash)
 
         logging.info('Loading DICOMs.')
-        for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'mr-dcm').glob('*')):
+        for dcmdir in sorted((output_root / self.Metadata.dir_to_str() / 'dcm').glob('*')):
             ds = dcmread(str(sorted(dcmdir.glob('*'))[0]), stop_before_pixels=True)
             if ds.SOPClassUID == '1.2.840.10008.5.1.4.1.1.4.1':
                 sfds_dict = defaultdict(list)
