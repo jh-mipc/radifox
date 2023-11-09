@@ -48,11 +48,12 @@ class ProcessingModule(ABC):
 
     def create_prov(self, args: dict[str], outputs: dict[str]) -> str:
         lbls = self.get_container_labels()
+        user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
             f"Container: {lbls['ci.image']}:{lbls['ci.tag']} ({lbls['ci.commit']}) "
             f"sha256:{lbls['ci.digest']}\n"
-            f"User: {os.environ['USER']}\n"
+            f"User: {user}\n"
             f"TimeStamp: {datetime.datetime.utcnow().isoformat()}\n"
             f"Inputs: \n"
         )
