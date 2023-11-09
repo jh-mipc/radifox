@@ -81,8 +81,11 @@ class ProcessingModule(ABC):
         return prov_str
 
     @staticmethod
-    def write_prov(prov_str: str, outputs: dict[str, Path]) -> None:
-        for j, output in enumerate(outputs):
+    def write_prov(prov_str: str, outputs: dict[str, Path | list[Path]]) -> None:
+        outs = []
+        for out in outputs.values():
+            outs.extend(out if isinstance(out, list) else [out])
+        for j, output in enumerate(outs):
             if j == 0:
                 session_dir = output.parent.parent
                 session_file = "_".join(
