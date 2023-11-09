@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from .imagefile import ImageFile
 from .utils import hash_file
 
 
@@ -17,7 +18,7 @@ class ProcessingModule(ABC):
         self.cli_call = " ".join(args)
         self.parsed_args = self.cli(args)
         self.outputs = self.run(**self.parsed_args)
-        self.write_prov()
+        self.generate_prov()
 
     @staticmethod
     @abstractmethod
@@ -26,7 +27,7 @@ class ProcessingModule(ABC):
 
     @staticmethod
     @abstractmethod
-    def run(*args, **kwargs) -> dict[str, Path]:
+    def run(*args, **kwargs) -> dict[str, Path] | list[dict[str, Path]]:
         raise NotImplementedError
 
     @staticmethod
@@ -44,7 +45,7 @@ class ProcessingModule(ABC):
         else:
             raise ValueError("Container labels not found. Running outside of container?")
 
-    def create_prov(self) -> str:
+    def create_prov(self, args: dict[str], outputs: dict[str]) -> str:
         lbls = self.get_container_labels()
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
@@ -53,15 +54,24 @@ class ProcessingModule(ABC):
             f"TimeStamp: {datetime.datetime.utcnow().isoformat()}\n"
             f"Inputs: \n"
         )
-        inputs = {k: v for k, v in self.parsed_args.items() if isinstance(v, Path)}
+        inputs = {
+            k: v
+            for k, v in args.items()
+            if isinstance(v, (Path, ImageFile))
+            or (isinstance(v, list) and isinstance(v[0], (Path, ImageFile)))
+        }
         if len(inputs) > 0:
             for k, v in inputs.items():
-                prov_str += f"  - {k}:{v}:sha256:{hash_file(v, include_names=False)}\n"
+                v_list = v if isinstance(v, list) else [v]
+                for item in v_list:
+                    prov_str += f"  - {k}:{item}:sha256:{hash_file(item, include_names=False)}\n"
         prov_str += f"Outputs: \n"
-        if len(self.outputs) > 0:
-            for k, v in self.outputs.items():
-                prov_str += f"  - {k}:{v}:sha256:{hash_file(v, include_names=False)}\n"
-        params = {k: v for k, v in self.parsed_args.items() if not isinstance(v, Path)}
+        if len(outputs) > 0:
+            for k, v in outputs.items():
+                v_list = v if isinstance(v, list) else [v]
+                for item in v_list:
+                    prov_str += f"  - {k}:{item}:sha256:{hash_file(item, include_names=False)}\n"
+        params = {k: v for k, v in inputs if k not in inputs}
         prov_str += f"Parameters: \n"
         if len(params) > 0:
             for k, v in params.items():
@@ -70,10 +80,10 @@ class ProcessingModule(ABC):
         prov_str += f"---\n"
         return prov_str
 
-    def write_prov(self) -> None:
-        prov_str = self.create_prov()
-        for i, output in enumerate(self.outputs.values()):
-            if i == 0:
+    @staticmethod
+    def write_prov(prov_str: str, outputs: dict[str, Path]) -> None:
+        for j, output in enumerate(outputs):
+            if j == 0:
                 session_dir = output.parent.parent
                 session_file = "_".join(
                     [session_dir.parent.name, session_dir.name, "_Provenance.txt"]
@@ -84,3 +94,22 @@ class ProcessingModule(ABC):
             prov_path = output.parent / output.name.replace(suffix, ".prov")
             with open(prov_path, "w") as f:
                 f.write(prov_str)
+
+    def check_multi_prov(self) -> bool:
+        multi_inputs = all(
+            isinstance(arg, list) and len(arg) == len(list(self.parsed_args.values())[0])
+            for arg in self.parsed_args.values()
+        )
+        return multi_inputs and len(self.outputs) == len(list(self.parsed_args.values())[0])
+
+    def generate_prov(self) -> None:
+        if self.check_multi_prov():
+            for i in range(len(list(self.parsed_args.values())[0])):
+                prov_str = self.create_prov(
+                    {k: v[i] for k, v in self.parsed_args.items()},
+                    self.outputs[i],
+                )
+                self.write_prov(prov_str, self.outputs[i])
+        else:
+            prov_str = self.create_prov(self.parsed_args, self.outputs)
+            self.write_prov(prov_str, self.outputs)
