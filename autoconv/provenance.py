@@ -78,7 +78,9 @@ class ProcessingModule(ABC):
         prov_str += f"Parameters: \n"
         if len(params) > 0:
             for k, v in params.items():
-                prov_str += f"  - {k}:{str(v)}\n"
+                v_list = v if isinstance(v, list) else [v]
+                for item in v_list:
+                    prov_str += f"  - {k}:{str(item)}\n"
         prov_str += f"Command: {self.cli_call}\n"
         prov_str += f"---\n"
         return prov_str
