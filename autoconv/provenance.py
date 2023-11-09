@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -82,7 +83,9 @@ class ProcessingModule(ABC):
                 for item in v_list:
                     prov_str += f"  - {k}:{str(item)}\n"
         prov_str += f"Command: {self.cli_call}\n"
-        prov_str += f"---\n"
+        hashobj = hashlib.sha256()
+        hashobj.update(prov_str.encode("utf-8"))
+        prov_str = f"Id: {hashobj.hexdigest()}\n" + prov_str + f"---\n"
         return prov_str
 
     @staticmethod
