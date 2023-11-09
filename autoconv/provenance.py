@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 from pathlib import Path
+import sys
 from typing import Any
 
 from .imagefile import ImageFile
@@ -15,7 +16,7 @@ class ProcessingModule(ABC):
 
     def __init__(self, args: list[str] | None = None) -> None:
         self.verify_container()
-        self.cli_call = " ".join(args)
+        self.cli_call = " ".join(sys.argv[1:] if args is None else args)
         self.parsed_args = self.cli(args)
         self.outputs = self.run(**self.parsed_args)
         self.generate_prov()
