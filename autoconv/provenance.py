@@ -74,7 +74,7 @@ class ProcessingModule(ABC):
                 v_list = v if isinstance(v, list) else [v]
                 for item in v_list:
                     prov_str += f"  - {k}:{item}:sha256:{hash_file(item, include_names=False)}\n"
-        params = {k: v for k, v in inputs if k not in inputs}
+        params = {k: v for k, v in args.items() if k not in inputs}
         prov_str += f"Parameters: \n"
         if len(params) > 0:
             for k, v in params.items():
