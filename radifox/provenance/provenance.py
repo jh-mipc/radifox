@@ -7,8 +7,8 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from .imagefile import ImageFile
-from .utils import hash_file
+from ..ontology.imagefile import ImageFile
+from ..conversion.utils import hash_file
 
 
 class ProcessingModule(ABC):

@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 from typing import Optional
 
-from ._version import __version__
+from .._version import __version__
 from .dicom import DicomSet, sort_dicoms
 from .logging import create_loggers
 from .metadata import Metadata

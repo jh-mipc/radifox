@@ -12,11 +12,11 @@ from typing import Callable, List, Tuple, Union, Any, Optional
 
 import numpy as np
 
-from ._version import __version__
+from .._version import __version__
+from ..qa.create import create_qa_image
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
-from .qa import create_qa_image
 # from .logging import WARNING_DEBUG
 from .utils import (mkdir_p, reorient, parse_dcm2niix_filenames, remove_created_files, hash_file_list, none_to_float,
                     find_closest, FILE_OCTAL, hash_file_dir, p_add, get_software_versions, hash_value, shift_date,

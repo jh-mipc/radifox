@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 from typing import List, Optional
 
-from ._version import __version__
+from .._version import __version__
 from .exec import run_autoconv, ExecError
 from .lut import LookupTable
 from .metadata import Metadata

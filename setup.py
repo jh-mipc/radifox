@@ -49,8 +49,8 @@ setup(
     keywords="mri conversion",
     entry_points={
         'console_scripts': [
-            'radifox-convert=radifox.cli:convert',
-            'radifox-update=radifox.cli:update',
+            'radifox-convert=radifox.conversion.cli:convert',
+            'radifox-update=radifox.conversion.cli:update',
         ]
     },
     python_requires='>=3.9',
