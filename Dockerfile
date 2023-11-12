@@ -29,10 +29,10 @@ RUN echo -e "{\n \
 }" > /opt/manifest.json
 
 # Copy package and install
-COPY requirements.txt /tmp/autoconv-src/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/autoconv-src/requirements.txt
-COPY . /tmp/autoconv-src/
-RUN pip install --no-cache-dir /tmp/autoconv-src/ && \
-    rm -rf /tmp/autoconv-src/
+COPY requirements.txt /tmp/radifox-src/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/radifox-src/requirements.txt
+COPY . /tmp/radifox-src/
+RUN pip install --no-cache-dir /tmp/radifox-src/ && \
+    rm -rf /tmp/radifox-src/
 
-ENTRYPOINT 'autoconv-convert'
+ENTRYPOINT 'radifox-convert'
