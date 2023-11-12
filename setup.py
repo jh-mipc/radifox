@@ -1,3 +1,4 @@
+from pathlib import Path
 from setuptools import setup, find_packages
 
 __package_name__ = "radifox"
@@ -19,10 +20,6 @@ def get_version_and_cmdclass(pkg_path):
 
 __version__, cmdclass = get_version_and_cmdclass(__package_name__)
 
-dir = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(dir, 'README.md')) as f:
-    long_description = f.read()
-
 
 setup(
     name=__package_name__,
@@ -31,7 +28,7 @@ setup(
         "RADIFOX is the RADiological Image File Ontology eXtension, "
         "a Python package for the organization and management of medical images."
     ),
-    long_description=long_description,
+    long_description=(Path(__file__).parent.resolve() / "README.md").read_text(),
     long_description_content_type='text/markdown',
     author='Blake Dewey',
     author_email='blake.dewey@jhu.edu',
