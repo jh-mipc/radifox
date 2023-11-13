@@ -1,0 +1,9 @@
+ - Avoid splitting PARREC files for multi-image data
+ - Type consistent defaults/type hinting in BaseInfo
+ - Add a `rename` CLI function to move sessions/subjects while updating metadata files
+ - Clean-up/add/update type hints throughout
+ - Add auto-logging in auto-provenance
+ - Add auto-qa in auto-provenance
+ - Add tests for all features
+ - Clean-up/finish QA Webapp (extras editing, processed image QA, etc.)
+ - Update/finish anonymization feature (use relative dates, audit for other PHI possiblities)
