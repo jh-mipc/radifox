@@ -161,11 +161,11 @@ def add_manual_entry(project_id, subject_id, session_id, key, value):
 
 def update_manual_entry(project_id, subject_id, session_id, data):
     filepath = (
-            Path("/data")
-            / project_id
-            / subject_id
-            / session_id
-            / "_".join([subject_id, session_id, "ManualNaming.json"])
+        Path("/data")
+        / project_id
+        / subject_id
+        / session_id
+        / "_".join([subject_id, session_id, "ManualNaming.json"])
     )
     json_obj = json.loads(filepath.read_text()) if filepath.exists() else {}
 

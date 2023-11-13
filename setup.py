@@ -20,7 +20,6 @@ def get_version_and_cmdclass(pkg_path):
 
 __version__, cmdclass = get_version_and_cmdclass(__package_name__)
 
-
 setup(
     name=__package_name__,
     version=__version__,
@@ -29,36 +28,36 @@ setup(
         "a Python package for the organization and management of medical images."
     ),
     long_description=(Path(__file__).parent.resolve() / "README.md").read_text(),
-    long_description_content_type='text/markdown',
-    author='Blake Dewey',
-    author_email='blake.dewey@jhu.edu',
-    url='https://gitlab.com/iacl/radifox',
-    license='Apache License, 2.0',
+    long_description_content_type="text/markdown",
+    author="Blake Dewey",
+    author_email="blake.dewey@jhu.edu",
+    url="https://gitlab.com/iacl/radifox",
+    license="Apache License, 2.0",
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Environment :: Console',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3.7',
-        'Topic :: Scientific/Engineering'
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3.7",
+        "Topic :: Scientific/Engineering",
     ],
     packages=find_packages(),
     keywords="mri conversion",
     entry_points={
-        'console_scripts': [
-            'radifox-convert=radifox.conversion.cli:convert',
-            'radifox-update=radifox.conversion.cli:update',
+        "console_scripts": [
+            "radifox-convert=radifox.conversion.cli:convert",
+            "radifox-update=radifox.conversion.cli:update",
         ]
     },
-    python_requires='>=3.9',
+    python_requires=">=3.10",
     install_requires=[
-        'nibabel',
-        'pydicom',
-        'numpy',
-        'pillow',
-        'scipy',
-        'resize @ git+https://gitlab.com/iacl/resize@v0.3.0',
+        "nibabel",
+        "pydicom",
+        "numpy",
+        "pillow",
+        "scipy",
+        "resize @ git+https://gitlab.com/iacl/resize@v0.3.0",
     ],
-    package_data={'radifox': ['parrec_templates/*.txt']},
+    package_data={"radifox": ["parrec_templates/*.txt"]},
     cmdclass=cmdclass,
 )
