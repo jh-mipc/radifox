@@ -1,7 +1,7 @@
 import nibabel as nib
 import numpy as np
 from PIL import Image
-from resize.scipy import resize
+from radifox.utils.resize.scipy import resize
 
 
 def create_qa_image(

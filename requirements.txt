@@ -3,4 +3,4 @@ numpy==1.26.0
 pydicom==2.4.3
 pillow==10.0.1
 scipy==1.11.3
-resize @ git+https://gitlab.com/iacl/resize@v0.3.0
+radifox-utils==1.0.1

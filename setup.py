@@ -56,7 +56,7 @@ setup(
         "numpy",
         "pillow",
         "scipy",
-        "resize @ git+https://gitlab.com/iacl/resize@v0.3.0",
+        "radifox-utils",
     ],
     package_data={"radifox": ["parrec_templates/*.txt"]},
     cmdclass=cmdclass,
