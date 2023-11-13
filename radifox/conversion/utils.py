@@ -12,8 +12,7 @@ from subprocess import check_output
 import nibabel as nib
 from pydicom.dataset import Dataset, FileDataset, Tag
 
-
-ORIENT_CODES = {'sagittal': 'PIL', 'coronal': 'LIP', 'axial': 'LPS'}
+ORIENT_CODES = {"sagittal": "PIL", "coronal": "LIP", "axial": "LPS"}
 
 
 # http://stackoverflow.com/a/22718321
@@ -23,7 +22,7 @@ def mkdir_p(path: Path, mode: int = 0o777) -> None:
 
 def copytree_link(source: Path, dest: Path, symlink: bool) -> None:
     dest.mkdir(parents=True, exist_ok=True)
-    for path in source.glob('*'):
+    for path in source.glob("*"):
         if path.is_file():
             if symlink:
                 (dest / path.name).symlink_to(path)
@@ -38,6 +37,7 @@ def copytree_link(source: Path, dest: Path, symlink: bool) -> None:
 def silentremove(filename: Path) -> None:
     import shutil
     import errno
+
     try:
         if filename.is_file():
             filename.unlink()
@@ -50,11 +50,11 @@ def silentremove(filename: Path) -> None:
 
 def read_csv(csv_filename: Path) -> dict[str, list[str]]:
     data = csv_filename.read_bytes()
-    codec = 'UTF-8-SIG' if data.startswith(BOM_UTF8) else 'UTF-8'
+    codec = "UTF-8-SIG" if data.startswith(BOM_UTF8) else "UTF-8"
     data = data.decode(codec)
-    line_sep = '\r\n' if '\r\n' in data else '\n'
+    line_sep = "\r\n" if "\r\n" in data else "\n"
     data = data.split(line_sep)
-    out_dict = {key: [] for key in data[0].split(',')}
+    out_dict = {key: [] for key in data[0].split(",")}
     for row in csv.DictReader(data):
         for key in out_dict.keys():
             out_dict[key].append(row[key])
@@ -62,42 +62,46 @@ def read_csv(csv_filename: Path) -> dict[str, list[str]]:
 
 
 def convert_dicom_date(date_str: str) -> date:
-    return datetime.strptime(date_str.replace('-', ''), '%Y%m%d').date()
+    return datetime.strptime(date_str.replace("-", ""), "%Y%m%d").date()
 
 
 def convert_dicom_time(time_str: str) -> time:
-    return datetime.strptime(time_str.split('.')[0].ljust(6, '0'), '%H%M%S').time()
+    return datetime.strptime(time_str.split(".")[0].ljust(6, "0"), "%H%M%S").time()
 
 
 def convert_dicom_datetime(dt_str: str) -> date:
-    return datetime.strptime(dt_str.replace('-', '').split('.')[0], '%Y%m%d%H%M%S')
+    return datetime.strptime(dt_str.replace("-", "").split(".")[0], "%Y%m%d%H%M%S")
 
 
 vr_corr = {
-    'CS': str,
-    'DA': convert_dicom_date,
-    'DS': float,
-    'DT': convert_dicom_datetime,
-    'FD': float,
-    'FL': float,
-    'IS': int,
-    'LO': str,
-    'LT': str,
-    'OB': bytes,
-    'PN': str,
-    'SH': str,
-    'SL': int,
-    'SS': int,
-    'ST': str,
-    'TM': convert_dicom_time,
-    'UI': str,
-    'UL': int,
-    'US': int
+    "CS": str,
+    "DA": convert_dicom_date,
+    "DS": float,
+    "DT": convert_dicom_datetime,
+    "FD": float,
+    "FL": float,
+    "IS": int,
+    "LO": str,
+    "LT": str,
+    "OB": bytes,
+    "PN": str,
+    "SH": str,
+    "SL": int,
+    "SS": int,
+    "ST": str,
+    "TM": convert_dicom_time,
+    "UI": str,
+    "UL": int,
+    "US": int,
 }
 
 
-def extract_de(ds: Dataset | FileDataset, label: str, series_uid, keep_list: bool = False) -> \
-        None | tuple | float | int | str:
+def extract_de(
+    ds: Dataset | FileDataset,
+    label: str,
+    series_uid,
+    keep_list: bool = False,
+) -> None | tuple | float | int | str:
     if label not in ds:
         return tuple() if keep_list else None
     de = ds[label]
@@ -110,8 +114,10 @@ def extract_de(ds: Dataset | FileDataset, label: str, series_uid, keep_list: boo
             out_list.append(vr_corr[de.VR](item))
         out_list = tuple(out_list)
     except ValueError:
-        logging.warning('Data element (%s) will not conform to required type (%s) for %s.' %
-                        (de.name, str(vr_corr[de.VR]), series_uid))
+        logging.warning(
+            "Data element (%s) will not conform to required type (%s) for %s."
+            % (de.name, str(vr_corr[de.VR]), series_uid)
+        )
         return tuple() if keep_list else None
     return out_list[0] if (len(out_list) == 1 and not keep_list) else out_list
 
@@ -127,10 +133,9 @@ def is_intstr(test_str: str) -> bool:
 def reorient(input_file: Path, orientation: str) -> bool:
     # noinspection PyTypeChecker
     input_obj = nib.Nifti1Image.load(input_file)
-    input_orient = ''.join(nib.aff2axcodes(input_obj.affine))
+    input_orient = "".join(nib.aff2axcodes(input_obj.affine))
     target_orient = ORIENT_CODES[orientation]
-    logging.debug('Reorienting %s from %s to %s.' %
-                  (input_file, input_orient, target_orient))
+    logging.debug("Reorienting %s from %s to %s." % (input_file, input_orient, target_orient))
     if input_orient != tuple(target_orient):
         try:
             orig_ornt = nib.orientations.io_orientation(input_obj.affine)
@@ -142,7 +147,7 @@ def reorient(input_file: Path, orientation: str) -> bool:
             nib.Nifti1Image(data, affine, input_obj.header).to_filename(str(input_file))
             return True
         except ValueError:
-            logging.warning('Reorientation failed for %s' % input_file)
+            logging.warning("Reorientation failed for %s" % input_file)
             return False
 
 
@@ -152,17 +157,17 @@ def allowed_archives() -> (list[str], list[str]):
     for names, extensions, _ in shutil.get_unpack_formats():
         allowed_exts.extend(extensions)
         allowed_names.append(names)
-    if '.zip' in allowed_exts:
-        allowed_exts.append('.zip.zip')
+    if ".zip" in allowed_exts:
+        allowed_exts.append(".zip.zip")
     return allowed_names, allowed_exts
 
 
 def extract_archive(input_zipfile: Path, output_dir: Path) -> None:
-    logging.info('Extracting archive')
+    logging.info("Extracting archive")
     mkdir_p(output_dir)
     # noinspection PyTypeChecker
     shutil.unpack_archive(input_zipfile, output_dir)
-    logging.info('Extraction complete')
+    logging.info("Extraction complete")
 
 
 def make_tuple(item: bytes | str | Sequence) -> tuple:
@@ -172,8 +177,11 @@ def make_tuple(item: bytes | str | Sequence) -> tuple:
 
 
 def remove_created_files(filename: Path) -> None:
-    for imgname in [f for f in filename.parent.glob(filename.name + '*')
-                    if re.search(filename.name + r'_*[A-Za-z0-9_]*\..+$', f.name)]:
+    for imgname in [
+        f
+        for f in filename.parent.glob(filename.name + "*")
+        if re.search(filename.name + r"_*[A-Za-z0-9_]*\..+$", f.name)
+    ]:
         imgname.unlink()
 
 
@@ -187,11 +195,11 @@ def parse_dcm2niix_filenames(stdout: str) -> list[Path]:
 
 
 def add_acq_num(name: str, count: int) -> str:
-    prefix = '_'.join(name.split('_')[:-1])
-    contrast_arr = name.split('_')[-1].split('-')
-    addons = '' if len(contrast_arr) == 6 else ('-' + '-'.join(contrast_arr[6:]))
-    base_contrast = '-'.join(contrast_arr[:6])
-    return prefix + '_' + base_contrast + ('-ACQ%d' % count) + addons
+    prefix = "_".join(name.split("_")[:-1])
+    contrast_arr = name.split("_")[-1].split("-")
+    addons = "" if len(contrast_arr) == 6 else ("-" + "-".join(contrast_arr[6:]))
+    base_contrast = "-".join(contrast_arr[:6])
+    return prefix + "_" + base_contrast + ("-ACQ%d" % count) + addons
 
 
 FILE_OCTAL = 0o660
@@ -199,18 +207,21 @@ DIR_OCTAL = 0o2770
 
 
 def has_permissions(path: Path, octal: int = DIR_OCTAL) -> bool:
-    return int('0o' + oct(path.stat().st_mode)[-4:], 8) == octal
+    return int("0o" + oct(path.stat().st_mode)[-4:], 8) == octal
 
 
-def recursive_chmod(directory: Path, dir_octal: int = DIR_OCTAL,
-                    file_octal: int = FILE_OCTAL) -> None:
+def recursive_chmod(
+    directory: Path,
+    dir_octal: int = DIR_OCTAL,
+    file_octal: int = FILE_OCTAL,
+) -> None:
     if not directory.exists():
         return
     elif directory.is_file():
         directory.chmod(file_octal)
     else:
         directory.chmod(dir_octal)
-        for item in directory.rglob('*'):
+        for item in directory.rglob("*"):
             if item.is_dir():
                 item.chmod(dir_octal)
             elif item.is_file():
@@ -230,11 +241,17 @@ def find_closest(target: int, to_check: list[int]) -> int | None:
     return candidates[0] if len(candidates) == 1 else min(candidates)
 
 
-def hash_file(filename: Path, include_names: bool = True, hashfunc: str = 'sha256', *, _bufsize=2**18) -> str:
+def hash_file(
+    filename: Path,
+    include_names: bool = True,
+    hashfunc: str = "sha256",
+    *,
+    _bufsize=2**18,
+) -> str:
     hashobj = hashlib.new(hashfunc)
     if include_names:
         hashobj.update(filename.name.encode())
-    with filename.open('rb') as fp:
+    with filename.open("rb") as fp:
         buf = bytearray(_bufsize)  # Reusable buffer to reduce allocations.
         view = memoryview(buf)
         while True:
@@ -246,7 +263,7 @@ def hash_file(filename: Path, include_names: bool = True, hashfunc: str = 'sha25
     return str(hashobj.hexdigest())
 
 
-def hash_dir(directory, include_names: bool = True, hashfunc: str = 'sha256') -> str:
+def hash_dir(directory, include_names: bool = True, hashfunc: str = "sha256") -> str:
     hashobj = hashlib.new(hashfunc)
     for path in sorted(directory.iterdir(), key=lambda p: str(p).lower()):
         hashobj.update(hash_file_dir(path, include_names, hashfunc).encode())
@@ -255,21 +272,23 @@ def hash_dir(directory, include_names: bool = True, hashfunc: str = 'sha256') ->
     return str(hashobj.hexdigest())
 
 
-def hash_file_dir(file_dir: Path, include_names: bool = True, hashfunc: str = 'sha256') -> str:
+def hash_file_dir(file_dir: Path, include_names: bool = True, hashfunc: str = "sha256") -> str:
     if file_dir.is_file():
         return hash_file(file_dir, include_names=include_names, hashfunc=hashfunc)
     elif file_dir.is_dir():
         return hash_dir(file_dir, include_names=include_names, hashfunc=hashfunc)
 
 
-def hash_file_list(file_list: list[Path], include_names: bool = True, hashfunc: str = 'sha256') -> str:
+def hash_file_list(
+    file_list: list[Path], include_names: bool = True, hashfunc: str = "sha256"
+) -> str:
     hashobj = hashlib.new(hashfunc)
     for path in file_list:
         hashobj.update(hash_file(path, include_names, hashfunc).encode())
     return str(hashobj.hexdigest())
 
 
-def hash_value(value: str | None, hashfunc: str = 'sha256') -> str | None:
+def hash_value(value: str | None, hashfunc: str = "sha256") -> str | None:
     if value is None:
         return None
     m = hashlib.new(hashfunc)
@@ -282,15 +301,21 @@ def p_add(path: Path, extra: str) -> Path:
 
 
 def get_software_versions() -> dict[str, str]:
-    dcm2niix_version = check_output('dcm2niix --version; exit 0', shell=True).decode().strip().split('\n')[-1].strip()
-    return {'dcm2niix': dcm2niix_version}
+    dcm2niix_version = (
+        check_output("dcm2niix --version; exit 0", shell=True)
+        .decode()
+        .strip()
+        .split("\n")[-1]
+        .strip()
+    )
+    return {"dcm2niix": dcm2niix_version}
 
 
 def version_check(saved_version: str, current_version: str) -> bool:
-    if 'dev' in saved_version or 'dev' in current_version:
+    if "dev" in saved_version or "dev" in current_version:
         return False
-    saved_arr = saved_version.split('-')[0].split('.')
-    current_arr = current_version.split('-')[0].split('.')
+    saved_arr = saved_version.split("-")[0].split(".")
+    current_arr = current_version.split("-")[0].split(".")
     for saved, current in zip(saved_arr, current_arr):
         if int(saved) < int(current):
             return False
@@ -298,83 +323,100 @@ def version_check(saved_version: str, current_version: str) -> bool:
 
 
 def shift_date(datetime_str: str, date_shift_days: int = 0) -> str:
-    orig_date = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
-    return (orig_date + timedelta(days=date_shift_days)).strftime('%Y-%m-%d %H:%M:%S')
+    orig_date = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+    return (orig_date + timedelta(days=date_shift_days)).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def none_to_float(value: float | None) -> float:
-    return float('inf') if value is None else value
+    return float("inf") if value is None else value
 
 
 def get_flattened_dataset(dataset: FileDataset | Dataset) -> Dataset:
-    return Dataset({de.tag: de for de in dataset.iterall() if de.VR != 'SQ'})
+    return Dataset({de.tag: de for de in dataset.iterall() if de.VR != "SQ"})
 
 
 EXCLUDE_TAGS = [
-    Tag('SharedFunctionalGroupsSequence'),
-    Tag('PerFrameFunctionalGroupsSequence'),
-    Tag('DimensionIndexSequence'),
-    Tag('NumberOfFrames'),
-    Tag('SourceImageEvidenceSequence'),
-    Tag('ReferencedImageEvidenceSequence'),
-    Tag('PixelData')
+    Tag("SharedFunctionalGroupsSequence"),
+    Tag("PerFrameFunctionalGroupsSequence"),
+    Tag("DimensionIndexSequence"),
+    Tag("NumberOfFrames"),
+    Tag("SourceImageEvidenceSequence"),
+    Tag("ReferencedImageEvidenceSequence"),
+    Tag("PixelData"),
 ]
 
 
 def fix_sf_headers(dataset: Dataset) -> Dataset:
-    if 'EffectiveEchoTime' in dataset:
+    if "EffectiveEchoTime" in dataset:
         dataset.EchoTime = dataset.EffectiveEchoTime
-    scan_seq: list = (dataset.ScanningSequence if dataset['ScanningSequence'].VM > 1 else [dataset.ScanningSequence]) \
-        if 'ScanningSequence' in dataset else []
-    if 'EchoPulseSequence' in dataset:
-        if dataset.EchoPulseSequence != 'SPIN':
-            scan_seq.append('GR')
-        if dataset.EchoPulseSequence != 'GRADIENT':
-            scan_seq.append('SE')
-    if dataset.get('InversionRecovery', 'NO') == 'YES':
-        scan_seq.append('IR')
-    if dataset.get('EchoPlanarPulseSequence', 'NO') == 'YES':
-        scan_seq.append('EP')
+    scan_seq: list = (
+        (
+            dataset.ScanningSequence
+            if dataset["ScanningSequence"].VM > 1
+            else [dataset.ScanningSequence]
+        )
+        if "ScanningSequence" in dataset
+        else []
+    )
+    if "EchoPulseSequence" in dataset:
+        if dataset.EchoPulseSequence != "SPIN":
+            scan_seq.append("GR")
+        if dataset.EchoPulseSequence != "GRADIENT":
+            scan_seq.append("SE")
+    if dataset.get("InversionRecovery", "NO") == "YES":
+        scan_seq.append("IR")
+    if dataset.get("EchoPlanarPulseSequence", "NO") == "YES":
+        scan_seq.append("EP")
     dataset.ScanningSequence = sorted(set(scan_seq))
 
-    seq_var: list = (dataset.SequenceVariant if dataset['SequenceVariant'].VM > 1 else [dataset.SequenceVariant]) \
-        if 'SequenceVariant' in dataset else []
-    if dataset.get('SegmentedKSpaceTraversal', 'SINGLE') != 'SINGLE':
-        seq_var.append('SK')
-    if dataset.get('MagnetizationTransfer', 'NONE') != 'NONE':
-        seq_var.append('MTC')
-    if dataset.get('SteadyStatePulseSequence', 'NONE') != 'NONE':
-        seq_var.append('TRSS' if dataset.SteadyStatePulseSequence == 'TIME_REVERSED' else 'SS')
-    if dataset.get('Spoiling', 'NONE') != 'NONE':
-        seq_var.append('SP')
-    if dataset.get('OversamplingPhase', 'NONE') != 'NONE':
-        seq_var.append('OSP')
+    seq_var: list = (
+        (
+            dataset.SequenceVariant
+            if dataset["SequenceVariant"].VM > 1
+            else [dataset.SequenceVariant]
+        )
+        if "SequenceVariant" in dataset
+        else []
+    )
+    if dataset.get("SegmentedKSpaceTraversal", "SINGLE") != "SINGLE":
+        seq_var.append("SK")
+    if dataset.get("MagnetizationTransfer", "NONE") != "NONE":
+        seq_var.append("MTC")
+    if dataset.get("SteadyStatePulseSequence", "NONE") != "NONE":
+        seq_var.append("TRSS" if dataset.SteadyStatePulseSequence == "TIME_REVERSED" else "SS")
+    if dataset.get("Spoiling", "NONE") != "NONE":
+        seq_var.append("SP")
+    if dataset.get("OversamplingPhase", "NONE") != "NONE":
+        seq_var.append("OSP")
     if len(seq_var) == 0:
-        seq_var.append('NONE')
+        seq_var.append("NONE")
     dataset.SequenceVariant = sorted(set(seq_var))
 
-    scan_opts: list = (dataset.ScanOptions if dataset['ScanOptions'].VM > 1 else [dataset.ScanOptions]) \
-        if 'ScanOptions' in dataset else []
-    if dataset.get('RectilinearPhaseEncodeReordering', 'LINEAR') != 'LINEAR':
-        scan_opts.append('PER')
+    scan_opts: list = (
+        (dataset.ScanOptions if dataset["ScanOptions"].VM > 1 else [dataset.ScanOptions])
+        if "ScanOptions" in dataset
+        else []
+    )
+    if dataset.get("RectilinearPhaseEncodeReordering", "LINEAR") != "LINEAR":
+        scan_opts.append("PER")
     frame_type3 = dataset.FrameType[2]
-    if frame_type3 == 'ANGIO':
-        dataset.AngioFlag = 'Y'
-    if frame_type3.startswith('CARD'):
-        scan_opts.append('CG')
-    if frame_type3.endswith('RESP_GATED'):
-        scan_opts.append('RG')
-    if 'PartialFourierDirection' in dataset:
-        if dataset.PartialFourierDirection == 'PHASE':
-            scan_opts.append('PFP')
-        elif dataset.PartialFourierDirection == 'FREQUENCY':
-            scan_opts.append('PFF')
-    if dataset.get('SpatialPresaturation', 'NONE') != 'NONE':
-        scan_opts.append('SP')
-    if dataset.get('SpectrallySelectedSuppression', 'NONE').startswith('FAT'):
-        scan_opts.append('FS')
-    if dataset.get('FlowCompensation', 'NONE') != 'NONE':
-        scan_opts.append('FC')
+    if frame_type3 == "ANGIO":
+        dataset.AngioFlag = "Y"
+    if frame_type3.startswith("CARD"):
+        scan_opts.append("CG")
+    if frame_type3.endswith("RESP_GATED"):
+        scan_opts.append("RG")
+    if "PartialFourierDirection" in dataset:
+        if dataset.PartialFourierDirection == "PHASE":
+            scan_opts.append("PFP")
+        elif dataset.PartialFourierDirection == "FREQUENCY":
+            scan_opts.append("PFF")
+    if dataset.get("SpatialPresaturation", "NONE") != "NONE":
+        scan_opts.append("SP")
+    if dataset.get("SpectrallySelectedSuppression", "NONE").startswith("FAT"):
+        scan_opts.append("FS")
+    if dataset.get("FlowCompensation", "NONE") != "NONE":
+        scan_opts.append("FC")
     dataset.ScanOptions = sorted(set(scan_opts))
     return dataset
 
@@ -383,8 +425,10 @@ def create_sf_headers(dataset: Dataset | FileDataset) -> list[Dataset]:
     shared_ds = Dataset({de.tag: de for de in dataset if de.tag not in EXCLUDE_TAGS})
     shared_ds.file_meta = dataset.file_meta
     shared_ds.update(get_flattened_dataset(dataset.SharedFunctionalGroupsSequence[0]))
-    flattened_frame_ds_list = [get_flattened_dataset(dataset.PerFrameFunctionalGroupsSequence[i])
-                               for i in range(len(dataset.PerFrameFunctionalGroupsSequence))]
+    flattened_frame_ds_list = [
+        get_flattened_dataset(dataset.PerFrameFunctionalGroupsSequence[i])
+        for i in range(len(dataset.PerFrameFunctionalGroupsSequence))
+    ]
 
     sf_ds_list = []
     for flat_frame_ds in flattened_frame_ds_list:
@@ -395,29 +439,39 @@ def create_sf_headers(dataset: Dataset | FileDataset) -> list[Dataset]:
 
 
 def parse_dcm2niix_suffixes(filenames: list[Path], base: str) -> list[tuple[str]]:
-    suffixes = [filename.name.replace(base, '') for filename in filenames]
+    suffixes = [filename.name.replace(base, "") for filename in filenames]
     for i in range(len(suffixes)):
-        suffixes[i] = suffixes[i].replace('_e', '_ECHO')
-        suffixes[i] = suffixes[i].replace('_ph', '_PHA')
-        suffixes[i] = suffixes[i].replace('_real', '_REA')
-        suffixes[i] = suffixes[i].replace('_imaginary', '_IMA')
-        suffixes[i] = suffixes[i].replace('_t', '_DYN')
-    if any([cplx in suffix for suffix in suffixes for cplx in ['PHA', 'REA', 'IMA']]):
+        suffixes[i] = suffixes[i].replace("_e", "_ECHO")
+        suffixes[i] = suffixes[i].replace("_ph", "_PHA")
+        suffixes[i] = suffixes[i].replace("_real", "_REA")
+        suffixes[i] = suffixes[i].replace("_imaginary", "_IMA")
+        suffixes[i] = suffixes[i].replace("_t", "_DYN")
+    if any([cplx in suffix for suffix in suffixes for cplx in ["PHA", "REA", "IMA"]]):
         for i in range(len(suffixes)):
-            if not any([cplx in suffixes[i] for cplx in ['PHA', 'REA', 'IMA']]):
-                suffixes[i] += '_MAG'
+            if not any([cplx in suffixes[i] for cplx in ["PHA", "REA", "IMA"]]):
+                suffixes[i] += "_MAG"
     # Replace numbers after DYN with 1,2,3... in order of original number
-    dyn_nums = sorted({int(re.search(r'_DYN(\d+)', suffix).group(1)) for suffix in suffixes
-                       if re.search(r'_DYN(\d+)', suffix) is not None})
+    dyn_nums = sorted(
+        {
+            int(re.search(r"_DYN(\d+)", suffix).group(1))
+            for suffix in suffixes
+            if re.search(r"_DYN(\d+)", suffix) is not None
+        }
+    )
     for i in range(len(suffixes)):
-        if re.search(r'_DYN(\d+)', suffixes[i]) is not None:
-            dyn_idx = dyn_nums.index(int(re.search(r'_DYN(\d+)', suffixes[i]).group(1))) + 1
-            suffixes[i] = re.sub(r'_DYN(\d+)', '_DYN%d' % dyn_idx, suffixes[i])
+        if re.search(r"_DYN(\d+)", suffixes[i]) is not None:
+            dyn_idx = dyn_nums.index(int(re.search(r"_DYN(\d+)", suffixes[i]).group(1))) + 1
+            suffixes[i] = re.sub(r"_DYN(\d+)", "_DYN%d" % dyn_idx, suffixes[i])
     # Do the same for echoes
-    echo_nums = sorted({int(re.search(r'_ECHO(\d+)', suffix).group(1)) for suffix in suffixes
-                       if re.search(r'_ECHO(\d+)', suffix) is not None})
+    echo_nums = sorted(
+        {
+            int(re.search(r"_ECHO(\d+)", suffix).group(1))
+            for suffix in suffixes
+            if re.search(r"_ECHO(\d+)", suffix) is not None
+        }
+    )
     for i in range(len(suffixes)):
-        if re.search(r'_ECHO(\d+)', suffixes[i]) is not None:
-            dyn_idx = echo_nums.index(int(re.search(r'_ECHO(\d+)', suffixes[i]).group(1))) + 1
-            suffixes[i] = re.sub(r'_ECHO(\d+)', '_ECHO%d' % dyn_idx, suffixes[i])
-    return [tuple(sorted(suffix[1:].split('_'))) for suffix in suffixes]
+        if re.search(r"_ECHO(\d+)", suffixes[i]) is not None:
+            dyn_idx = echo_nums.index(int(re.search(r"_ECHO(\d+)", suffixes[i]).group(1))) + 1
+            suffixes[i] = re.sub(r"_ECHO(\d+)", "_ECHO%d" % dyn_idx, suffixes[i])
+    return [tuple(sorted(suffix[1:].split("_"))) for suffix in suffixes]
