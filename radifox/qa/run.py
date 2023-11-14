@@ -24,7 +24,7 @@ def run(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", default="5000")
-    parser.add_argument("--data-dir")
+    parser.add_argument("--root-directory")
     parser.add_argument("--workers", type=int, default=1)
     parsed = parser.parse_args(args)
 
