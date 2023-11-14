@@ -467,7 +467,10 @@ class BaseSet:
         manual_names: Optional[dict] = None,
         input_hash: Optional[str] = None,
     ) -> None:
-        self.RADIFOXVersion = __version__
+        self.__version__ = {
+            'radifox': __version__,
+            'dcm2niix': get_software_versions()['dcm2niix']
+        }
         self.ConversionSoftwareVersions = get_software_versions()
         if input_hash is None:
             logging.info("Hashing source file(s) for record keeping.")

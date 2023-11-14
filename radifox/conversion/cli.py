@@ -231,7 +231,7 @@ def update(args: Optional[List[str]] = None) -> None:
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
     if not args.force and (
-        version_check(json_obj["RADIFOXVersion"], __version__)
+        version_check(json_obj["__version__"]["radifox"], __version__)
         and json_obj["LookupTable"]["LookupDict"] == lookup_dict
         and json_obj["ManualNames"] == manual_names
     ):
