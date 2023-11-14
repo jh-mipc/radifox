@@ -47,6 +47,7 @@ setup(
         "console_scripts": [
             "radifox-convert=radifox.conversion.cli:convert",
             "radifox-update=radifox.conversion.cli:update",
+            "radifox-qa=radifox.qa.run:run",
         ]
     },
     python_requires=">=3.10",
@@ -58,6 +59,17 @@ setup(
         "scipy",
         "radifox-utils",
     ],
-    package_data={"radifox": ["parrec_templates/*.txt"]},
+    extras_require={
+        "qa": [
+            "flask",
+            "gunicorn",
+        ]
+    },
+    package_data={
+        "radifox": [
+            "conversion/parrec_templates/*.txt",
+            "qa/templates/*.html",
+        ]
+    },
     cmdclass=cmdclass,
 )

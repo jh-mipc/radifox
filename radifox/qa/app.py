@@ -1,10 +1,13 @@
 import base64
+import os
 import json
 from pathlib import Path
 
 from flask import Flask, request, render_template, jsonify, send_from_directory
 
 from ..conversion.json import JSONObjectEncoder, NoIndent
+
+DATA_DIR = Path(os.environ.get("QA_DATA_DIR", "/data")).resolve()
 
 app = Flask(__name__)
 
@@ -17,21 +20,20 @@ def encode_image(filepath):
 
 @app.route("/qa/")
 def index():
-    root_dir = Path("/data")
-    projects = sorted([proj.name for proj in root_dir.glob("*") if proj.is_dir()])
+    projects = sorted([proj.name for proj in DATA_DIR.glob("*") if proj.is_dir()])
     return render_template("index.html", projects=projects)
 
 
 @app.route("/qa/<project_id>/")
 def project(project_id):
-    proj_dir = Path("/data") / project_id
+    proj_dir = DATA_DIR / project_id
     subjects = sorted([pat.name for pat in proj_dir.glob("*") if pat.is_dir()])
     return render_template("project.html", project_id=project_id, subjects=subjects)
 
 
 @app.route("/qa/<project_id>/<subject_id>/")
 def subject(project_id, subject_id):
-    pat_dir = Path("/data") / project_id / subject_id
+    pat_dir = DATA_DIR / project_id / subject_id
     sessions = sorted([session.name for session in pat_dir.glob("*")])
     return render_template(
         "subject.html", project_id=project_id, subject_id=subject_id, sessions=sessions
@@ -40,20 +42,20 @@ def subject(project_id, subject_id):
 
 @app.route("/qa/<project_id>/<subject_id>/<session_id>/")
 def qa(project_id, subject_id, session_id):
-    session_dir = Path("/data") / project_id / subject_id / session_id
+    session_dir = DATA_DIR / project_id / subject_id / session_id
     subjects = sorted(
-        [pat.name for pat in Path("/data", project_id).glob(project_id.upper() + "*")]
+        [pat.name for pat in (DATA_DIR / project_id).glob(project_id.upper() + "*")]
     )
     pat_idx = subjects.index(subject_id)
     prev_subject = subjects[pat_idx - 1] if pat_idx > 0 else None
     next_subject = subjects[pat_idx + 1] if pat_idx < (len(subjects) - 1) else None
-    sessions = sorted([session.name for session in Path("/data", project_id, subject_id).glob("*")])
+    sessions = sorted([session.name for session in (DATA_DIR / project_id / subject_id).glob("*")])
     session_idx = sessions.index(session_id)
     prev_session = sessions[session_idx - 1] if session_idx > 0 else None
     next_session = sessions[session_idx + 1] if session_idx < (len(sessions) - 1) else None
     json_files = (session_dir / "nii").glob("*.json")
     manual_json_path = (
-        Path("/data")
+        DATA_DIR
         / project_id
         / subject_id
         / session_id
@@ -148,7 +150,7 @@ def save_manual(json_obj, filepath):
 
 def add_manual_entry(project_id, subject_id, session_id, key, value):
     filepath = (
-        Path("/data")
+        DATA_DIR
         / project_id
         / subject_id
         / session_id
@@ -161,7 +163,7 @@ def add_manual_entry(project_id, subject_id, session_id, key, value):
 
 def update_manual_entry(project_id, subject_id, session_id, data):
     filepath = (
-        Path("/data")
+        DATA_DIR
         / project_id
         / subject_id
         / session_id
@@ -242,5 +244,5 @@ def change_btn():
 @app.route("/image/<project_id>/<subject_id>/<session_id>/<image_name>")
 def image(project_id, subject_id, session_id, image_name):
     return send_from_directory(
-        str(Path("/data", project_id, subject_id, session_id, "qa", "autoconv")), image_name
+        str(DATA_DIR / project_id / subject_id / session_id / "qa" / "autoconv"), image_name
     )
