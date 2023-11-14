@@ -130,13 +130,16 @@ from radifox.ontology.imagefile import ImageFile
 img = ImageFile('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz')
 print(img.body_part) # prints 'BRAIN'
 print(img.modality) # prints 'T1'
+print(img.parent) # prints Path object for '/path/to/output/study/STUDY-123456/1/nii'
 print(img.name) # prints 'STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'
-print(img.path) # prints Path object for '/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'
 print(img.info.series_description) # prints 'IRFSPGR 3D SAGITTAL PRE'
 ```
 
 Multiple `pathlib.Path` functions are available directly (like `Path.name`) and others are available through the `path` property (like `Path.iterdir`).
 These functions will return `Path` objects, not `ImageFile` objects.
+```python
+print(img.path) # prints Path object for '/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'
+```
 
 #### `ImageFilter`
 The `ImageFilter` class is used to represent a filter for images based on naming.
