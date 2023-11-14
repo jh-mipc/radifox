@@ -368,12 +368,35 @@ Parameters:
 Command: <command-string>
 ```
 
-
+The `<record-id>` is a unique identifier for the record created from a hash of the rest of record.
+The `<module-name>` and `<module-version>` are the name and version of the processing module that created the record (defined in `ProcessingModule` subclass).
+The `<container-url>`, `<container-tag>`, and `<container-hash>` are the URL, tag, and hash of the container used to run the processing module.
+These are derived from specific labels set during container creation.
+For more information on how compatible containers are created, see [Container Creation](#container-creation).
+The `<user-name>` and `<timestamp>` are the user name of the user that ran the processing module and the timestamp of the processing module run completion.
+The `<input-key>`s, `<input-filename>`s, and `<input-hash>`s are the input names, filenames, and hashes of the input files to the processing module.
+Outputs are structured the same way.
+The `<parameter-key>`s and `<parameter-value>`s are the key-value pairs of the parameters passed to the processing module (that are not files).
+The `<command-string>` is the exact command string that was used to run the processing module.
 
 ## Quality Assurance
+The web-based quality assurance system is a system for viewing images and recording QA results.
+Currently, it is limited to the results from the RADIFOX conversion system, but will likely include results from the auto-provenance system in the future.
+
+There are three types of actions that can be taken with the QA webapp.
+- Ignore Button: This will mark the image to be skipped by the conversion process on update.
+- Body Type Buttons: This will change the `bodypart` of the image to the selected value. It is currently available for `BRAIN`, `CSPINE`, `TSPINE`, `LSPINE`, and `ORBITS`.
+- Correct Name Button: This will open a form to correct any of the **core** aspects of the RADIFOX naming convention. `extras` are not yet supported.
+
+The QA webapp is launched with the `radifox-qa` command.
+It is a webapp that runs locally on port 5000 by default.
+It can be accessed at `http://localhost:5000` and will show all projects in the root directory.
+See [`radifox-qa`](#radifox-qa) above for more details.
 
 # Additional Information
 
 ## Advanced CLI Usage
 
 ## JSON Sidecar Format
+
+## Container Creation
