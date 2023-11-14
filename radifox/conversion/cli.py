@@ -6,7 +6,7 @@ import shutil
 from typing import List, Optional
 
 from .._version import __version__
-from .exec import run_autoconv, ExecError
+from .exec import run_conversion, ExecError
 from .lut import LookupTable
 from .metadata import Metadata
 from .utils import hash_file_dir, silentremove, mkdir_p, version_check
@@ -146,7 +146,7 @@ def convert(args: Optional[List[str]] = None) -> None:
             shutil.rmtree(args.output_root / metadata.dir_to_str() / type_dirname)
             silentremove(args.output_root / metadata.dir_to_str() / "nii")
             for filepath in (args.output_root / metadata.dir_to_str() / "logs").glob(
-                "autoconv-*.log"
+                "conversion-*.log"
             ):
                 silentremove(filepath)
             for filepath in (args.output_root / metadata.dir_to_str()).glob("*.json"):
@@ -161,7 +161,7 @@ def convert(args: Optional[List[str]] = None) -> None:
         "InstitutionName": args.institution,
     }
 
-    run_autoconv(
+    run_conversion(
         args.source,
         args.output_root,
         metadata,
@@ -180,7 +180,7 @@ def convert(args: Optional[List[str]] = None) -> None:
 
 def update(args: Optional[List[str]] = None) -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("directory", type=Path, help="Existing AutoConv Directory to update.")
+    parser.add_argument("directory", type=Path, help="Existing RADIFOX Directory to update.")
     parser.add_argument("-l", "--lut-file", type=Path, help="Lookup table file.")
     parser.add_argument(
         "--force", action="store_true", help="Force run even if it would be skipped."
@@ -231,7 +231,7 @@ def update(args: Optional[List[str]] = None) -> None:
     manual_names = json.loads(manual_json_file.read_text()) if manual_json_file.exists() else {}
 
     if not args.force and (
-        version_check(json_obj["AutoConvVersion"], __version__)
+        version_check(json_obj["RADIFOXVersion"], __version__)
         and json_obj["LookupTable"]["LookupDict"] == lookup_dict
         and json_obj["ManualNames"] == manual_names
     ):
@@ -248,14 +248,14 @@ def update(args: Optional[List[str]] = None) -> None:
     for filename in ["nii", "qa", json_file.name]:
         if (args.directory / filename).exists():
             (args.directory / filename).rename(args.directory / "prev" / filename)
-    for filepath in (args.directory / "logs").glob("autoconv-*.log*"):
+    for filepath in (args.directory / "logs").glob("conversion-*.log*"):
         if filepath.name.endswith(".log"):
             filepath.rename(args.directory / "logs" / (filepath.name + ".01"))
         else:
             num = int(filepath.name.split(".")[-1]) + 1
             filepath.rename(args.directory / "logs" / (filepath.name + ".%02d" % num))
     try:
-        run_autoconv(
+        run_conversion(
             type_dir,
             output_root,
             metadata,

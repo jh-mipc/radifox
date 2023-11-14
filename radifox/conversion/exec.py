@@ -25,7 +25,7 @@ class ExecError(Exception):
     pass
 
 
-def run_autoconv(
+def run_conversion(
     source: Optional[Path],
     output_root: Path,
     metadata: Metadata,
@@ -51,7 +51,7 @@ def run_autoconv(
     metadata.check_metadata()
 
     try:
-        logging.info("Beginning scan conversion using AutoConv v" + __version__)
+        logging.info("Beginning scan conversion using RADIFOX v" + __version__)
         if remove_identifiers:
             logging.info(
                 "Anonymization will be performed, including removal of copied source folders."
@@ -72,7 +72,7 @@ def run_autoconv(
                 "PARREC source indicated. Using InstitutionName=%s and MagneticFieldStrength=%d"
                 % (inst_name, manual_args["MagneticFieldStrength"])
             )
-        logging.info("AutoConv starting: %s" % metadata.dir_to_str())
+        logging.info("RADIFOX conversion starting: %s" % metadata.dir_to_str())
         type_folder = session_path / ("parrec" if parrec else "dcm")
         sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
@@ -130,7 +130,7 @@ def run_autoconv(
         recursive_chmod(session_path / "logs")
         if remove_identifiers:
             shutil.rmtree(type_folder)
-        logging.info("AutoConv finished: %s" % metadata.dir_to_str())
+        logging.info("RADIFOX conversion finished: %s" % metadata.dir_to_str())
     except KeyboardInterrupt:
         raise
     except:

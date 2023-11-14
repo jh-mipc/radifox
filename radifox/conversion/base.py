@@ -467,7 +467,7 @@ class BaseSet:
         manual_names: Optional[dict] = None,
         input_hash: Optional[str] = None,
     ) -> None:
-        self.AutoConvVersion = __version__
+        self.RADIFOXVersion = __version__
         self.ConversionSoftwareVersions = get_software_versions()
         if input_hash is None:
             logging.info("Hashing source file(s) for record keeping.")
@@ -787,7 +787,7 @@ class BaseSet:
         )
 
     def generate_qa_image(self, di_obj: BaseInfo) -> None:
-        qa_dir = self.OutputRoot / self.Metadata.dir_to_str() / "qa" / "autoconv"
+        qa_dir = self.OutputRoot / self.Metadata.dir_to_str() / "qa" / "conversion"
         nifti_file = (
             self.OutputRoot / self.Metadata.dir_to_str() / "nii" / (di_obj.NiftiName + ".nii.gz")
         )
