@@ -396,6 +396,32 @@ See [`radifox-qa`](#radifox-qa) above for more details.
 # Additional Information
 
 ## Advanced CLI Usage
+### `radifox-convert`
+| Option                      | Description                                                                                                                            | Default                                         |
+|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
+| `source`                    | The source directory (or zip file) containing the DICOM files.                                                                         | `required`                                      |
+| `-o`, `--output-root`       | The root directory for the output files (contains project directories).                                                                | `required`                                      |
+| `-p`, `--project-id`        | The project ID for the converted session.                                                                                              | `required`                                      |
+| `-s`, `--subject-id`        | The subject ID for the converted session.                                                                                              | `required`                                      |
+| `-e`, `--session-id`        | The session ID for the converted session.                                                                                              | `required`                                      |
+| `-l`, `--lut-file`          | The look-up table file to use for naming.                                                                                              | <output-root>/<project-id>/<project-id>_lut.csv |
+| `--site-id`                 | The site ID for the converted session.                                                                                                 | `None`                                          |
+| `--force`                   | Force conversion even if session directory already exists.                                                                             | `False`                                         |
+| `--reckless`                | Skip consistency checks when forcing run (will overwrite files!)                                                                       | `False`                                         |
+| `--safe`                    | If the session directory already exists, use a new directory with `-#` appended (does not change session ID or filenames)              | `False`                                         |
+| `--no-project-subdir`       | Do not create a project subdirectory in the output root directory. Subjects will be placed directly into the `--output-root` directory | `False`                                         |
+| `--symlink`                 | Create symlinks to the original DICOM files instead of copying them.                                                                   | `False`                                         |
+| `--hardlink`                | Create hardlinks to the original DICOM files instead of copying them.                                                                  | `False`                                         |
+| `--verbose`                 | Log debug output.                                                                                                                      | `False`                                         |
+| `--version`                 | Output RADIFOX version and exit.                                                                                                       | `False`                                         |
+| `--help`                    | Show help message and exit.                                                                                                            | `False`                                         |
+| `--parrec`                  | Convert PAR/REC files instead of DICOM files.                                                                                          | `False`                                         |
+| `--institution-name`        | The institution name to use for the session (required for PAR/REC conversion).                                                         | `None`                                          |
+| `--magnetic-field-strength` | The magnetic field strength to use for the session (required for PAR/REC conversion).                                                  | `None`                                          |
+| `--anonymize`               | Experimental anonymization support (will remove copied DICOM files).                                                                   | `False`                                         |
+| `--date-shift-days`         | The number of days to shift the date by during anonymization.                                                                          | `None`                                          |
+| `--tms-metafile`            | The TMS metafile to use for subject, site and session ID.                                                                              | `None`                                          |
+
 
 ## JSON Sidecar Format
 
