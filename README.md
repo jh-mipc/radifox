@@ -65,6 +65,95 @@ radifox-qa --port 8888 --root-directory /path/to/output
 This will launch the QA webapp on port 8888, pointing to `/path/to/output`.
 The QA webapp will be accessible at `http://localhost:8888` and will show projects in `/path/to/output`.
 
+### Python API
+The `radifox` package also includes a Python API for accessing additional components.
+
+#### `ImageFile`
+The `ImageFile` class is used to represent a single image file, including its name and metadata.
+It is a wrapper around a lot of `pathlib.Path` functions, so it can be used in place of a `Path` object in many cases.
+It additionally defines a number of properties to access naming breakdowns and metadata.
+
+Example Usage:
+```python
+from radifox.ontology.imagefile import ImageFile
+img = ImageFile('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz')
+print(img.body_part) # prints 'BRAIN'
+print(img.modality) # prints 'T1'
+print(img.name) # prints 'STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'
+print(img.info.series_description) # prints 'IRFSPGR 3D SAGITTAL PRE'
+```
+
+#### `ImageFilter`
+The `ImageFilter` class is used to represent a filter for images based on naming.
+It is a wrapper around a `dict` that defines a set of key-value pairs that must be present in the image name.
+It can be defined as keyword arguments in the class constructer or by passing a formatted string to `ImageFile.from_string`.
+
+Example Usage:
+```python
+from radifox.ontology.imagefile import ImageFilter
+
+imgs = [
+    ImageFile('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'),
+    ImageFile('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-04_BRAIN-T2-FSE-2D-AXIAL-POST.nii.gz'),
+]
+
+filt = ImageFilter(body_part='BRAIN', modality='T1')
+print(filt) # prints "body_part=BRAIN,modality=T1"
+print(filt.filter(imgs)) # prints ['/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz']
+
+filt = ImageFilter.from_string('body_part=BRAIN,modality=T2')
+print(filt) # prints "body_part=BRAIN,modality=T2"
+print(filt.filter(imgs)) # prints ['/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-04_BRAIN-T2-FSE-2D-AXIAL-POST.nii.gz']
+```
+
+#### `ProcessingModule`
+The `ProcessingModule` class is used to represent a processing module for use in the auto-provenance system.
+Module code should inherit from this class and implement the `cli` and `run` methods, as well as define the `name` and `version` class attributes.
+The `cli` method should take either a list of options/arguments or None to pull from `sys.argv`.
+It should return a `dict` of keywards and arguments to pass directly to the `run` method.
+The `run` method should take a `dict` of keywords and arguments and return a `dict` of results.
+
+Example Usage:
+```python
+import argparse
+from pathlib import Path
+
+import nibabel as nib
+from radifox.provenance.provenance import ProcessingModule
+from radifox.conversion.utils import mkdir_p
+
+class MyModule(ProcessingModule):
+    name = "my-module"
+    version = "1.0.0"
+
+    @staticmethod
+    def cli(args=None):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--input", type=Path, required=True)
+        parser.add_argument("--mult-factor", type=float, required=True)
+        parsed = parser.parse_args(args)
+        
+        return {
+            "input": parsed.input,
+            "mult_factor": parsed.mult_factor,
+        }
+
+    @staticmethod
+    def run(in_file: Path, mult_factor: float):
+        out_stem = in_file.name.split(".")[0]
+        out_dir = in_file.parent.parent / "proc"
+        mkdir_p(out_dir)
+        
+        
+        obj = nib.Nifti1Image.load(in_file)
+        data = obj.get_fdata()
+        new_obj = nib.Nifti1Image(data * mult_factor, obj.affine, obj.header)
+        new_obj.to_filename(out_dir/ f"{out_stem}_mult-{mult_factor}.nii.gz")
+        return {
+            'output': out_dir / f"{out_stem}_mult-{mult_factor}.nii.gz"
+        }
+```
+
 # RADIFOX Components
 RADIFOX is a collection of components that work together to provide a comprehensive system for managing medical images.
 
@@ -126,7 +215,44 @@ The `stage` directory is where the filtered images are placed prior to processin
 The `tmp` directory is where intermediate files are stored during processing.
 
 ## Naming
+The RADIFOX naming system is a detailed, type-based naming system for medical images.
+It is currently focused on MRI images, but it is expected to extend to other modalities.
+There are six main components to the naming system:
+ - `bodypart`: The body part being imaged (e.g. BRAIN, CSPINE, etc.)
+ - `modality`: The imaging modality (e.g. T1, T2, etc.)
+ - `technique`: The imaging technique (e.g. IRFSPGR, FSE, etc.)
+ - `acqdim`: The acquisition dimension (2D or 3D)
+ - `orientation`: The imaging plane (AXIAL, SAGITTAL, CORONAL)
+ - `excontrast`: The exogenous contrast (PRE, POST, etc.)
 
+An image filename is then constructed by combining these components with hyphens.
+```
+<subject-id>_<session-id>_<image-id>_<bodypart>-<modality>-<technique>-<acqdim>-<orientation>-<excontrast>.nii.gz
+```
+The `image-id` is a unique identifier for the image within the session, it is created from a study number (in case multiple imaging studies are in the same session) and an image number (in each study).
+
+Additionally, image names can have `extras` appended to the end of the core name.
+These are additional descriptors that are not part of the core naming system, but are useful for identifying images.
+`extras` are connected to the main name with a hyphen (and multiple extras are separated by hyphens).
+Common uses for `extras` are echo numbers (e.g. ECHO1, ECHO2, etc.) in multi-echo sequences and complex image components (like MAG and PHA) in complex images.
+However, this can be used for any additional descriptor of the acquired image that may help route it through processing.
+
+For example:
+```
+STUDY-123456_01-03_BRAIN-T2-FSE-2D-AXIAL-PRE-ECHO1.nii.gz
+STUDY-123456_01-03_BRAIN-T2-FSE-2D-AXIAL-PRE-ECHO2.nii.gz
+```
+
+Processed images also have tags appended to the end of the name.
+This is to indicate the processing steps that were applied to the image.
+These tags are separated from the main name with an underscore (and multiple tags are separated by underscores).
+In general, new tags are appended to existing tags (so the order of tags is important).
+This is to ensure that the processing history of the image is preserved in the filename.
+
+For example:
+```
+STUDY-123456_01-03_BRAIN-T2-FSE-2D-AXIAL-PRE-ECHO1_n4.nii.gz
+```
 
 ## Conversion
 
