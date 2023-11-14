@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from .utils import safe_append_to_file
 from ..ontology.imagefile import ImageFile
 from ..conversion.utils import hash_file
 
@@ -103,8 +104,7 @@ class ProcessingModule(ABC):
                 session_file = "_".join(
                     [session_dir.parent.name, session_dir.name, "Provenance.txt"]
                 )
-                with open(session_dir / session_file, "a") as f:
-                    f.write(prov_str)
+                safe_append_to_file(session_dir / session_file, prov_str)
             suffix = "".join(output.suffixes)
             prov_path = output.parent / output.name.replace(suffix, ".prov")
             with open(prov_path, "w") as f:
