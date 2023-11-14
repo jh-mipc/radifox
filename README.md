@@ -154,6 +154,14 @@ class MyModule(ProcessingModule):
         }
 ```
 
+A `ProcessingModule` subclass can then be run as `MyModule()` or `MyModule(args)` (where args is as list of strings for `argparse` to parse).
+This can be used to make a processing script by adding:
+```python
+if __name__ == "__main__":
+    MyModule()
+```
+to the end of the file.
+
 # RADIFOX Components
 RADIFOX is a collection of components that work together to provide a comprehensive system for managing medical images.
 
@@ -255,11 +263,117 @@ STUDY-123456_01-03_BRAIN-T2-FSE-2D-AXIAL-PRE-ECHO1_n4.nii.gz
 ```
 
 ## Conversion
+The conversion system is a wrapper around the `dcm2niix` tool.
+It uses the RADIFOX naming system to organize the output files.
+`radifox-convert` is the core command for this function.
+
+The conversion process is as follows:
+ 1. Copy the DICOM files to the `dcm` directory in the session directory.
+ 2. Sort the DICOM files into series directories in the `dcm` directory and remove any duplicates.
+ 3. Check for series that should be skipped (scouts, localizers, derived images, etc.).
+ 4. Generate image names automatically from the DICOM metadata, look-up tables, and manual naming entries.
+ 5. Convert the DICOM files to NIfTI using `dcm2niix` and rename to RADIFOX naming.
+ 6. Create the JSON sidecar files for the NIfTI files (contains some DICOM metadata).
+ 7. Create QA images for the converted NIfTI files.
+
+### Look-up Tables
+The look-up tables are a set of rules for automatically naming images based on the DICOM `SeriesDescription` tag.
+They are stored in a comma-separated values (CSV) file in each project folder.
+They have a specific name format: `<project-id>_lut.csv`.
+If no look-up table is found for a project, a blank look-up table is written.
+Look-up table values take precidence over automatic naming, but are overwritten by manual names.
+
+The look-up table file has five total columns: `Project`, `Site`, `InstitutionName`, `SeriesDescription`, and `OutputFilename`.
+
+The first three columns (`Project`, `Site`, and `InstitutionName`) narrow down which images are affected.
+These columns match the project and site IDs and the DICOM `InstitutionName` tag.
+This means that if a particular site or even scanning center uses a specific `SeriesDescription`, it can be handled differently than others.
+The `Site` and `InstitutionName` columns are optional and can be `None`.
+
+The `SeriesDescription` column is a string and must **exactly** match the DICOM `SeriesDescription` tag.
+This may mean that multiple rows are needed to cover all possible values of the `SeriesDescription` tag for a particular name.
+
+The `OutputFilename` column is where the RADIFOX naming is specified.
+You do not have to specify all components of the name, only the ones that need to be changed.
+For example, if you only want to change the `bodypart` to `BRAIN` for a specific `SeriesDescription`, you can specify `BRAIN` in the `OutputFilename` column.
+However, you must specify all components that come prior to the one you want to change as `None`.
+For example, to change the `modality` to `T1` for a specific `SeriesDescription`, you must specify `None-T1` in the `OutputFilename` column.
+This can also be used to change the `extras`, by specifying them at the end of the `OutputFilename` column.
+For example, to add `ECHO1` to the end of the name for a specific `SeriesDescription`, but change nothing else, you must specify `None-None-None-None-None-None-ECHO1` in the `OutputFilename` column.
+
+### Manual Naming
+Manual naming entries are the most specific way to name images.
+They are stored as a JSON file in each session directory (`<subject-id>_<session-id>_ManualNaming.json`).
+This JSON file is a dictionary with the DICOM series directory path (`dcm/...`) as the key and the new name as the value.
+This series path can be found as the `SourcePath` in the sidecar JSON file for the image.
+Manual naming entries take precidence over look-up tables and automatic naming.
+The naming convention for manual naming entries is the same as for look-up tables.
+
+The simplest way to create manual naming entries is to use the `radifox-qa` webapp.
+
+### JSON Sidecar Files
+JSON sidecar files are created for each NIfTI file during conversion.
+They contain information about the conversion process (versions, look-up table values, manual naming, etc.) as well as critical DICOM metadata.
+The JSON sidecar files are stored in the `nii` directory in eact session directory next to their corresponding NIfTI file.
+
+Sidecar files are human-readable, but can also be accessed in Python using the `json` standard package.
+Most of the crutial information will be in the `SeriesInfo` key of the sidecar file.
+
+```python
+import json
+
+obj = json.load(open('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.json'))
+print(obj['SeriesInfo']['SeriesDescription']) # prints 'IRFSPGR 3D SAGITTAL PRE'
+print(obj('SeriesInfo')['SliceThickness']) # prints 1.0
+```
+
+A complete record of the sidecar JSON format is below [JSON Sidecar Format](#json-sidecar-format).
 
 ## Provenance
+The auto-provenance system is a system for tracking the provenance of processing results.
+It allows developers to easily include RADIFOX management features into their processing scripts in a consistent way.
+Currently, this is limited to automatic provenance generation, but will likely include automatic logging and QA image generation.
+
+The auto-provenance system is based on the `ProcessingModule` class.
+This is an abstract class that defines the basic structure of a processing module.
+Developers should inherit from this class and implement the `cli` and `run` methods, as well as define the `name` and `version` class attributes.
+See [ProcessingModule](#processingmodule) for more details.
+
+Provenance from this system is stored in two different ways.
+The first is at the session level in the `<subject-id>_<session-id>_Provenance.txt` file.
+This is an append-only text file that contains the provenance records of all processing steps for the session.
+The second is a provenance text file (`.prov`) that is stored with each processed file.
+This contains the provenance record for the process that created the processed file only.
+
+Provenance records are stored in a custom format that is human-readable, but will also be parsable by RADIFOX in the future.
+The format is as follows:
+```
+Id: <record-id>
+Module: <module-name>:<module-version>
+Container: <container-url>:<container-tag> <container-hash>
+User: <user-name>
+TimeStamp: <timestamp>
+Inputs:
+  - <input-key-1>: <input-filename-1>:<input-hash-1>
+  - <input-key-2>: <input-filename-2>:<input-hash-2>
+  - ...
+Outputs:
+  - <output-key-1>: <output-filename-1>:<output-hash-1>
+  - <output-key-2>: <output-filename-2>:<output-hash-2>
+  - ...
+Parameters:
+  - <parameter-key-1>: <parameter-value-1>
+  - <parameter-key-2>: <parameter-value-2>
+  - ...
+Command: <command-string>
+```
+
+
 
 ## Quality Assurance
 
 # Additional Information
 
 ## Advanced CLI Usage
+
+## JSON Sidecar Format
