@@ -7,6 +7,57 @@ There are multiple components under the RADIFOX umbrella:
  - A auto-provenance system to track the provenance of processing results
  - A web-based quality assurance system
 
+RADIFOX is designed to be flexible and extensible.
+
+## Table of Contents
+- [Overview](#overview)
+- [Installation](#installation)
+- [Basic Usage](#basic-usage)
+  - [CLI Scripts](#cli-scripts)
+    - [`radifox-convert`](#radifox-convert)
+    - [`radifox-update`](#radifox-update)
+    - [`radifox-qa`](#radifox-qa)
+  - [Python API](#python-api)
+    - [`ImageFile`](#imagefile)
+    - [`ImageFilter`](#imagefilter)
+    - [`ProcessingModule`](#processingmodule)
+- [RADIFOX Components](#radifox-components)
+  - [File Organization](#file-organization)
+  - [Naming](#naming)
+  - [Conversion](#conversion)
+    - [Look-up Tables](#look-up-tables)
+    - [Manual Naming](#manual-naming)
+    - [JSON Sidecar Files](#json-sidecar-files)
+  - [Provenance](#provenance)
+  - [Quality Assurance](#quality-assurance)
+- [Additional Information](#additional-information)
+    - [Advanced CLI Usage](#advanced-cli-usage)
+        - [`radifox-convert`](#radifox-convert)
+        - [`radifox-update`](#radifox-update)
+        - [`radifox-qa`](#radifox-qa)
+    - [JSON Sidecar Format](#json-sidecar-format)
+    - [Container Creation](#container-creation)
+
+## Overview
+The core of the RADIFOX system is the naming and organization system.
+This system is designed to be flexible, but also can be opinionated.
+The directory organization can be simplified to:
+```
+<output-root>/<project-id>/<subject-id>/<session-id>/...
+```
+
+The naming system is a detailed, type-based naming system optimized for medical images.
+It can be simplified to:
+```
+<subject-id>_<session-id>_<image-id>_<image-type>.ext
+```
+The image type can be futher broken down into a number of components:
+```
+<bodypart>-<modality>-<technique>-<acqdim>-<orientation>-<excontrast>[-<extras>]
+```
+
+This organzation allows for the implementation of features such as auto-provenance.
+
 ## Installation
 RADIFOX is available on PyPI and can be installed with pip:
 ```bash
@@ -80,8 +131,12 @@ img = ImageFile('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRA
 print(img.body_part) # prints 'BRAIN'
 print(img.modality) # prints 'T1'
 print(img.name) # prints 'STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'
+print(img.path) # prints Path object for '/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'
 print(img.info.series_description) # prints 'IRFSPGR 3D SAGITTAL PRE'
 ```
+
+Multiple `pathlib.Path` functions are available directly (like `Path.name`) and others are available through the `path` property (like `Path.iterdir`).
+These functions will return `Path` objects, not `ImageFile` objects.
 
 #### `ImageFilter`
 The `ImageFilter` class is used to represent a filter for images based on naming.
