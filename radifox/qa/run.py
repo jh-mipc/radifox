@@ -25,7 +25,6 @@ def run(args=None):
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", default="5000")
     parser.add_argument("--data-dir")
-    parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument("--workers", type=int, default=1)
     parsed = parser.parse_args(args)
 
@@ -35,6 +34,5 @@ def run(args=None):
     options = {
         "bind": "%s:%s" % (parsed.host, parsed.port),
         "workers": parsed.workers,
-        "debug": parsed.debug,
     }
     StandaloneApplication("radifox.qa.app:app", options).run()
