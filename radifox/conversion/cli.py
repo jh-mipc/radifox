@@ -23,7 +23,6 @@ def convert(args: Optional[List[str]] = None) -> None:
     parser.add_argument("-s", "--subject-id", type=str, help="Subject ID.")
     parser.add_argument("-e", "--session-id", type=str, help="Session ID.")
     parser.add_argument("--site-id", type=str, help="Site ID.")
-    parser.add_argument("--project-shortname", type=str, help="Project shortname.")
     parser.add_argument("--tms-metafile", type=Path, help="TMS metadata file.")
     parser.add_argument("--verbose", action="store_true", help="Verbose output.")
     parser.add_argument(
@@ -82,15 +81,14 @@ def convert(args: Optional[List[str]] = None) -> None:
             args.subject_id,
             args.session_id,
             args.site_id,
-            args.project_shortname,
             args.no_project_subdir,
         )
 
     if args.lut_file is None:
         lut_file = (
-            (args.output_root / (metadata.ProjectID + "-lut.csv"))
+            (args.output_root / (metadata.projectname + "-lut.csv"))
             if args.no_project_subdir
-            else (args.output_root / metadata.ProjectID / (metadata.ProjectID + "-lut.csv"))
+            else (args.output_root / metadata.projectname / (metadata.projectname + "-lut.csv"))
         )
     else:
         lut_file = args.lut_file
@@ -216,9 +214,11 @@ def update(args: Optional[List[str]] = None) -> None:
     if args.lut_file is None:
         # noinspection PyProtectedMember
         if metadata._NoProjectSubdir:
-            lut_file = output_root / (metadata.ProjectID + "-lut.csv")
+            lut_file = output_root / (metadata.projectname + "-lut.csv")
         else:
-            lut_file = output_root / metadata.ProjectID / (metadata.ProjectID + "-lut.csv")
+            lut_file = (
+                output_root / metadata.projectname / (metadata.projectname + "-lut.csv")
+            )
     else:
         lut_file = args.lut_file
     lookup_dict = (

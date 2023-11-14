@@ -17,17 +17,13 @@ class Metadata:
         subject_id: str,
         session_id: str,
         site_id: Optional[str] = None,
-        project_shortname: Optional[str] = None,
         no_project_subdir: bool = False,
     ) -> None:
-        self.ProjectID = project_id
-        self.SubjectID = subject_id
-        self.SessionID = session_id
-        self.SiteID = site_id
+        self.ProjectID = project_id.upper()
+        self.SubjectID = subject_id.upper()
+        self.SessionID = session_id.upper()
+        self.SiteID = site_id.upper() if site_id is not None else None
         self.AttemptNum = None
-        self.ProjectShortName = (
-            self.ProjectID.upper() if project_shortname is None else project_shortname
-        )
         self.TMSMetaFileHash = None
         self._RawMetaFileObj = None
         self._NoProjectSubdir = no_project_subdir
@@ -62,7 +58,6 @@ class Metadata:
             dict_obj["SubjectID"],
             dict_obj["SessionID"],
             dict_obj["SiteID"],
-            dict_obj["ProjectShortName"],
             dict_obj["_NoProjectSubdir"],
         )
         if "TMSMetaFileHash" in dict_obj:
@@ -76,6 +71,10 @@ class Metadata:
             skip_keys += ["TMSMetaFileHash", "_RawMetaFileObj"]
         return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
 
+    @property
+    def projectname(self) -> str:
+        return self.ProjectID.lower()
+
     def check_metadata(self) -> None:
         if self._RawMetaFileObj is not None and self.SiteID != self._RawMetaFileObj["site_id"]:
             logging.warning(
@@ -85,29 +84,21 @@ class Metadata:
 
     def prefix_to_str(self) -> str:
         if self.SiteID is None:
-            return self.ProjectShortName + "-" + self.SubjectID + "_" + self.SessionID
+            return f"{self.ProjectID}-{self.SubjectID}_{self.SessionID}"
         else:
-            return (
-                self.ProjectShortName
-                + "-"
-                + self.SiteID
-                + "-"
-                + self.SubjectID
-                + "_"
-                + self.SessionID
-            )
+            return f"{self.ProjectID}-{self.SiteID}-{self.SubjectID}_{self.SessionID}"
 
     def dir_to_str(self) -> Path:
-        subject_id = (
-            self.ProjectShortName + "-" + self.SubjectID
+        subject_str = (
+            f"{self.ProjectID}-{self.SubjectID}"
             if self.SiteID is None
-            else self.ProjectShortName + "-" + self.SiteID + "-" + self.SubjectID
+            else f"{self.ProjectID}-{self.SiteID}-{self.SubjectID}"
         )
         # noinspection PyStringFormat
         output_dir = Path(
-            subject_id,
+            subject_str,
             self.SessionID + ("" if self.AttemptNum is None else ("-%d" % self.AttemptNum)),
         )
         if not self._NoProjectSubdir:
-            output_dir = Path(self.ProjectID, output_dir)
+            output_dir = Path(self.projectname, output_dir)
         return output_dir
