@@ -397,32 +397,145 @@ See [`radifox-qa`](#radifox-qa) above for more details.
 
 ## Advanced CLI Usage
 ### `radifox-convert`
-| Option                      | Description                                                                                                                            | Default                                         |
-|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
-| `source`                    | The source directory (or zip file) containing the DICOM files.                                                                         | `required`                                      |
-| `-o`, `--output-root`       | The root directory for the output files (contains project directories).                                                                | `required`                                      |
-| `-p`, `--project-id`        | The project ID for the converted session.                                                                                              | `required`                                      |
-| `-s`, `--subject-id`        | The subject ID for the converted session.                                                                                              | `required`                                      |
-| `-e`, `--session-id`        | The session ID for the converted session.                                                                                              | `required`                                      |
-| `-l`, `--lut-file`          | The look-up table file to use for naming.                                                                                              | <output-root>/<project-id>/<project-id>_lut.csv |
-| `--site-id`                 | The site ID for the converted session.                                                                                                 | `None`                                          |
-| `--force`                   | Force conversion even if session directory already exists.                                                                             | `False`                                         |
-| `--reckless`                | Skip consistency checks when forcing run (will overwrite files!)                                                                       | `False`                                         |
-| `--safe`                    | If the session directory already exists, use a new directory with `-#` appended (does not change session ID or filenames)              | `False`                                         |
-| `--no-project-subdir`       | Do not create a project subdirectory in the output root directory. Subjects will be placed directly into the `--output-root` directory | `False`                                         |
-| `--symlink`                 | Create symlinks to the original DICOM files instead of copying them.                                                                   | `False`                                         |
-| `--hardlink`                | Create hardlinks to the original DICOM files instead of copying them.                                                                  | `False`                                         |
-| `--verbose`                 | Log debug output.                                                                                                                      | `False`                                         |
-| `--version`                 | Output RADIFOX version and exit.                                                                                                       | `False`                                         |
-| `--help`                    | Show help message and exit.                                                                                                            | `False`                                         |
-| `--parrec`                  | Convert PAR/REC files instead of DICOM files.                                                                                          | `False`                                         |
-| `--institution-name`        | The institution name to use for the session (required for PAR/REC conversion).                                                         | `None`                                          |
-| `--magnetic-field-strength` | The magnetic field strength to use for the session (required for PAR/REC conversion).                                                  | `None`                                          |
-| `--anonymize`               | Experimental anonymization support (will remove copied DICOM files).                                                                   | `False`                                         |
-| `--date-shift-days`         | The number of days to shift the date by during anonymization.                                                                          | `None`                                          |
-| `--tms-metafile`            | The TMS metafile to use for subject, site and session ID.                                                                              | `None`                                          |
+| Option                      | Description                                                                                                                            | Default                                           |
+|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------|
+| `source`                    | The source directory (or zip file) containing the DICOM files.                                                                         | `required`                                        |
+| `-o`, `--output-root`       | The root directory for the output files (contains project directories).                                                                | `required`                                        |
+| `-p`, `--project-id`        | The project ID for the converted session.                                                                                              | `required`                                        |
+| `-s`, `--subject-id`        | The subject ID for the converted session.                                                                                              | `required`                                        |
+| `-e`, `--session-id`        | The session ID for the converted session.                                                                                              | `required`                                        |
+| `-l`, `--lut-file`          | The look-up table file to use for naming.                                                                                              | `<output-root>/<project-id>/<project-id>_lut.csv` |
+| `--site-id`                 | The site ID for the converted session.                                                                                                 | `None`                                            |
+| `--force`                   | Force conversion even if session directory already exists.                                                                             | `False`                                           |
+| `--reckless`                | Skip consistency checks when forcing run (will overwrite files!)                                                                       | `False`                                           |
+| `--safe`                    | If the session directory already exists, use a new directory with `-#` appended (does not change session ID or filenames)              | `False`                                           |
+| `--no-project-subdir`       | Do not create a project subdirectory in the output root directory. Subjects will be placed directly into the `--output-root` directory | `False`                                           |
+| `--symlink`                 | Create symlinks to the original DICOM files instead of copying them.                                                                   | `False`                                           |
+| `--hardlink`                | Create hardlinks to the original DICOM files instead of copying them.                                                                  | `False`                                           |
+| `--verbose`                 | Log debug output.                                                                                                                      | `False`                                           |
+| `--version`                 | Output RADIFOX version and exit.                                                                                                       | `False`                                           |
+| `--help`                    | Show help message and exit.                                                                                                            | `False`                                           |
+| `--parrec`                  | Convert PAR/REC files instead of DICOM files.                                                                                          | `False`                                           |
+| `--institution-name`        | The institution name to use for the session (required for PAR/REC conversion).                                                         | `None`                                            |
+| `--magnetic-field-strength` | The magnetic field strength to use for the session (required for PAR/REC conversion).                                                  | `None`                                            |
+| `--anonymize`               | Experimental anonymization support (will remove copied DICOM files).                                                                   | `False`                                           |
+| `--date-shift-days`         | The number of days to shift the date by during anonymization.                                                                          | `None`                                            |
+| `--tms-metafile`            | The TMS metafile to use for subject, site and session ID.                                                                              | `None`                                            |
 
+### `radifox-update`
+| Option             | Description                                                | Default                               |
+|--------------------|------------------------------------------------------------|---------------------------------------|
+| `directory`        | The converted RADIFOX directory to update.                 | `required`                            |
+| `-l`, `--lut-file` | The look-up table file to use for naming.                  | `<directory>/../<project-id>_lut.csv` |
+| `--force`          | Force conversion even if session directory already exists. | `False`                               |
+| `--verbose`        | Log debug output.                                          | `False`                               |
+| `--version`        | Output RADIFOX version and exit.                           | `False`                               |
+| `--help`           | Show help message and exit.                                | `False`                               |
+
+### `radifox-qa`
+| Option             | Description                                                          | Default   |
+|--------------------|----------------------------------------------------------------------|-----------|
+| `--port`           | The port to run the QA webapp on.                                    | `5000`    |
+| `--host`           | The host bind address for the QA webapp.                             | `0.0.0.0` |
+| `--root-directory` | The output root to read projects from (contains project directories) | `/data`   |
+| `--workers`        | Number of workers to use for web server.                             | `1`       |
 
 ## JSON Sidecar Format
+The JSON sidecar format is a dictionary with 8 top-level keys:
+ - `__version__`: A dictionary of software versions used in conversion (`radifox` and `dcm2niix`)
+ - `InputHash`: A hash of the input directory or archive file used in conversion
+ - `LookupTable`: A dictionary of look-up table values used in conversion (limited by project/site ID/institution, if applicable)
+ - `ManualNames`: A dictionary of manual name entries used in conversion
+ - `Metadata`: A dictionary of session level metadata items (Project ID, Subject ID, Session ID, etc.)
+ - `RemoveIdentifiers`: A boolean indicating if identifiers were removed from the converted files
+ - `SeriesInfo`: A dictionary of DICOM metadata and conversion information for each converted image
+
+
+The `SeriesInfo` value has most of the information about the converted image, including converted DICOM tags.
+ - `AcqDateTime`: The acquisition date and time of the image
+ - `AcquiredResolution`: The acquired, in-plane resolution of the image (list of 2 floats)
+ - `AcquisitionDimension`: The number of acquisition dimensions (2D or 3D)
+ - `AcquisitionMatrix`: The acquired in-plane matrix size of the image (list of 2 ints)
+ - `BodyPartExamined`: The body part examined in the image
+ - `ComplexImageComponent`: The complex number component represented in the image (MAGNITUDE, PHASE, REAL, IMAGINARY)
+ - `ConvertImage`: Boolean indicating if the image was supposed to be converted
+ - `DeviceIdentifier`: An identifier for the device used to acquire the image
+ - `EPIFactor`: The echo planar imaging (EPI) factor of the image
+ - `EchoTime`: The echo time (in ms) of the image
+ - `EchoTrainLength`: The echo train length of the image
+ - `ExContrastAgent`: Any information about the exogenous contrast agent used in the acquisition
+ - `FieldOfView`: The field of view (in mm) of the image (list of 2 floats)
+ - `FlipAngle`: The flip angle (in degrees) of the image
+ - `ImageOrientationPatient`: The DICOM image orientation patient tag of the image (list of 6 floats)
+ - `ImagePositionPatient`: The DICOM image position patient tag of the image (list of 3 floats)
+ - `ImageType`: The DICOM image type tag of the image (list of strings)
+ - `InstitutionName`: The institution name of the device used to acquire the image
+ - `InversionTime`: The inversion time (in ms) of the image
+ - `LookupName`: Any naming components for this image pulled from the lookup-table (list of strings)
+ - `MagneticFieldStrength`: The magnetic field strength (in T) of the image
+ - `ManualName`: Any naming components for this image pulled from the manual naming entries (list of strings)
+ - `Manufacturer`: The manufacturer of the device used to acquire the image
+ - `MultiFrame`: Boolean indicating if the image is a multi-frame DICOM image
+ - `NiftiCreated`: Boolean indicating if the image was successfully converted to NIfTI
+ - `NiftiHash`: The hash of the converted NIfTI file
+ - `NiftiName`: The final filename for the converted NIfTI file.
+ - `NumFiles`: Number of files (or frames) incorporated into the image (number of slices).
+ - `NumberOfAverages`: The number of averages used in the acquisition
+ - `PercentSampling`: The percent of k-space sampling used in the acquisition
+ - `PixelBandwidth`: The pixel bandwidth (in Hz) of the image
+ - `PredictedName`: Automatically generated name prediction from the DICOM metadata (list of strings)
+ - `ReceiveCoilName`: The name of the receive coil used in the acquisition
+ - `ReconMatrix`: The reconstructed in-plane matrix size of the image (list of 2 ints)
+ - `ReconResolution`: The reconstructed, in-plane resolution of the image (list of 2 floats)
+ - `RepetitionTime`: The repetition time (in ms) of the image
+ - `ScanOptions`: Any scan options used in the acquisition
+ - `ScannerModelName`: The model name of the scanner used to acquire the image
+ - `SequenceName`: The name of the sequence used to acquire the image
+ - `SequenceType`: The type of sequence used to acquire the image
+ - `SequenceVariant`: The variant of the sequence used to acquire the image
+ - `SeriesDescription`: The DICOM series description tag of the image
+ - `SeriesNumber`: The DICOM series number tag of the image
+ - `SeriesUID`: The DICOM series UID tag for the image
+ - `SliceOrientation`: The slice orientation of the image (axial, sagittal, or coronal)
+ - `SliceSpacing`: The slice spacing (in mm) between slices of the image
+ - `SliceThickness`: The slice thickness (in mm) of the image
+ - `SoftwareVersions`: The software versions of the device that acquired the image
+ - `SourceHash`: The hash of the source DICOM files
+ - `SourcePath`: The path to the source DICOM files (relative to session directory, e.g `dcm/...`)
+ - `StudyDescription`: The study description DICOM tag for the image
+ - `StudyUID`: The study UID DICOM tag for the image
+ - `TriggerTime`: The trigger time (in ms) of the image (can be used to store inversion time)
+ - `VariableFlipAngle`: Boolean indicating if the image used variable flip angles
 
 ## Container Creation
+For reproducibility, processing must be done in a container.
+This can be Docker or Apptainer/Singularity, but requires a few specific labels to be set to maintain strict accounting of the container used.
+
+The labels are:
+ - `ci.image`: URL of the container image in a repository (e.g. Docker Hub)
+ - `ci.tag`: Version tag of the container image
+ - `ci.commit`: Commit hash of the Dockerfile/repo used to build the container image
+ - `ci.digest`: Digest hash of the container image
+
+These labels are most easily set by using Continuous Integration (CI) to create your images.
+This is an example `.gitlab-ci.yml` to achieve this on GitLab:
+```yaml
+build:
+  image: docker:20.10.16
+  stage: build
+  services:
+    - docker:20.10.16-dind
+  variables:
+    TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build 
+      --label ci.image=$CI_REGISTRY_IMAGE
+      --label ci.tag=$CI_COMMIT_TAG
+      --label ci.commit=$CI_COMMIT_SHA 
+      -t $TAG .
+    - DIGEST=$(docker inspect --format='{{index .Id}}' $TAG)
+    - echo "FROM $TAG" | docker buildx build --label ci.digest=$DIGEST -t $TAG --push -
+  only:
+    - tags
+```
