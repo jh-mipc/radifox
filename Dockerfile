@@ -8,6 +8,8 @@ ARG DCM2NIIX_VERSION
 ARG PYTHON_VERSION
 ARG DEBIAN_VERSION
 
+ENV PYTHONUSERBASE=/opt/python
+
 RUN apt-get update && \
     apt-get -y --no-install-recommends install ca-certificates git unzip curl && \
     rm -rf /var/lib/apt/lists/*
