@@ -16,17 +16,23 @@ class LogFilter(logging.Filter):
         return record.levelno <= self.level
 
 
-def create_loggers(log_dir: Path, log_prefix: str, verbose: bool = False) -> None:
+def create_loggers(
+    log_dir: Path,
+    log_prefix: str,
+    verbose: bool = False,
+    add_stream_handler: bool = True,
+) -> None:
     mkdir_p(log_dir)
     log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    log_stream = logging.StreamHandler(sys.stdout)
-    log_stream.setFormatter(log_formatter)
     # noinspection PyTypeChecker
     log_file = logging.FileHandler(log_dir / f"{log_prefix}-info.log", delay=True)
     log_file.setFormatter(log_formatter)
     logging.getLogger().setLevel(logging.DEBUG if verbose else logging.INFO)
-    logging.getLogger().addHandler(log_stream)
     logging.getLogger().addHandler(log_file)
+    if add_stream_handler:
+        log_stream = logging.StreamHandler(sys.stdout)
+        log_stream.setFormatter(log_formatter)
+        logging.getLogger().addHandler(log_stream)
     # noinspection PyTypeChecker
     warn_file = logging.FileHandler(log_dir / f"{log_prefix}-warnings.log", delay=True)
     warn_file.addFilter(LogFilter(logging.ERROR - 1))

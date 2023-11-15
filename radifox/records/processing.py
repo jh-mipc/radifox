@@ -183,13 +183,13 @@ class ProcessingModule(ABC):
                     break
         if out_paths is None:
             raise ValueError("Could not find any Path or ImageFile inputs.")
-        for out_path in out_paths:
+        for i, out_path in enumerate(out_paths):
             if self.log_uses_filename:
                 log_dir = out_path.parent.parent / "logs" / self.name
                 log_filename = out_path.name.split(".")[0]
             else:
                 log_dir = out_path.parent.parent / "logs"
                 log_filename = self.name
-            create_loggers(log_dir, log_filename)
+            create_loggers(log_dir, log_filename, add_stream_handler=i == 0)
 
 
