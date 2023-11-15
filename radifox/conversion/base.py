@@ -803,7 +803,7 @@ class BaseSet:
         info_file = (
             self.OutputRoot
             / self.Metadata.dir_to_str()
-            / (self.Metadata.prefix_to_str() + "_MR-UnconvertedInfo.json")
+            / (self.Metadata.prefix_to_str() + "_UnconvertedInfo.json")
         )
         logging.info("Writing unconverted info file to %s" % info_file)
         out_dict = {k: v for k, v in self.__repr_json__().items() if k not in "SeriesList"}
