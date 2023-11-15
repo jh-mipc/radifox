@@ -27,7 +27,7 @@ class ProcessingModule(ABC):
             return
         self.create_loggers()
         try:
-            logging.info(f"Begining processing using {self.name} v{self.version}.")
+            logging.info(f"Beginning processing using: {self.name} v{self.version}.")
             logging.info(f"Command: {self.cli_call}")
             self.outputs = self.run(**self.parsed_args)
             logging.info(f"Generating QA imagees.")
