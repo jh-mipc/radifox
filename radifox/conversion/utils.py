@@ -438,7 +438,7 @@ def create_sf_headers(dataset: Dataset | FileDataset) -> list[Dataset]:
     return sf_ds_list
 
 
-def parse_dcm2niix_suffixes(filenames: list[Path], base: str) -> list[tuple[str]]:
+def parse_dcm2niix_suffixes(filenames: list[Path], base: str, add_mag: bool) -> list[tuple[str]]:
     suffixes = [filename.name.replace(base, "") for filename in filenames]
     for i in range(len(suffixes)):
         suffixes[i] = suffixes[i].replace("_e", "_ECHO")
@@ -446,7 +446,7 @@ def parse_dcm2niix_suffixes(filenames: list[Path], base: str) -> list[tuple[str]
         suffixes[i] = suffixes[i].replace("_real", "_REA")
         suffixes[i] = suffixes[i].replace("_imaginary", "_IMA")
         suffixes[i] = suffixes[i].replace("_t", "_DYN")
-    if any([cplx in suffix for suffix in suffixes for cplx in ["PHA", "REA", "IMA"]]):
+    if add_mag or any([cplx in suffix for suffix in suffixes for cplx in ["PHA", "REA", "IMA"]]):
         for i in range(len(suffixes)):
             if not any([cplx in suffixes[i] for cplx in ["PHA", "REA", "IMA"]]):
                 suffixes[i] += "_MAG"

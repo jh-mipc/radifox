@@ -923,7 +923,8 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
 
     # Match filenames to dicom info objects
     if len(filenames) > 1:
-        suffixes = parse_dcm2niix_suffixes(filenames, convert_di[0].NiftiName)
+        need_mag = any(["-MAG" in di.NiftiName for di in convert_di])
+        suffixes = parse_dcm2niix_suffixes(filenames, convert_di[0].NiftiName, need_mag)
         suffixes = {suffix: filename for suffix, filename in zip(suffixes, filenames)}
         extras = ["_".join(di.NiftiName.split("_")[-1].split("-")[6:]) for di in convert_di]
         if any([sum(dyn in extra for dyn in ["POS", "INV", "DYN"]) > 1 for extra in extras]):
