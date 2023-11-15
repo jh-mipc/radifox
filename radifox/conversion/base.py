@@ -887,7 +887,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
 
     # Remove images that have an _e# without an EchoTime
     # Remove any images that are a, b, c, etc. of another image
-    suffix_pattern = re.compile(r'^(.*)([a-z])\.(.*)$')
+    suffix_pattern = re.compile(r'^(.*)([a-z])$')
     removes = []
     for i, filename in enumerate(filenames):
         removes.append(False)
@@ -897,9 +897,9 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             if "EchoTime" not in bids_dict:
                 removes[i] = True
         elif match:
-            base, extra_letter, ext = match.groups()
-            original_file = f"{base}.{ext}"
-            if original_file in filenames:
+            base, extra_letter = match.groups()
+            original_file = f"{base}"
+            if original_file in [filename.name for filename in filenames]:
                 removes[i] = True
         if removes[i]:
             p_add(filename, ".nii.gz").unlink()
