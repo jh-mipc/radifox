@@ -390,13 +390,14 @@ A complete record of the sidecar JSON format is below [JSON Sidecar Format](#jso
 ## Provenance
 The auto-provenance system is a system for tracking the provenance of processing results.
 It allows developers to easily include RADIFOX management features into their processing scripts in a consistent way.
-Currently, this is limited to automatic provenance generation, but will likely include automatic logging and QA image generation.
+This includes automatic generation of provenance records, automatic logging during execution and automatic generation of QA images from outputs.
 
 The auto-provenance system is based on the `ProcessingModule` class.
 This is an abstract class that defines the basic structure of a processing module.
 Developers should inherit from this class and implement the `cli` and `run` methods, as well as define the `name` and `version` class attributes.
 See [ProcessingModule](#processingmodule) for more details.
 
+### Provenance Records
 Provenance from this system is stored in two different ways.
 The first is at the session level in the `<subject-id>_<session-id>_Provenance.txt` file.
 This is an append-only text file that contains the provenance records of all processing steps for the session.
@@ -436,6 +437,21 @@ The `<input-key>`s, `<input-filename>`s, and `<input-hash>`s are the input names
 Outputs are structured the same way.
 The `<parameter-key>`s and `<parameter-value>`s are the key-value pairs of the parameters passed to the processing module (that are not files).
 The `<command-string>` is the exact command string that was used to run the processing module.
+
+### Automatic Logging
+The auto-provenance system also includes automatic logging during execution.
+This is done by setting up a `logging` handler that writes to the `logs` directory in the session directory.
+This handler is set up by default to log all messages to the `logs/<module-name>/<first-input-filename>-info.log` file.
+This can be adjusted to `logs/<module-name>-info.log` by setting `log_uses_filename` to `False` in the `ProcessingModule` subclass.
+Currently, there is support for `INFO`, `WARNING` and `ERROR` level messages.
+They can be accessed at any point in the `run` method by calling `logging.info(message)` (or `warning` or `error`).
+You must import `logging` at the top of the file to use this feature.
+If there are warnings or errors produced during execution, they will be written to additional log files (`-warning.log` and `-error.log`) for easy viewing.
+There is currently no support for `DEBUG` level messages, but that is planned for the future.
+
+### Automatic QA Images
+The auto-provenance system also includes automatic generation of QA images from outputs.
+Any output that is returned from the `run` method will have a QA image generated automatically, if it is a NIfTI file (ends in `.nii.gz`).
 
 ## Quality Assurance
 The web-based quality assurance system is a system for viewing images and recording QA results.
