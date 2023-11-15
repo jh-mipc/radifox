@@ -886,14 +886,23 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
     filenames = parse_dcm2niix_filenames(str(result.stdout))
 
     # Remove images that have an _e# without an EchoTime
+    # Remove any images that are a, b, c, etc. of another image
+    suffix_pattern = re.compile(r'^(.*)([a-z])\.(.*)$')
     removes = []
     for i, filename in enumerate(filenames):
         removes.append(False)
+        match = suffix_pattern.match(filename.name)
         if "_e" in filename.name:
             bids_dict = json.load(open(p_add(filename, ".json")))
             if "EchoTime" not in bids_dict:
                 removes[i] = True
-                p_add(filename, ".nii.gz").unlink()
+        elif match:
+            base, extra_letter, ext = match.groups()
+            original_file = f"{base}.{ext}"
+            if original_file in filenames:
+                removes[i] = True
+        if removes[i]:
+            p_add(filename, ".nii.gz").unlink()
         # Cleanup dcm2niix json files
         p_add(filename, ".json").unlink()
     filenames = [filename for filename, remove in zip(filenames, removes) if not remove]
@@ -907,7 +916,11 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
         logging.warning("dcm2niix return code: %d" % result.returncode)
         logging.warning("dcm2niix output:\n" + str(result.stdout))
         logging.warning("Nifti creation failed.")
-        success = False
+        for di in convert_di:
+            di.NiftiCreated = False
+        for filename in filenames:
+            remove_created_files(filename)
+        return
 
     # Match filenames to dicom info objects
     if len(filenames) > 1:
