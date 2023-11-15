@@ -9,7 +9,8 @@ ARG PYTHON_VERSION
 ARG DEBIAN_VERSION
 
 RUN apt-get update && \
-    apt-get -y --no-install-recommends install ca-certificates git unzip curl
+    apt-get -y --no-install-recommends install ca-certificates git unzip curl && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN cd /tmp && \
     curl -L -o dcm2niix_lnx.zip https://github.com/rordenlab/dcm2niix/releases/download/v${DCM2NIIX_VERSION}/dcm2niix_lnx.zip && \
@@ -29,8 +30,9 @@ RUN echo -e "{\n \
 }" > /opt/manifest.json
 
 # Copy package and install
-COPY requirements.txt /tmp/radifox-src/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/radifox-src/requirements.txt
+COPY requirements.txt qa-requirements /tmp/radifox-src/
+RUN pip install --no-cache-dir -r /tmp/radifox-src/requirements.txt && \
+    pip install --no-cache-dir -r /tmp/radifox-src/qa-requirements.txt
 COPY . /tmp/radifox-src/
 RUN pip install --no-cache-dir /tmp/radifox-src/ && \
     rm -rf /tmp/radifox-src/
