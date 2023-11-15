@@ -30,7 +30,7 @@ RUN echo -e "{\n \
 }" > /opt/manifest.json
 
 # Copy package and install
-COPY requirements.txt qa-requirements /tmp/radifox-src/
+COPY requirements.txt qa-requirements.txt /tmp/radifox-src/
 RUN pip install --no-cache-dir -r /tmp/radifox-src/requirements.txt && \
     pip install --no-cache-dir -r /tmp/radifox-src/qa-requirements.txt
 COPY . /tmp/radifox-src/
