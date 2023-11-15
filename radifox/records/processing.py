@@ -23,6 +23,8 @@ class ProcessingModule(ABC):
         self.verify_container()
         self.cli_call = " ".join(sys.argv[1:] if args is None else args)
         self.parsed_args = self.cli(args)
+        if self.parsed_args is None:  # CLI call returned None, so we're done
+            return
         self.create_loggers()
         try:
             logging.info(f"Begining processing using {self.name} v{self.version}.")
