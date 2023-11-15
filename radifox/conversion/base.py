@@ -896,10 +896,9 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
             bids_dict = json.load(open(p_add(filename, ".json")))
             if "EchoTime" not in bids_dict:
                 removes[i] = True
-        elif match:
-            base, extra_letter = match.groups()
-            original_file = f"{base}"
-            if original_file in [filename.name for filename in filenames]:
+        if not removes[i] and match:
+            base, _ = match.groups()
+            if base in [item.name for item in filenames]:
                 removes[i] = True
         if removes[i]:
             p_add(filename, ".nii.gz").unlink()
