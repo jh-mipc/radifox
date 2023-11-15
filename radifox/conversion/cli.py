@@ -191,10 +191,10 @@ def update(args: Optional[List[str]] = None) -> None:
     session_id = args.directory.name
     subj_id = args.directory.parent.name
 
-    json_file = args.directory / "_".join([subj_id, session_id, "_UnconvertedInfo.json"])
+    json_file = args.directory / "_".join([subj_id, session_id, "UnconvertedInfo.json"])
     if not json_file.exists():
         safe_json_file = args.directory / "_".join(
-            [subj_id, "-".join(session_id.split("-")[:-1]), "_UnconvertedInfo.json"]
+            [subj_id, "-".join(session_id.split("-")[:-1]), "UnconvertedInfo.json"]
         )
         if not safe_json_file.exists():
             raise ValueError("Unconverted info file (%s) does not exist." % json_file)
