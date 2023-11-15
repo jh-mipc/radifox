@@ -31,7 +31,7 @@ class Metadata:
     @classmethod
     def from_tms_metadata(cls, metadata_file: Path, no_project_subdir: bool = False) -> Metadata:
         metadata_obj = json.loads(metadata_file.read_text())["metadataFieldsToValues"]
-        if "subject_id" in metadata_obj:
+        if "patient_id" in metadata_obj:
             site_id, subject_id = metadata_obj["patient_id"].split("-")
         else:
             site_id, subject_id = metadata_obj["site_id"], "900"
