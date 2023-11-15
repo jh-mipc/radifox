@@ -155,7 +155,7 @@ class ProcessingModule(ABC):
         out_dir = outs[0].parent.parent / "qa" / name
         out_dir.mkdir(exist_ok=True, parents=True)
         for out in outs:
-            create_qa_image(out, out_dir / f"{out.name.split('.')[0]}.png")
+            create_qa_image(str(out), out_dir / f"{out.name.split('.')[0]}.png")
 
     def generate_qa_images(self) -> None:
         if self.check_multi_run():
