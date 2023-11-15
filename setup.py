@@ -57,7 +57,7 @@ setup(
         "numpy",
         "pillow",
         "scipy",
-        "radifox-utils @ git+https://gitlab.com/iacl/radifox-utils.git@main",
+        "radifox-utils",
     ],
     extras_require={
         "qa": [

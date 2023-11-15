@@ -3,4 +3,4 @@ numpy==1.26.0
 pydicom==2.4.3
 pillow==10.0.1
 scipy==1.11.3
-radifox-utils @ git+https://gitlab.com/iacl/radifox-utils.git@main
+radifox-utils @ git+https://gitlab.com/iacl/radifox-utils.git@1.0.2-dev
