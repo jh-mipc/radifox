@@ -126,7 +126,7 @@ It additionally defines a number of properties to access naming breakdowns and m
 
 Example Usage:
 ```python
-from radifox.ontology.imagefile import ImageFile
+from radifox.naming import ImageFile
 img = ImageFile('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz')
 print(img.body_part) # prints 'BRAIN'
 print(img.modality) # prints 'T1'
@@ -148,7 +148,7 @@ It can be defined as keyword arguments in the class constructer or by passing a 
 
 Example Usage:
 ```python
-from radifox.ontology.imagefile import ImageFilter
+from radifox.naming import ImageFilter
 
 imgs = [
     ImageFile('/path/to/output/study/STUDY-123456/1/nii/STUDY-123456_01-03_BRAIN-T1-IRFSPGR-3D-SAGITTAL-PRE.nii.gz'),
@@ -174,11 +174,11 @@ The `run` method should take a `dict` of keywords and arguments and return a `di
 Example Usage:
 ```python
 import argparse
+import logging
 from pathlib import Path
 
 import nibabel as nib
-from radifox.provenance.provenance import ProcessingModule
-from radifox.conversion.utils import mkdir_p
+from radifox.records import ProcessingModule
 
 class MyModule(ProcessingModule):
     name = "my-module"
@@ -200,9 +200,9 @@ class MyModule(ProcessingModule):
     def run(in_file: Path, mult_factor: float):
         out_stem = in_file.name.split(".")[0]
         out_dir = in_file.parent.parent / "proc"
-        mkdir_p(out_dir)
+        out_dir.mkdir(exist_ok=True, parents=True)
         
-        
+        logging.info(f"Multiplying {in_file} by {mult_factor}.")
         obj = nib.Nifti1Image.load(in_file)
         data = obj.get_fdata()
         new_obj = nib.Nifti1Image(data * mult_factor, obj.affine, obj.header)

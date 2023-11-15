@@ -47,7 +47,7 @@ def run_conversion(
     if not has_permissions(session_path.parent, DIR_OCTAL):
         session_path.parent.chmod(mode=DIR_OCTAL)
 
-    create_loggers(output_root / metadata.dir_to_str(), verbose)
+    create_loggers(output_root / metadata.dir_to_str() / "logs", "conversion", verbose)
     metadata.check_metadata()
 
     try:
