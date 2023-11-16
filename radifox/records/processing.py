@@ -5,10 +5,11 @@ import json
 import logging
 import os
 from pathlib import Path
+import socket
 import sys
 from typing import Any
 
-from .utils import safe_append_to_file
+from .utils import safe_append_to_file, format_timedelta
 from ..conversion import hash_file, create_loggers
 from ..naming import ImageFile
 from ..qa import create_qa_image
@@ -22,6 +23,7 @@ class ProcessingModule(ABC):
     def __init__(self, args: list[str] | None = None) -> None:
         self.verify_container()
         self.cli_call = " ".join(sys.argv[1:] if args is None else args)
+        self.start_time = datetime.datetime.now()
         self.parsed_args = self.cli(args)
         if self.parsed_args is None:  # CLI call returned None, so we're done
             return
@@ -71,8 +73,9 @@ class ProcessingModule(ABC):
             f"Module: {self.name}:{self.version}\n"
             f"Container: {lbls['ci.image']}:{lbls['ci.tag']} ({lbls['ci.commit']}) "
             f"{lbls['ci.digest']}\n"
-            f"User: {user}\n"
-            f"TimeStamp: {datetime.datetime.utcnow().isoformat()}\n"
+            f"User: {user}@{socket.getfqdn()}\n"
+            f"StartTime: {self.start_time.isoformat(timespec='seconds')}\n"
+            f"Duration: {format_timedelta(datetime.datetime.now() - self.start_time)}\n"
             f"Inputs: \n"
         )
         inputs = {
@@ -195,5 +198,3 @@ class ProcessingModule(ABC):
                 log_dir = out_path.parent.parent / "logs"
                 log_filename = self.name
             create_loggers(log_dir, log_filename, add_stream_handler=i == 0)
-
-
