@@ -57,7 +57,7 @@ setup(
         "numpy",
         "pillow",
         "scipy",
-        "radifox-utils",
+        "radifox-utils>=1.0.2",
     ],
     extras_require={
         "qa": [
