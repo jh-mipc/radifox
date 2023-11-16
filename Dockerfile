@@ -39,4 +39,4 @@ COPY . /tmp/radifox-src/
 RUN pip install --no-cache-dir /tmp/radifox-src/ && \
     rm -rf /tmp/radifox-src/
 
-ENTRYPOINT 'radifox-convert'
+ENTRYPOINT ["radifox-convert"]
