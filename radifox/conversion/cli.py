@@ -143,10 +143,6 @@ def convert(args: Optional[List[str]] = None) -> None:
                     )
             shutil.rmtree(args.output_root / metadata.dir_to_str() / type_dirname)
             silentremove(args.output_root / metadata.dir_to_str() / "nii")
-            for filepath in (args.output_root / metadata.dir_to_str() / "logs").glob(
-                "conversion-*.log"
-            ):
-                silentremove(filepath)
             for filepath in (args.output_root / metadata.dir_to_str()).glob("*.json"):
                 silentremove(filepath)
         else:
@@ -248,12 +244,6 @@ def update(args: Optional[List[str]] = None) -> None:
     for filename in ["nii", "qa", json_file.name]:
         if (args.directory / filename).exists():
             (args.directory / filename).rename(args.directory / "prev" / filename)
-    for filepath in (args.directory / "logs").glob("conversion-*.log*"):
-        if filepath.name.endswith(".log"):
-            filepath.rename(args.directory / "logs" / (filepath.name + ".01"))
-        else:
-            num = int(filepath.name.split(".")[-1]) + 1
-            filepath.rename(args.directory / "logs" / (filepath.name + ".%02d" % num))
     try:
         run_conversion(
             type_dir,
