@@ -441,8 +441,8 @@ The `<command-string>` is the exact command string that was used to run the proc
 ### Automatic Logging
 The auto-provenance system also includes automatic logging during execution.
 This is done by setting up a `logging` handler that writes to the `logs` directory in the session directory.
-This handler is set up by default to log all messages to the `logs/<module-name>/<first-input-filename>-info.log` file.
-This can be adjusted to `logs/<module-name>-info.log` by setting `log_uses_filename` to `False` in the `ProcessingModule` subclass.
+This handler is set up by default to log all messages to the `logs/<module-name>/<first-input-filename>-<timestamp>-info.log` file.
+This can be adjusted to `logs/<module-name>-<timestamp>-info.log` by setting `log_uses_filename` to `False` in the `ProcessingModule` subclass.
 Currently, there is support for `INFO`, `WARNING` and `ERROR` level messages.
 They can be accessed at any point in the `run` method by calling `logging.info(message)` (or `warning` or `error`).
 You must import `logging` at the top of the file to use this feature.
