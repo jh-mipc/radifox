@@ -25,7 +25,7 @@ def create_loggers(
 ) -> None:
     mkdir_p(log_dir)
     log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     # noinspection PyTypeChecker
     log_file = logging.FileHandler(log_dir / f"{log_prefix}-{timestamp}-info.log", delay=True)
     log_file.setFormatter(log_formatter)
