@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        html {
+            font-size: 0.5rem;
+        }
+
+        @media (min-width: 576px) {
+            html {
+                font-size: 0.625rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            html {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (min-width: 992px) {
+            html {
+                font-size: 0.875rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            html {
+                font-size: 1rem;
+            }
+        }
+    </style>
+    <title>RADIFOX QA - {{ project_id | upper() }}</title>
+</head>
+<body>
+<nav class="navbar sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">RADIFOX QA</a>
+    <span class="navbar-text">
+        {{ project_id | upper() }}
+      </span>
+</nav>
+<div class="container-fluid">
+    <br/>
+    <h1 class="text-center">Subjects</h1>
+    <hr/>
+    <div class="row">
+        {% for subject in subjects %}
+        <div class="col-6 col-sm-4 col-lg-3"><a href="/qa/{{ project_id }}/{{ subject }}/"><h4
+                class="text-center text-monospace">{{ subject }}</h4></a></div>
+        {% endfor %}
+    </div>
+</div>
+</body>
+</html>

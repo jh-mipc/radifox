@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        html {
+            font-size: 0.5rem;
+        }
+
+        @media (min-width: 576px) {
+            html {
+                font-size: 0.625rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            html {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (min-width: 992px) {
+            html {
+                font-size: 0.875rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            html {
+                font-size: 1rem;
+            }
+        }
+    </style>
+    <title>RADIFOX QA - {{ subject_id }}</title>
+</head>
+<body>
+<nav class="navbar sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">RADIFOX QA</a>
+    <span class="navbar-text">
+        <a href="/qa/{{ subject_id }}/">{{ project_id | upper() }}</a>&nbsp;/&nbsp;{{ subject_id }}
+      </span>
+</nav>
+<div class="container-fluid">
+    <br/>
+    <h1 class="text-center">Sessions</h1>
+    <hr/>
+    {% for session in sessions %}
+    <div class="row">
+        <div class="col">
+            <a href="/qa/{{ project_id }}/{{ subject_id }}/{{ session }}/">
+                <h3 class="text-center">{{ session }}</h3>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+</body>
+</html>

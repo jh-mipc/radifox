@@ -13,7 +13,7 @@ class JSONObjectEncoder(json.JSONEncoder):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.kwargs = dict(kwargs)
-        del self.kwargs['indent']
+        del self.kwargs["indent"]
         self._replacement_map = {}
 
     def default(self, o: Any) -> Union[str, dict]:
@@ -23,7 +23,7 @@ class JSONObjectEncoder(json.JSONEncoder):
             return "@@%s@@" % (key,)
         elif isinstance(o, PurePath):
             return str(o)
-        elif hasattr(o, '__repr_json__') and callable(o.__repr_json__):
+        elif hasattr(o, "__repr_json__") and callable(o.__repr_json__):
             return o.__repr_json__()
         else:
             return super().default(o)

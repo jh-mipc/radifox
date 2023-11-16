@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        html {
+            font-size: 0.5rem;
+        }
+
+        @media (min-width: 576px) {
+            html {
+                font-size: 0.625rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            html {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (min-width: 992px) {
+            html {
+                font-size: 0.875rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            html {
+                font-size: 1rem;
+            }
+        }
+
+        .border-10 {
+            border-style: solid;
+            border-width: 10px;
+        }
+
+        .right-button {
+            display: flex;
+            justify-content: right;
+            align-items: center;
+        }
+
+        .negative {
+            color: red;
+        }
+
+        .neutral {
+            color: black;
+        }
+    </style>
+    <title>RADIFOX QA - {{ subject_id }}&nbsp;/&nbsp;{{ session_id }}</title>
+</head>
+<body>
+<nav class="navbar sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">RADIFOX QA</a>
+    <span class="navbar-text">
+        <a href="/qa/{{ project_id }}/">{{ project_id | upper() }}</a>&nbsp;/&nbsp;<a
+            href="/qa/{{ project_id }}/{{ subject_id }}/">{{ subject_id }}</a>&nbsp;/&nbsp;{{ session_id }}
+      </span>
+</nav>
+<div class="container-fluid">
+    <br/>
+    <h1 class="text-center">Conversion QA</h1>
+    <hr/>
+    {% for item in images %}
+        <hr/>
+        <br/>
+        <div class="container-fluid outer-container" id="image{{ loop.index }}">
+            <div class="row">
+                <div class="col-8"><h3>
+                    #{{ item.study_number }}-{{ item.series_number }}-{{ item.acq_number }}: {{ item.image_name }}</h3>
+                </div>
+                <div class="col-2 right-button"><h4
+                        class="text-right {% if item.created_by in ['MODIFIED', 'IGNORED'] %}negative{% else %}neutral{% endif %}"
+                        id="created{{ loop.index }}">{{ item.created_by }}</h4></div>
+                <div class="col-2 right-button">
+                    <button type="button"
+                            data-project="{{ project_id }}"
+                            data-subject="{{ subject_id }}"
+                            data-session="{{ session_id }}"
+                            data-source_path="{{ item.source_path }}"
+                            data-name="{{ item.image_name }}"
+                            data-toggle="modal"
+                            data-target="#exampleModal"
+                            class="btn btn-dark">
+                        CORRECT NAME
+                    </button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-5">
+                    {% if item.manual_name != '' %}
+                        <h4 class="{% if item.created_by == 'MODIFIED' %}negative{% else %}neutral{% endif %}">
+                            Manual: {{ item.manual_name }}
+                        </h4>
+                    {% endif %}
+                </div>
+                <div class="col-7 right-button">
+                    <button type="button"
+                            onclick="sendPostRequest(this)"
+                            data-api="ignore"
+                            data-project="{{ project_id }}"
+                            data-subject="{{ subject_id }}"
+                            data-session="{{ session_id }}"
+                            data-source_path="{{ item.source_path }}"
+                            data-name="{{ item.image_name }}"
+                            data-loop_index="{{ loop.index }}"
+                            id="ignore{{ loop.index }}"
+                            class="ignore-btn btn btn-dark">
+                        IGNORE
+                    </button> &nbsp;
+                    <button type="button"
+                            onclick="sendPostRequest(this)"
+                            data-api="change"
+                            data-body_part="brain"
+                            data-project="{{ project_id }}"
+                            data-subject="{{ subject_id }}"
+                            data-session="{{ session_id }}"
+                            data-source_path="{{ item.source_path }}"
+                            data-name="{{ item.image_name }}"
+                            data-loop_index="{{ loop.index }}"
+                            id="change-brain{{ loop.index }}"
+                            class="change-brain-btn btn btn-dark">
+                        BRAIN
+                    </button> &nbsp;
+                    <button type="button"
+                            onclick="sendPostRequest(this)"
+                            data-api="change"
+                            data-body_part="cspine"
+                            data-project="{{ project_id }}"
+                            data-subject="{{ subject_id }}"
+                            data-session="{{ session_id }}"
+                            data-source_path="{{ item.source_path }}"
+                            data-name="{{ item.image_name }}"
+                            data-loop_index="{{ loop.index }}"
+                            id="change-cspine{{ loop.index }}"
+                            class="change-cspine-btn btn btn-dark">
+                        CSPINE
+                    </button> &nbsp;
+                    <button type="button"
+                            onclick="sendPostRequest(this)"
+                            data-api="change"
+                            data-body_part="tspine"
+                            data-project="{{ project_id }}"
+                            data-subject="{{ subject_id }}"
+                            data-session="{{ session_id }}"
+                            data-source_path="{{ item.source_path }}"
+                            data-name="{{ item.image_name }}"
+                            data-loop_index="{{ loop.index }}"
+                            id="change-tspine{{ loop.index }}"
+                            class="change-tspine-btn btn btn-dark">
+                        TSPINE
+                    </button> &nbsp;
+                    <button type="button"
+                            onclick="sendPostRequest(this)"
+                            data-api="change"
+                            data-body_part="lspine"
+                            data-project="{{ project_id }}"
+                            data-subject="{{ subject_id }}"
+                            data-session="{{ session_id }}"
+                            data-source_path="{{ item.source_path }}"
+                            data-name="{{ item.image_name }}"
+                            data-loop_index="{{ loop.index }}"
+                            id="change-lspine{{ loop.index }}"
+                            class="change-lspine-btn btn btn-dark">
+                        LSPINE
+                    </button> &nbsp;
+                    <button type="button"
+                            onclick="sendPostRequest(this)"
+                            data-api="change"
+                            data-body_part="orbits"
+                            data-project="{{ project_id }}"
+                            data-subject="{{ subject_id }}"
+                            data-session="{{ session_id }}"
+                            data-source_path="{{ item.source_path }}"
+                            data-name="{{ item.image_name }}"
+                            data-loop_index="{{ loop.index }}"
+                            id="change-orbits{{ loop.index }}"
+                            class="change-orbits-btn btn btn-dark">
+                        ORBITS
+                    </button>
+                </div>
+            </div>
+            {% if item.image_src %}
+                <div class="row border-10 border-secondary mx-auto" style="background:#000000; width: 100%">
+                    <div class="col text-center">
+                        <img src="{{ url_for('image', project_id=project_id, subject_id=subject_id, session_id=session_id, image_name=item.image_src) }}"
+                             class="pop img-fluid" alt="{{ item.image_name }}" loading="lazy"/>
+                    </div>
+                </div>
+            {% endif %}
+            <div class="container-fluid">
+                <br/>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Institution Name:</span><br/>{{ item.institution_name }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-right">
+                            <span class="font-weight-bold">Acquired On:</span><br/>{{ item.acq_date_time }}
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Manufacturer:</span><br/>{{ item.manufacturer }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Model:</span><br/>{{ item.model }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Field Strength:</span><br/>{{ item.field_strength }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-right">
+                            <span class="font-weight-bold">Series Description:</span><br/>{{ item.series_description }}
+                        </h5>
+                    </div>
+
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Sequence Name:</span><br/>{{ item.sequence_name }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Sequence Type:</span><br/>[{{ item.sequence_type | join(', ') }}]
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Sequence Variants:</span><br/>[{{ item.sequence_variant | join(', ') }}]
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-right">
+                            <span class="font-weight-bold">Scan Options:</span><br/>[{{ item.scan_options | join(', ') }}]
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Acquired Resolution:</span><br/>[{{ item.acquired_resolution | join(', ') }}]
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Field of View:</span><br/>[{{ item.field_of_view | join(', ') }}]
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Slice Thickness/Spacing:</span><br/>{{ item.slice_thickness }}/{{ item.slice_spacing }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-right">
+                            <span class="font-weight-bold">Number of Slices:</span><br/>{{ item.num_slices }}
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Echo Time:</span><br/>{{ item.echo_time }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Repetition Time:</span><br/>{{ item.repetition_time }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Inversion Time:</span><br/>{{ item.inversion_time }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-right">
+                            <span class="font-weight-bold">Flip Angle:</span><br/>{{ item.flip_angle }}
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Echo Train Length:</span><br/>{{ item.echo_train_length }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Contrast Agent:</span><br/>{{ item.contrast_agent }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-center">
+                            <span class="font-weight-bold">Study Description</span><br/>{{ item.study_description }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-right">
+                            <span class="font-weight-bold">Body Part:</span><br/>{{ item.body_part }}
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br/>
+    {% endfor %}
+</div>
+<br/>
+<br/>
+<br/>
+
+<button id="scrollToNextContainer" class="btn btn-primary position-fixed mb-4" style="bottom: 20px; right: 5px;">Next Image</button>
+<button id="scrollToPrevContainer" class="btn btn-primary position-fixed mb-4" style="bottom: 20px; right: 125px;">Prev Image</button>
+
+<nav class="navbar fixed-bottom navbar-dark bg-dark" style="padding-top: 0; padding-bottom: 0">
+      <span class="navbar-text">
+        {% if prev_scan %}
+            &larr;&nbsp;&nbsp;<a href="/qa/{{ project_id }}/{{ patient_id }}/{{ prev_scan }}">{{ prev_scan }}</a>
+        {% elif prev_patient %}
+            &larr;&nbsp;&nbsp;<a href="/qa/{{ project_id }}/{{ prev_patient }}">{{ prev_patient }}</a>
+        {% endif %}
+      </span>
+    <span class="navbar-text">
+        {% if next_scan %}
+            <a href="/qa/{{ project_id }}/{{ patient_id }}/{{ next_scan }}">{{ next_scan }}</a>&nbsp;&nbsp;&rarr;
+        {% elif next_patient %}
+            <a href="/qa/{{ project_id }}/{{ next_patient }}">{{ next_patient }}</a>&nbsp;&nbsp;&rarr;
+        {% endif %}
+      </span>
+</nav>
+
+<div class="modal fade" id="imagemodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 100%"
+         data-dismiss="modal">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img src="" class="imagepreview" alt="full size image">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Correct Naming</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="note-form">
+                    <input type="hidden" id="project-id" name="project"/>
+                    <input type="hidden" id="patient-id" name="patient"/>
+                    <input type="hidden" id="scan-id" name="scan"/>
+                    <input type="hidden" id="source-path" name="source"/>
+                    <div class="form-group">
+                        <label for="original-name" class="col-form-label">Original Name:</label>
+                        <input readonly type="text" class="form-control" id="original-name" name="original"/>
+                    </div>
+                    <h3 class="text-center">Corrected Name:</h3>
+                    <div class="form-group">
+                        <label for="body-part" class="col-form-label">Body Part:</label>
+                        <input type="text" class="form-control" id="body-part" name="body_part"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="modality" class="col-form-label">Modality:</label>
+                        <input type="text" class="form-control" id="modality" name="modality"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="technique" class="col-form-label">Technique:</label>
+                        <input type="text" class="form-control" id="technique" name="technique"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="acq-dim" class="col-form-label">Acquired Dimension:</label>
+                        <input type="text" class="form-control" id="acq-dim" name="acq_dim"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="orient" class="col-form-label">Orientation:</label>
+                        <input type="text" class="form-control" id="orient" name="orient"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="ex-contrast" class="col-form-label">Ex-Contrast:</label>
+                        <input type="text" class="form-control" id="ex-contrast" name="ex_contrast"/>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-danger" id="ignore-button-submit">Ignore Image</button>
+                <button type="submit" class="btn btn-primary" id="note-form-submit">Correct Name</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha384-tsQFqpEReu7ZLhBV2VZlAu7zcOV+rXbYlF2cqB8txI/8aZajjp4Bqd+V6D5IgvKT"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+<script type="text/javascript">
+    $(function () {
+        $('.pop').on('click', function () {
+            $('.imagepreview').attr('src', $(this).attr('src'));
+            $('#imagemodal').modal('show');
+        });
+    });
+
+    function updateButtonStatus() {
+        // Get all div elements with class "container"
+        const containers = $('div.outer-container');
+
+        // Find the current container based on scroll position
+        const currentContainer = containers.filter(function () {
+            return $(window).scrollTop() >= $(this).offset().top - 101;
+        }).last();
+
+        // Find the index of the current container
+        const currentIndex = containers.index(currentContainer);
+
+        // Check if we are at the first or last container
+        if (currentIndex <= 0) {
+            $('#scrollToPrevContainer').prop('disabled', true);
+        } else {
+            $('#scrollToPrevContainer').prop('disabled', false);
+        }
+        if (currentIndex >= containers.length - 1) {
+            $('#scrollToNextContainer').prop('disabled', true);
+        } else {
+            $('#scrollToNextContainer').prop('disabled', false);
+        }
+    }
+
+    $('#scrollToPrevContainer').on('click', function () {
+        // Get all div elements with class "container"
+        const containers = $('div.outer-container');
+
+        // Find the current container based on scroll position
+        const currentContainer = containers.filter(function () {
+            return $(window).scrollTop() >= $(this).offset().top - 101;
+        }).last();
+
+        // Find the index of the current container
+        const currentIndex = containers.index(currentContainer);
+
+        // Find the next container
+        const prevContainer = containers.eq(currentIndex - 1);
+
+        // If the next container exists, scroll to it
+        if (prevContainer.length && currentIndex > 0) {
+            $('html, body').animate({
+                scrollTop: prevContainer.offset().top - 100
+            }, 200); // 200ms animation duration
+        }
+    });
+    $('#scrollToNextContainer').on('click', function () {
+        // Get all div elements with class "container"
+        const containers = $('div.outer-container');
+
+        // Find the current container based on scroll position
+        const currentContainer = containers.filter(function () {
+            return $(window).scrollTop() >= $(this).offset().top - 101;
+        }).last();
+
+        // Find the index of the current container
+        const currentIndex = containers.index(currentContainer);
+
+        // Find the next container
+        const nextContainer = containers.eq(currentIndex + 1);
+
+        // If the next container exists, scroll to it
+        if (nextContainer.length) {
+            $('html, body').animate({
+                scrollTop: nextContainer.offset().top - 100
+            }, 200); // 200ms animation duration
+        }
+    });
+    // Update the button status on page load and when scrolling
+    $(window).on('load scroll', updateButtonStatus);
+
+    function sendPostRequest(btn) {
+        const btn_types = ['ignore', 'change-brain', 'change-cspine', 'change-tspine', 'change-lspine', 'change-orbits'];
+        // Retrieve data from the custom data-* attributes of the button
+        const api = btn.getAttribute('data-api');
+        const loop_idx = btn.getAttribute('data-loop_index');
+        const data = {
+            project: btn.getAttribute('data-project'),
+            subject: btn.getAttribute('data-subject'),
+            session: btn.getAttribute('data-session'),
+            source: btn.getAttribute('data-source_path'),
+            body_part: btn.getAttribute('data-body_part'),
+            original_name: btn.getAttribute('data-name')
+        };
+        const api_str = (api === 'change') ? `${api}-${data['body_part']}` : api;
+
+        // Define the URL to which the POST request will be sent
+        const url = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/${api}-btn`;
+
+        // Use the jQuery $.ajax() function to send the POST request
+        $.ajax({
+            url: url,
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (json) {
+                // Handle a successful response
+                btn_types.forEach(curstr => {
+                    let curr_btn = document.getElementById(`${curstr}${loop_idx}`);
+                    curr_btn.classList.remove("btn-success");
+                    curr_btn.classList.add("btn-dark");
+                });
+                const button = document.getElementById(`${api_str}${loop_idx}`);
+                button.classList.remove("btn-dark");
+                button.classList.add("btn-success");
+            },
+            error: function (xhr, status, error) {
+                // Handle any errors
+                console.error("Error:", error);
+            }
+        });
+    }
+
+    $(function () {
+        $('#exampleModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget) // Button that triggered the modal
+            const name = button.data('name') // Extract info from data-* attributes
+            const project = button.data('project')
+            const subject = button.data('subject')
+            const session = button.data('session')
+            const source_path = button.data('source_path')
+            const name_array = name.split('-')
+            // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+            // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+            const modal = $(this)
+            modal.find('.modal-title').text('Correct Naming -- ' + subject + ' / ' + session)
+            modal.find('.modal-body #original-name').val(name)
+            modal.find('.modal-body #project-id').val(project)
+            modal.find('.modal-body #subject-id').val(subject)
+            modal.find('.modal-body #session-id').val(session)
+            modal.find('.modal-body #source-path').val(source_path)
+            modal.find('.modal-body #body-part').val(name_array[0])
+            modal.find('.modal-body #modality').val(name_array[1])
+            modal.find('.modal-body #technique').val(name_array[2])
+            modal.find('.modal-body #acq-dim').val(name_array[3])
+            modal.find('.modal-body #orient').val(name_array[4])
+            modal.find('.modal-body #ex-contrast').val(name_array[5])
+        });
+    });
+    $(function () {
+        $('#note-form-submit').click(function (e) {
+            e.preventDefault();
+            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/manual-entry`, $('#note-form').serialize())
+            $('#exampleModal').modal('hide');
+        });
+    });
+    $(function () {
+        $('#ignore-button-submit').click(function (e) {
+            e.preventDefault();
+            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/ignore-entry`, $('#note-form').serialize())
+            $('#exampleModal').modal('hide');
+        });
+    });
+</script>
+</body>
+</html>
