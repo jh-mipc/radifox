@@ -410,8 +410,9 @@ The format is as follows:
 Id: <record-id>
 Module: <module-name>:<module-version>
 Container: <container-url>:<container-tag> <container-hash>
-User: <user-name>
-TimeStamp: <timestamp>
+User: <user-name>@<hostname>
+StartTime: <start-timestamp>
+Duration: <duration-days-hours-minutes-seconds>
 Inputs:
   - <input-key-1>: <input-filename-1>:<input-hash-1>
   - <input-key-2>: <input-filename-2>:<input-hash-2>

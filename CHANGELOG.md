@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
  - Add LICENSE file
  - Filled out CHANGELOG
+ - Add README changes from v1.0.1
 
 ## [1.0.1] - 2023-11-16
 This is a small correction release after 1.0.0 that makes some convenience changes to the provenance record files.
