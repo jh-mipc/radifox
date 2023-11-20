@@ -587,6 +587,8 @@ For reproducibility, processing must be done in a container.
 This can be Docker or Apptainer/Singularity, but requires a few specific labels to be set to maintain strict accounting of the container used.
 
 The labels are:
+ - `ci.timestamp`: Timestamp of the container image creation (`%Y-%m-%dT%H:%M:%SZ`)
+ - `ci.builder`: The username of the builder of the container image (who initiated the build)
  - `ci.image`: URL of the container image in a repository (e.g. Docker Hub)
  - `ci.tag`: Version tag of the container image
  - `ci.commit`: Commit hash of the Dockerfile/repo used to build the container image
@@ -605,6 +607,8 @@ build:
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build 
+      --label ci.timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+      --label ci.builder=$GITLAB_USER_LOGIN
       --label ci.image=$CI_REGISTRY_IMAGE
       --label ci.tag=$CI_COMMIT_TAG
       --label ci.commit=$CI_COMMIT_SHA 
@@ -613,4 +617,75 @@ build:
     - echo "FROM $TAG" | docker buildx build --label ci.digest=$DIGEST -t $TAG --push -
   only:
     - tags
+```
+
+Using a GitHub action is similar and can be done with GitHub Actions:
+```yaml
+name: Publish Docker Image to GHCR
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - '*'
+
+jobs:
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      -
+        name: Get build time
+        id: build_time
+        run: echo "time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+      -
+        name: Login to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      -
+        name: Build image
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          labels: |
+            ci.timestamp=${{ steps.build_time.outputs.time }}
+            ci.image=${{ github.repository }}
+            ci.tag=${{ github.ref_name }}
+            ci.commit=${{ github.sha }}
+            ci.builder=${{ github.triggering_actor }}
+          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          build-args: |
+            BUILDKIT_CONTEXT_KEEP_GIT_DIR=true
+      -
+        name: Write new Dockerfile
+        run: echo "FROM ghcr.io/${{ github.repository }}:${{ github.ref_name }}" > Dockerfile.new
+
+      - name: Build labeled image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.new
+          push: true
+          labels: ci.digest=${{ steps.docker_build.outputs.digest }}
+          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
 ```
