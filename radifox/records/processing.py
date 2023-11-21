@@ -71,7 +71,8 @@ class ProcessingModule(ABC):
         user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
-            f"Container: {lbls['ci.image']}:{lbls['ci.tag']} ({lbls['ci.commit']}) "
+            f"Container: {lbls['ci.image']}:{lbls['ci.tag']}[{lbls['ci.commit']}] "
+            f"Built: {lbls['ci.timestamp']} By: {lbls['ci.builder']}\n "
             f"{lbls['ci.digest']}\n"
             f"User: {user}@{socket.getfqdn()}\n"
             f"StartTime: {self.start_time.isoformat(timespec='seconds')}\n"

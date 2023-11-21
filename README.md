@@ -409,7 +409,7 @@ The format is as follows:
 ```
 Id: <record-id>
 Module: <module-name>:<module-version>
-Container: <container-url>:<container-tag> <container-hash>
+Container: <container-url>:<container-tag>[<container-hash>] Built: <container-timestamp> By: <container-builder>
 User: <user-name>@<hostname>
 StartTime: <start-timestamp>
 Duration: <duration-days-hours-minutes-seconds>
@@ -430,7 +430,8 @@ Command: <command-string>
 
 The `<record-id>` is a unique identifier for the record created from a hash of the rest of record.
 The `<module-name>` and `<module-version>` are the name and version of the processing module that created the record (defined in `ProcessingModule` subclass).
-The `<container-url>`, `<container-tag>`, and `<container-hash>` are the URL, tag, and hash of the container used to run the processing module.
+The `<container-url>`, `<container-tag>`, and `<container-hash>` values are the URL, tag, and hash of the container used to run the processing module.
+The `<container-timestamp>`, `<container-builder>` values are the timestamp and builder identity of the container used to run the processing module.
 These are derived from specific labels set during container creation.
 For more information on how compatible containers are created, see [Container Creation](#container-creation).
 The `<user-name>` and `<timestamp>` are the user name of the user that ran the processing module and the timestamp of the processing module run completion.
