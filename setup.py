@@ -31,7 +31,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Blake Dewey",
     author_email="blake.dewey@jhu.edu",
-    url="https://gitlab.com/iacl/radifox",
+    url="https://github.com/jh-mipc/radifox",
     license="Apache License, 2.0",
     classifiers=[
         "Development Status :: 3 - Alpha",
