@@ -168,7 +168,7 @@ class ProcessingModule(ABC):
             if j == 0:
                 session_dir = output.parent.parent
                 session_file = "_".join(
-                    [session_dir.parent.name, session_dir.name, "Provenance.txt"]
+                    [session_dir.parent.name, session_dir.name, "Provenance.yml"]
                 )
                 safe_append_to_file(session_dir / session_file, prov_str)
             suffix = "".join(output.suffixes)
