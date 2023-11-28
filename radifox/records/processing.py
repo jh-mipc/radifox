@@ -32,8 +32,8 @@ class ProcessingModule(ABC):
             logging.info(f"Beginning processing using: {self.name} v{self.version}.")
             logging.info(f"Command: {self.cli_call}")
             self.outputs = self.run(**self.parsed_args)
-            if not isinstance(self.outputs, dict) or len(self.outputs) == 0:
-                logging.error(f"Processing failed. No outputs were generated.")
+            if not self.check_outputs():
+                logging.error(f"Processing failed. No outputs reported.")
                 return
             logging.info(f"Generating QA imagees.")
             self.generate_qa_images()
@@ -68,6 +68,18 @@ class ProcessingModule(ABC):
                 raise ValueError("Container is missing required labels.")
         else:
             raise ValueError("Container labels not found. Running outside of container?")
+
+    def check_outputs(self) -> bool:
+        if self.outputs is None:
+            return False
+        if self.check_multi_inputs():
+            return (
+                isinstance(self.outputs, list)
+                and len(self.outputs) > 0
+                and isinstance(self.outputs[0], dict)
+            )
+        else:
+            return isinstance(self.outputs, dict) and len(self.outputs) > 0
 
     def create_prov(self, args: dict[str], outputs: dict[str, Path | list[Path]]) -> str:
         lbls = self.get_container_labels()
