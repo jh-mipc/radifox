@@ -98,9 +98,11 @@ class ProcessingModule(ABC):
         user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
-            f"Container: {lbls['ci.image']}:{lbls['ci.tag']}@{lbls['ci.commit'][:8]}"
-            f"[{lbls['ci.digest']}] "
-            f"Built: {lbls['ci.timestamp']} By: {lbls['ci.builder']}\n"
+            f"Container: \n"
+            f"  url: {lbls['ci.image']}:{lbls['ci.tag']}@{lbls['ci.commit'][:8]}\n"
+            f"  hash: {lbls['ci.digest']}\n"
+            f"  builder: {lbls['ci.builder']}\n"
+            f"  timestamp: {lbls['ci.timestamp']}\n"
             f"User: {user}@{socket.getfqdn()}\n"
             f"StartTime: {self.start_time.isoformat(timespec='seconds')}\n"
             f"Duration: {format_timedelta(datetime.datetime.now() - self.start_time)}\n"
@@ -125,29 +127,38 @@ class ProcessingModule(ABC):
         if len(params) > 0:
             prov_str += "\n"
             for k, v in params.items():
-                v_list = v if isinstance(v, list) else [v]
-                for item in v_list:
-                    prov_str += f"  - {k}: {str(item)}\n"
+                if isinstance(v, list):
+                    prov_str += f"  {k}:\n"
+                    for item in v:
+                        prov_str += f"    - {str(item)}\n"
+                else:
+                    prov_str += f"  {k}: {str(v)}\n"
         else:
             prov_str += "None\n"
         prov_str += f"Command: {self.cli_call}\n"
         hashobj = hashlib.sha256()
         hashobj.update(prov_str.encode("utf-8"))
-        prov_str = f"Id: {hashobj.hexdigest()}\n" + prov_str + f"---\n"
+        prov_str = f"---\nId: {hashobj.hexdigest()}\n" + prov_str + f"...\n"
         return prov_str
 
     @staticmethod
     def get_prov_path_strs(path_dict: dict[str, Path | list[Path]], project_root: Path) -> str:
         prov_str = ""
         for k, v in path_dict.items():
-            v_list = v if isinstance(v, list) else [v]
-            for item in v_list:
-                rel_path = (
-                    item.relative_to(project_root) if item.is_relative_to(project_root) else item
-                )
-                prov_str += (
-                    f"  - {k}: {str(rel_path)}:sha256:{hash_file(item, include_names=False)}\n"
-                )
+            if isinstance(v, list):
+                prov_str += f"  {k}:\n"
+                for item in v:
+                    rel_path = (
+                        item.relative_to(project_root)
+                        if item.is_relative_to(project_root)
+                        else item
+                    )
+                    prov_str += (
+                        f"    - {str(rel_path)}:sha256:{hash_file(item, include_names=False)}\n"
+                    )
+            else:
+                rel_path = v.relative_to(project_root) if v.is_relative_to(project_root) else v
+                prov_str += f"  {k}: {str(rel_path)}:sha256:{hash_file(v, include_names=False)}\n"
         return prov_str
 
     @staticmethod
