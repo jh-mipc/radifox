@@ -14,6 +14,15 @@ from ..conversion import hash_file, create_loggers
 from ..naming import ImageFile
 from ..qa import create_qa_image
 
+CONTAINER_LABELS = [
+    "ci.image",
+    "ci.tag",
+    "ci.commit",
+    "ci.builder",
+    "ci.timestamp",
+    "ci.digest",
+]
+
 
 class ProcessingModule(ABC):
     name: str = None
@@ -64,7 +73,7 @@ class ProcessingModule(ABC):
     def verify_container() -> None:
         if Path("/.singularity.d/labels.json").exists():
             labels = ProcessingModule.get_container_labels()
-            if any(lbl not in labels for lbl in ["ci.image", "ci.tag", "ci.commit", "ci.digest"]):
+            if any(lbl not in labels for lbl in CONTAINER_LABELS):
                 raise ValueError("Container is missing required labels.")
         else:
             raise ValueError("Container labels not found. Running outside of container?")
@@ -89,9 +98,9 @@ class ProcessingModule(ABC):
         user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
-            f"Container: {lbls['ci.image']}:{lbls['ci.tag']}[{lbls['ci.commit']}] "
+            f"Container: {lbls['ci.image']}:{lbls['ci.tag']}@{lbls['ci.commit'][:8]}"
+            f"[{lbls['ci.digest']}] "
             f"Built: {lbls['ci.timestamp']} By: {lbls['ci.builder']}\n "
-            f"{lbls['ci.digest']}\n"
             f"User: {user}@{socket.getfqdn()}\n"
             f"StartTime: {self.start_time.isoformat(timespec='seconds')}\n"
             f"Duration: {format_timedelta(datetime.datetime.now() - self.start_time)}\n"
