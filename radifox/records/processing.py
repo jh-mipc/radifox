@@ -100,7 +100,7 @@ class ProcessingModule(ABC):
             f"Module: {self.name}:{self.version}\n"
             f"Container: {lbls['ci.image']}:{lbls['ci.tag']}@{lbls['ci.commit'][:8]}"
             f"[{lbls['ci.digest']}] "
-            f"Built: {lbls['ci.timestamp']} By: {lbls['ci.builder']}\n "
+            f"Built: {lbls['ci.timestamp']} By: {lbls['ci.builder']}\n"
             f"User: {user}@{socket.getfqdn()}\n"
             f"StartTime: {self.start_time.isoformat(timespec='seconds')}\n"
             f"Duration: {format_timedelta(datetime.datetime.now() - self.start_time)}\n"
@@ -127,7 +127,7 @@ class ProcessingModule(ABC):
             for k, v in params.items():
                 v_list = v if isinstance(v, list) else [v]
                 for item in v_list:
-                    prov_str += f"  - {k}:{str(item)}\n"
+                    prov_str += f"  - {k}: {str(item)}\n"
         else:
             prov_str += "None\n"
         prov_str += f"Command: {self.cli_call}\n"
@@ -146,7 +146,7 @@ class ProcessingModule(ABC):
                     item.relative_to(project_root) if item.is_relative_to(project_root) else item
                 )
                 prov_str += (
-                    f"  - {k}:{str(rel_path)}:sha256:{hash_file(item, include_names=False)}\n"
+                    f"  - {k}: {str(rel_path)}:sha256:{hash_file(item, include_names=False)}\n"
                 )
         return prov_str
 
