@@ -39,6 +39,12 @@ class ImageFile:
     def path(self) -> Path:
         return self._path
 
+    def is_relative_to(self, other: Path | str) -> bool:
+        return self.path.is_relative_to(other)
+
+    def relative_to(self, other: Path | str) -> Path:
+        return self.path.relative_to(other)
+
     @property
     def name(self) -> str:
         return self.path.name

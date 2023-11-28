@@ -32,6 +32,9 @@ class ProcessingModule(ABC):
             logging.info(f"Beginning processing using: {self.name} v{self.version}.")
             logging.info(f"Command: {self.cli_call}")
             self.outputs = self.run(**self.parsed_args)
+            if not isinstance(self.outputs, dict) or len(self.outputs) == 0:
+                logging.error(f"Processing failed. No outputs were generated.")
+                return
             logging.info(f"Generating QA imagees.")
             self.generate_qa_images()
             logging.info(f"Generating provenance records.")
@@ -68,6 +71,7 @@ class ProcessingModule(ABC):
 
     def create_prov(self, args: dict[str], outputs: dict[str, Path | list[Path]]) -> str:
         lbls = self.get_container_labels()
+        project_root = outputs[list(outputs.keys())[0]].parent.parent.parent.parent
         user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
@@ -77,7 +81,8 @@ class ProcessingModule(ABC):
             f"User: {user}@{socket.getfqdn()}\n"
             f"StartTime: {self.start_time.isoformat(timespec='seconds')}\n"
             f"Duration: {format_timedelta(datetime.datetime.now() - self.start_time)}\n"
-            f"Inputs: \n"
+            f"ProjectRoot: {project_root}\n"
+            f"Inputs: "
         )
         inputs = {
             k: v
@@ -86,31 +91,40 @@ class ProcessingModule(ABC):
             or (isinstance(v, list) and isinstance(v[0], (Path, ImageFile)))
         }
         if len(inputs) > 0:
-            for k, v in inputs.items():
-                v_list = v if isinstance(v, list) else [v]
-                for item in v_list:
-                    prov_str += (
-                        f"  - {k}:{str(item)}:sha256:{hash_file(item, include_names=False)}\n"
-                    )
+            prov_str += "\n"
+            prov_str += self.get_prov_path_strs(inputs, project_root)
+        else:
+            prov_str += "None\n"
         prov_str += f"Outputs: \n"
-        if len(outputs) > 0:
-            for k, v in outputs.items():
-                v_list = v if isinstance(v, list) else [v]
-                for item in v_list:
-                    prov_str += (
-                        f"  - {k}:{str(item)}:sha256:{hash_file(item, include_names=False)}\n"
-                    )
+        prov_str += self.get_prov_path_strs(outputs, project_root)
         params = {k: v for k, v in args.items() if k not in inputs}
-        prov_str += f"Parameters: \n"
+        prov_str += f"Parameters: "
         if len(params) > 0:
+            prov_str += "\n"
             for k, v in params.items():
                 v_list = v if isinstance(v, list) else [v]
                 for item in v_list:
                     prov_str += f"  - {k}:{str(item)}\n"
+        else:
+            prov_str += "None\n"
         prov_str += f"Command: {self.cli_call}\n"
         hashobj = hashlib.sha256()
         hashobj.update(prov_str.encode("utf-8"))
         prov_str = f"Id: {hashobj.hexdigest()}\n" + prov_str + f"---\n"
+        return prov_str
+
+    @staticmethod
+    def get_prov_path_strs(path_dict: dict[str, Path | list[Path]], project_root: Path) -> str:
+        prov_str = ""
+        for k, v in path_dict.items():
+            v_list = v if isinstance(v, list) else [v]
+            for item in v_list:
+                rel_path = (
+                    item.relative_to(project_root) if item.is_relative_to(project_root) else item
+                )
+                prov_str += (
+                    f"  - {k}:{str(rel_path)}:sha256:{hash_file(item, include_names=False)}\n"
+                )
         return prov_str
 
     @staticmethod
