@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - Filled out CHANGELOG
  - Add README changes from v1.0.1
 
+### Changed
+ - Fixed .gitattributes for rename
+ - Add `timestamp` and `builder` values to container labels
+ - Add GitHub Actions for docker creation and pypi publishing
+ - Reformat prov record (new container labels, relative paths, yaml compliance)
+ - Harmonize GitLab CI and GitHub Actions workflows
+
 ## [1.0.1] - 2023-11-16
 This is a small correction release after 1.0.0 that makes some convenience changes to the provenance record files.
 
