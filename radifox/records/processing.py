@@ -83,7 +83,9 @@ class ProcessingModule(ABC):
 
     def create_prov(self, args: dict[str], outputs: dict[str, Path | list[Path]]) -> str:
         lbls = self.get_container_labels()
-        project_root = outputs[list(outputs.keys())[0]].parent.parent.parent.parent
+        project_root = [
+            el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])
+        ][0].parent.parent.parent.parent
         user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
             f"Module: {self.name}:{self.version}\n"
@@ -141,9 +143,7 @@ class ProcessingModule(ABC):
 
     @staticmethod
     def write_prov(prov_str: str, outputs: dict[str, Path | list[Path]]) -> None:
-        outs = []
-        for out in outputs.values():
-            outs.extend(out if isinstance(out, list) else [out])
+        outs = [el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])]
         for j, output in enumerate(outs):
             if j == 0:
                 session_dir = output.parent.parent
