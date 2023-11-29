@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - Reformat prov record (new container labels, relative paths, yaml compliance)
  - Harmonize GitLab CI and GitHub Actions workflows
  - Update URL for GitHub move
+ - Update Dockerfile to use Debian bookworm fixing a ldconfig bug
 
 ## [1.0.1] - 2023-11-16
 This is a small correction release after 1.0.0 that makes some convenience changes to the provenance record files.
