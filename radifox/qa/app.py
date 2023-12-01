@@ -164,7 +164,7 @@ def qa(project_id, subject_id, session_id):
             "source_path": si["SourcePath"],
             "manual_name": manual_name,
         }
-        img_path = session_dir / "qa" / "autoconv" / jsonfile.name.replace(".json", ".png")
+        img_path = session_dir / "qa" / "conversion" / jsonfile.name.replace(".json", ".png")
         if img_path.exists():
             image_obj["image_src"] = img_path.name
         images.append(image_obj)
@@ -287,5 +287,5 @@ def change_btn():
 @app.route("/image/<project_id>/<subject_id>/<session_id>/<image_name>")
 def image(project_id, subject_id, session_id, image_name):
     return send_from_directory(
-        str(DATA_DIR / project_id / subject_id / session_id / "qa" / "autoconv"), image_name
+        str(DATA_DIR / project_id / subject_id / session_id / "qa" / "conversion"), image_name
     )
