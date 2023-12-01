@@ -407,33 +407,40 @@ See [ProcessingModule](#processingmodule) for more details.
 
 ### Provenance Records
 Provenance from this system is stored in two different ways.
-The first is at the session level in the `<subject-id>_<session-id>_Provenance.txt` file.
+The first is at the session level in the `<subject-id>_<session-id>_Provenance.yml` file.
 This is an append-only text file that contains the provenance records of all processing steps for the session.
 The second is a provenance text file (`.prov`) that is stored with each processed file.
 This contains the provenance record for the process that created the processed file only.
 
-Provenance records are stored in a custom format that is human-readable, but will also be parsable by RADIFOX in the future.
+Provenance records are stored in the YAML format that is human-readable, but also easily parsed by Python.
 The format is as follows:
-```
+```yaml
+---
 Id: <record-id>
 Module: <module-name>:<module-version>
-Container: <container-url>:<container-tag>@<container-commit>[<container-hash>] Built: <container-timestamp> By: <container-builder>
+Container: 
+  url: <container-url>:<container-tag>@<container-commit>
+  hash: <container-hash>
+  builder: <container-builder>
+  timestamp: <container-timestamp>
 User: <user-name>@<hostname>
 StartTime: <start-timestamp>
 Duration: <duration-days-hours-minutes-seconds>
 Inputs:
-  - <input-key-1>: <input-filename-1>:<input-hash-1>
-  - <input-key-2>: <input-filename-2>:<input-hash-2>
-  - ...
+  <input-key-1>: <input-filename-1>:<input-hash-1>
+  <input-key-2>: 
+    - <input-filename-2>:<input-hash-2>
+    - <input-filename-3>:<input-hash-3>
 Outputs:
-  - <output-key-1>: <output-filename-1>:<output-hash-1>
-  - <output-key-2>: <output-filename-2>:<output-hash-2>
-  - ...
+  <output-key-1>: <output-filename-1>:<output-hash-1>
+  <output-key-2>: 
+    - <output-filename-2>:<output-hash-2>
+    - <output-filename-3>:<output-hash-3>
 Parameters:
-  - <parameter-key-1>: <parameter-value-1>
-  - <parameter-key-2>: <parameter-value-2>
-  - ...
+  <parameter-key-1>: <parameter-value-1>
+  <parameter-key-2>: <parameter-value-2>
 Command: <command-string>
+...
 ```
 
 The `<record-id>` is a unique identifier for the record created from a hash of the rest of record.
