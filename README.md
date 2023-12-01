@@ -611,20 +611,24 @@ The labels are:
 These labels are most easily set by using Continuous Integration (CI) to create your images.
 This is an example `.gitlab-ci.yml` to achieve this on GitLab:
 ```yaml
+variables:
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 0
+
 build:
   image: docker:20.10.16
   stage: build
   services:
     - docker:20.10.16-dind
   variables:
-    TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build 
       --label ci.timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
       --label ci.builder=$GITLAB_USER_LOGIN
       --label ci.image=$CI_REGISTRY_IMAGE
-      --label ci.tag=$CI_COMMIT_TAG
+      --label ci.tag=$CI_COMMIT_REF_NAME
       --label ci.commit=$CI_COMMIT_SHA 
       -t $TAG .
     - DIGEST=$(docker inspect --format='{{index .Id}}' $TAG)
