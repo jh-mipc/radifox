@@ -2,20 +2,63 @@ import base64
 import os
 import json
 from pathlib import Path
+import secrets
 
-from flask import Flask, request, render_template, jsonify, send_from_directory
+from flask import (
+    Flask,
+    request,
+    render_template,
+    jsonify,
+    send_from_directory,
+    url_for,
+    session,
+    redirect,
+)
 
 from ..conversion.json import JSONObjectEncoder, NoIndent
 
 DATA_DIR = Path(os.environ.get("QA_DATA_DIR", "/data")).resolve()
+SECRET_KEY = os.environ.get("QA_SECRET_KEY", secrets.token_urlsafe())
 
 app = Flask(__name__)
+app.secret_key = secrets.token_hex()
+
+with app.app_context():
+    print(
+        f"Access the QA Webapp Directly at: "
+        f"http://{os.environ['QA_HOST']}:{os.environ['QA_PORT']}/login?key={SECRET_KEY}"
+    )
+    print(f"QA Data Directory: {DATA_DIR}")
+    print(f"QA Secret Key: {SECRET_KEY}")
 
 
 def encode_image(filepath):
     with filepath.open("rb") as fp:
         b64_str = base64.b64encode(fp.read())
     return b64_str
+
+
+@app.before_request
+def require_authentication():
+    if session.get("qa_secret_key") != SECRET_KEY and request.endpoint != "login":
+        return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        test_key = request.form["key"]
+    else:
+        test_key = request.args.get("key")
+
+    if test_key is not None:
+        if test_key == SECRET_KEY:
+            session["qa_secret_key"] = test_key
+            return redirect(url_for("index"))
+        else:
+            error = "Invalid Key"
+    return render_template("login.html", error=error)
 
 
 @app.route("/qa/")
@@ -34,7 +77,7 @@ def project(project_id):
 @app.route("/qa/<project_id>/<subject_id>/")
 def subject(project_id, subject_id):
     pat_dir = DATA_DIR / project_id / subject_id
-    sessions = sorted([session.name for session in pat_dir.glob("*")])
+    sessions = sorted([session_path.name for session_path in pat_dir.glob("*")])
     return render_template(
         "subject.html", project_id=project_id, subject_id=subject_id, sessions=sessions
     )
@@ -43,13 +86,13 @@ def subject(project_id, subject_id):
 @app.route("/qa/<project_id>/<subject_id>/<session_id>/")
 def qa(project_id, subject_id, session_id):
     session_dir = DATA_DIR / project_id / subject_id / session_id
-    subjects = sorted(
-        [pat.name for pat in (DATA_DIR / project_id).glob(project_id.upper() + "*")]
-    )
+    subjects = sorted([pat.name for pat in (DATA_DIR / project_id).glob(project_id.upper() + "*")])
     pat_idx = subjects.index(subject_id)
     prev_subject = subjects[pat_idx - 1] if pat_idx > 0 else None
     next_subject = subjects[pat_idx + 1] if pat_idx < (len(subjects) - 1) else None
-    sessions = sorted([session.name for session in (DATA_DIR / project_id / subject_id).glob("*")])
+    sessions = sorted(
+        [session_path.name for session_path in (DATA_DIR / project_id / subject_id).glob("*")]
+    )
     session_idx = sessions.index(session_id)
     prev_session = sessions[session_idx - 1] if session_idx > 0 else None
     next_session = sessions[session_idx + 1] if session_idx < (len(sessions) - 1) else None
