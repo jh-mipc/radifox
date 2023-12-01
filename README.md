@@ -115,6 +115,14 @@ radifox-qa --port 8888 --root-directory /path/to/output
 ```
 This will launch the QA webapp on port 8888, pointing to `/path/to/output`.
 The QA webapp will be accessible at `http://localhost:8888` and will show projects in `/path/to/output`.
+Be sure to note the secret key printed to the terminal when the app starts.
+You will need this to log into the webapp.
+The secret key changes each time the app is launched.
+
+You can specify your own secret key using the `--secret-key` option.
+```bash
+radifox-qa --port 8888 --root-directory /path/to/output --secret-key my-secret-key
+```
 
 ### Python API
 The `radifox` package also includes a Python API for accessing additional components.
@@ -466,7 +474,11 @@ There are three types of actions that can be taken with the QA webapp.
 
 The QA webapp is launched with the `radifox-qa` command.
 It is a webapp that runs locally on port 5000 by default.
-It can be accessed at `http://localhost:5000` and will show all projects in the root directory.
+Be sure to copy down the Secret Key that is printed to the console when the webapp is launched.
+This will be required to log into the webapp and changes each time the app is launched.
+It can also be specified using the `--secret-key` option.
+For convenience, you can log into the app using `http://{HOST}:{PORT}/login?key={SECRET_KEY}`, which is printed when the app is launched.
+It can also be accessed at `http://{HOST}:{PORT}` (`http://localhost:5000` by default) and the key can be entered there.
 See [`radifox-qa`](#radifox-qa) above for more details.
 
 # Additional Information
@@ -514,6 +526,7 @@ See [`radifox-qa`](#radifox-qa) above for more details.
 | `--port`           | The port to run the QA webapp on.                                    | `5000`    |
 | `--host`           | The host bind address for the QA webapp.                             | `0.0.0.0` |
 | `--root-directory` | The output root to read projects from (contains project directories) | `/data`   |
+| `--secret-key`     | The secret key to use for the QA webapp.                             | `None`    |
 | `--workers`        | Number of workers to use for web server.                             | `1`       |
 
 ## JSON Sidecar Format
