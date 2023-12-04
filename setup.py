@@ -53,9 +53,10 @@ setup(
     python_requires=">=3.10",
     install_requires=[
         "nibabel",
-        "pydicom",
         "numpy",
         "pillow",
+        "pydicom",
+        "pyyaml",
         "scipy",
         "radifox-utils>=1.0.2",
     ],
