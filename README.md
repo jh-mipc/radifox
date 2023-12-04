@@ -124,6 +124,37 @@ You can specify your own secret key using the `--secret-key` option.
 radifox-qa --port 8888 --root-directory /path/to/output --secret-key my-secret-key
 ```
 
+#### 'radifox-stage'
+"Staging" is the process of filtering images for processing.
+`radifox-stage` is a processing module that is uses ImageFilters to accomplish this.
+`radifox-stage` looks over an entire subject and filters images based on provided `--image-types`.
+By default, all images matching the filter will be staged for processing.
+To keep only the best resolution images for each filter, use the `--keep-best-res` option.
+Additionally, it can generate registration targets based on provided `--reg-filters`.
+Plugins derived from the `StagingPlugin` abstract class can be used to add additional functionality to `radifox-stage`.
+Two default plugins `MEMPRAGEPlugin` and `MP2RAGEPlugin` are included with RADIFOX.
+These can be skipped by providing the `--skip-default-plugins` option.
+Staged results have the sform and qform matrices set to be equal by default.
+To skip this, use the `--skip-set-sform` option.
+
+A good default call of `radifox-stage` might be:
+```bash
+radifox-stage \
+    --keep-best-res \
+    --subject-dir /path/to/output/study/STUDY-123456 \
+    --image-types \
+        'bodypart=BRAIN;modality=T1;excontrast=PRE' \
+        'bodypart=BRAIN;modality=T1;excontrast=POST' \
+        'bodypart=BRAIN;modality=T2' \
+        'bodypart=BRAIN;modality=PD' \
+        'bodypart=BRAIN;modality=FLAIR' \
+    --reg-filters \
+        'bodypart=BRAIN;modality=T1;acqdim=3D;excontrast=PRE' \
+        'bodypart=BRAIN;modality=T1;acqdim=3D;excontrast=POST' \
+        'bodypart=BRAIN;acqdim=3D' \
+        'bodypart=BRAIN;acqdim=2D'
+```
+
 ### Python API
 The `radifox` package also includes a Python API for accessing additional components.
 
@@ -227,6 +258,57 @@ if __name__ == "__main__":
     MyModule()
 ```
 to the end of the file.
+
+
+#### `StagingPlugin`
+The `StagingPlugin` class is used to represent a plugin for use in the `radifox-stage` module.
+Plugins should inherit from this class and implement the `filter` and `run` methods.
+The `filter` method should take a list of `ImageFile` objects and return a list of `ImageFile` objects.
+The most common way to achieve this would be to define an `ImageFilter` and use the `filter` method of that class.
+The `run` method should take a list of `ImageFile` objects and return a list of `ImageFile` objects.
+This method should perform the actual processing of the images.
+
+Below is an example that calculates the sum of a list of multi-echo images of an MEMPRAGE acquisition.
+```python
+import nibabel as nib
+import numpy as np
+
+from radifox.naming import ImageFile, ImageFilter
+from radifox.modules import StagingPlugin
+
+class MEMPRAGEPlugin(StagingPlugin):
+    @staticmethod
+    def filter(images: list[ImageFile]) -> list[ImageFile]:
+        return ImageFilter(
+            modality="T1",
+            technique="IRFSPGR",
+            extras=lambda x: any("ECHO" in s or s == "SUM" for s in x),
+        ).filter(images)
+
+    @staticmethod
+    def run(images: list[ImageFile]) -> list[ImageFile]:
+        out_imgs = []
+        for img_set in MEMPRAGEPlugin.sort_by_series(images):
+            # Choose a SUM image if both echoes and SUM are available
+            sum_imgs = [img for img in img_set if "SUM" in img.extras]
+            if sum_imgs:
+                out_imgs.append(sum_imgs[0])
+            else:
+                out_imgs.append(MEMPRAGEPlugin.sum_memprage(img_set))
+        return out_imgs
+
+    @staticmethod
+    def sum_memprage(imgs: list[ImageFile]) -> ImageFile:
+        """Create a sum image from a list of MEMPRAGE echo images."""
+        temp_img = sorted(imgs, key=lambda x: x.name)[0]
+        out_fpath = temp_img.path.parent.parent / "stage" / f"{temp_img.stem}_sum.nii.gz"
+        obj = nib.load(temp_img.path)
+        sum_data = np.sum(
+            [nib.Nifti1Image.load(img.path).get_fdata(dtype=np.float32) for img in imgs], axis=0
+        )
+        nib.Nifti1Image(sum_data, None, obj.header).to_filename(out_fpath)
+        return ImageFile(out_fpath)
+```
 
 # RADIFOX Components
 RADIFOX is a collection of components that work together to provide a comprehensive system for managing medical images.
@@ -535,6 +617,17 @@ See [`radifox-qa`](#radifox-qa) above for more details.
 | `--root-directory` | The output root to read projects from (contains project directories) | `/data`   |
 | `--secret-key`     | The secret key to use for the QA webapp.                             | `None`    |
 | `--workers`        | Number of workers to use for web server.                             | `1`       |
+
+### `radifox-stage`
+| Option                   | Description                                                               | Default    |
+|--------------------------|---------------------------------------------------------------------------|------------|
+| `--subject-dir`          | The path to the subject directory to stage.                               | `required` |
+| `--image-types`          | A set of `ImageFilter` strings used to filter the images for staging      | `required` |
+| `--reg-filters`          | A set of `ImageFilter` strings used for determining registration targets. | `None`     |
+| `--keep-best-res`        | Only keep the highest resolution image for each filter.                   | `False`    |
+| `--plugin-paths`         | A list of additional plugin paths to add.                                 | `None`     |
+| `--skip-default-plugins` | Skip the default plugins included with staging.                           | `False`    |
+| `--skip-set-sform`       | Skip setting the sform matrix for staged images.                          | `False`    |
 
 ## JSON Sidecar Format
 The JSON sidecar format is a dictionary with 8 top-level keys:
