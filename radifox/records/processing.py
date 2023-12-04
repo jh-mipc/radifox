@@ -145,7 +145,9 @@ class ProcessingModule(ABC):
     def get_prov_path_strs(path_dict: dict[str, Path | list[Path]], project_root: Path) -> str:
         prov_str = ""
         for k, v in path_dict.items():
-            if isinstance(v, list):
+            if v is None:
+                prov_str += 'f  {k}: None\n'
+            elif isinstance(v, list):
                 prov_str += f"  {k}:\n"
                 for item in v:
                     rel_path = (

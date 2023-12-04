@@ -10,6 +10,7 @@ from pathlib import Path
 
 import nibabel as nib
 import numpy as np
+from .._version import __version__
 from ..naming import ImageFile, ImageFilter, glob
 from ..records import ProcessingModule
 
@@ -19,7 +20,7 @@ __all__ = ["Staging", "StagingPlugin"]
 
 class Staging(ProcessingModule):
     name = "staging"
-    version = "0.0.1"
+    version = __version__
     log_uses_filename = False
 
     @staticmethod
@@ -49,17 +50,16 @@ class Staging(ProcessingModule):
                 if not plugin_path.is_file():
                     parser.error(f"Plugin file ({plugin_path}) does not exist.")
 
-        if parsed.reg_filters is None:
-            parsed.reg_filters = [
-                ImageFilter(bodypart="BRAIN", modality="T1", acqdim="3D", excontrast="PRE"),
-                ImageFilter(bodypart="BRAIN", modality="T1", acqdim="3D", excontrast="POST"),
-                ImageFilter(bodypart="BRAIN", acqdim="3D"),
-                ImageFilter(bodypart="BRAIN", acqdim="2D"),
-            ]
-        else:
+        if parsed.reg_filters is not None:
             parsed.reg_filters = [
                 ImageFilter.from_string(filter_str) for filter_str in parsed.reg_filters
             ]
+            for reg_filter in parsed.reg_filters:
+                if reg_filter.acqdim is None:
+                    parser.error(
+                        f"Registration filters must provide an 'acqdim' filter."
+                        f"{str(reg_filter)} was provided."
+                    )
 
         session_imgs = {}
         for session in sorted(parsed.subject_dir.iterdir()):
@@ -89,7 +89,7 @@ class Staging(ProcessingModule):
             image_types: list[list[ImageFilter]],
             keep_best_res: list[bool],
             plugin_paths: list[list[Path]],
-            reg_filters: list[list[ImageFilter]],
+            reg_filters: list[list[ImageFilter] | None],
             skip_default_plugins: list[bool],
     ):
         # For each session, find images that match the contrast filters
@@ -153,55 +153,61 @@ class Staging(ProcessingModule):
 
             session_imgs[session] = out_imgs
 
-        # Subject targets are chosen over all sessions (first for tie)
-        # Session targets are chosen over all images in each session
-        # Ties in priority are resolved by resolution:
-        # 1. For 3D images, most isotropic
-        # 2. For 2D images, thinnest slice spacing
         reg_filters = reg_filters[0]
-        # Find session targets
-        session_targets: dict[Path, ImageFile] = {}
-        for session, imgs in session_imgs.items():
-            for reg_filter in reg_filters:
-                # Currenly use private _filter_dict to check acqdim
-                # Radifox should be updated to expose these parameters readonly
-                best_func = (
-                    pick_most_isotropic
-                    if reg_filter._filter_dict["acqdim"] == "3D"
-                    else pick_smallest_slices
-                )
-                filtered = reg_filter.filter(imgs)
+        if reg_filters is None:
+            # No registration targets
+            logging.info("No registration targets provided. Skipping.")
+            session_targets = {session: None for session in session_imgs}
+            subject_target = None
+        else:
+            # Subject targets are chosen over all sessions (first for tie)
+            # Session targets are chosen over all images in each session
+            # Ties in priority are resolved by resolution:
+            # 1. For 3D images, most isotropic
+            # 2. For 2D images, thinnest slice spacing
+            # Find session targets
+            session_targets: dict[Path, ImageFile] = {}
+            for session, imgs in session_imgs.items():
+                for reg_filter in reg_filters:
+                    # Currenly use private _filter_dict to check acqdim
+                    # Radifox should be updated to expose these parameters readonly
+                    best_func = (
+                        pick_most_isotropic
+                        if reg_filter.acqdim == "3D"
+                        else pick_smallest_slices
+                    )
+                    filtered = reg_filter.filter(imgs)
+                    if filtered:
+                        session_targets[session] = best_func(filtered)
+                        break
+
+            # Find subject target
+            subject_target = None
+            for img_filter in reg_filters:
+                filtered = img_filter.filter(list(session_targets.values()))
                 if filtered:
-                    session_targets[session] = best_func(filtered)
+                    subject_target = filtered[0]
                     break
+            if subject_target is None:
+                raise ValueError("No target images found for subject.")
 
-        # Find subject target
-        subject_target = None
-        for img_filter in reg_filters:
-            filtered = img_filter.filter(list(session_targets.values()))
-            if filtered:
-                subject_target = filtered[0]
-                break
-        if subject_target is None:
-            raise ValueError("No target images found for subject.")
+            # Symlink target images
+            for session, img in session_targets.items():
+                (session / "stage" / "sess-target").symlink_to(img.path)
+                (session / "stage" / "subj-target").symlink_to(subject_target.path)
 
-        # Symlink target images
-        for session, img in session_targets.items():
-            (session / "stage" / "sess-target").symlink_to(img.path)
-            (session / "stage" / "subj-target").symlink_to(subject_target.path)
-
-        for session, imgs in session_imgs.items():
+            for session, imgs in session_imgs.items():
+                logging.info("---")
+                logging.info(session)
+                logging.info("---")
+                for img in imgs:
+                    logging.info(f"{str(img.path)}")
             logging.info("---")
-            logging.info(session)
+            logging.info("Registration Targets")
             logging.info("---")
-            for img in imgs:
-                logging.info(f"{str(img.path)}")
-        logging.info("---")
-        logging.info("Registration Targets")
-        logging.info("---")
-        logging.info(subject_target.path)
-        for session, img in session_targets.items():
-            logging.info(f"{session}: {str(img.path)}")
+            logging.info(subject_target.path)
+            for session, img in session_targets.items():
+                logging.info(f"{session}: {str(img.path)}")
 
         return [
             {
