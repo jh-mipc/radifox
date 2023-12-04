@@ -48,6 +48,7 @@ setup(
             "radifox-convert=radifox.conversion.cli:convert",
             "radifox-update=radifox.conversion.cli:update",
             "radifox-qa=radifox.qa.run:run",
+            "radifox-stage=radifox.processing.staging:Staging",
         ]
     },
     python_requires=">=3.10",
