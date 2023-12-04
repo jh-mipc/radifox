@@ -203,9 +203,7 @@ class ProcessingModule(ABC):
 
     @staticmethod
     def create_qa(outputs: dict[str, Path | list[Path]], name: str) -> None:
-        outs = []
-        for out in outputs.values():
-            outs.extend(out if isinstance(out, list) else [out])
+        outs = [el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])]
         out_dir = outs[0].parent.parent / "qa" / name
         out_dir.mkdir(exist_ok=True, parents=True)
         for out in outs:
