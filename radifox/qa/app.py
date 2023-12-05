@@ -264,28 +264,25 @@ def processing_qa(project_id, subject_id, session_id):
 
     for module_str, provs in prov_objs.items():
         for idstr, prov_obj in provs.items():
-            filestrs = [
-                el.split(":")[0]
-                for sub in prov_obj["Outputs"].values()
-                for el in (sub if isinstance(sub, list) else [sub])
-            ]
-            paths = [session_dir.parent.parent / filestr for filestr in filestrs]
-            output_qas = {
-                el: img.parent.parent
-                / "qa"
-                / module_str.split(":")[0]
-                / img.name.replace(".nii.gz", ".png")
-                for img, el in zip(paths, filestrs)
-                if img.name.endswith(".nii.gz")
-            }
-            prov_obj["OutputQA"] = {
-                img: (
-                    (qai.parent.parent.parent.name, qai.parent.name, qai.name)
-                    if qai.exists()
-                    else None
-                )
-                for img, qai in output_qas.items()
-            }
+            prov_obj["OutputQA"] = {}
+            for key, val in prov_obj.items():
+                prov_obj["OutputQA"][key] = {}
+                if not isinstance(val, list):
+                    val = [val]
+                for v in val:
+                    filestr = v.split(":")[0]
+                    filepath = session_dir.parent.parent / filestr
+                    qa_path = (
+                        filepath.parent.parent
+                        / "qa"
+                        / module_str.split(":")[0]
+                        / (filepath.name.replace(".nii.gz", ".png"))
+                    )
+                    prov_obj["OutputQA"][key][filestr] = (
+                        (qa_path.parent.parent.parent.name, qa_path.parent.name, qa_path.name)
+                        if qa_path.exists()
+                        else None
+                    )
 
     return render_template(
         "processing.html",
