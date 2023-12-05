@@ -127,6 +127,7 @@
                             class="ignore-btn btn btn-dark">
                         IGNORE
                     </button>
+                    {% button_index = loop.index %}
                     {% for part in ["brain", "cspine", "tspine", "lspine", "orbits"] %}
                         &nbsp;
                         <button type="button"
@@ -138,8 +139,8 @@
                                 data-session="{{ session_id }}"
                                 data-source_path="{{ item.source_path }}"
                                 data-name="{{ item.image_name }}"
-                                data-loop_index="{{ loop.index }}"
-                                id="change-{{ part }}{{ loop.index }}"
+                                data-loop_index="{{ button_index }}"
+                                id="change-{{ part }}{{ button_index }}"
                                 class="change-{{ part }}-btn btn btn-dark">
                             {{ part | upper() }}
                         </button>
