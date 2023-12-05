@@ -56,14 +56,13 @@ def login():
             error = "Invalid Key"
     return render_template("login.html", error=error)
 
-
-@app.route("/qa/")
+@app.route("/")
 def index():
     projects = sorted([proj.name for proj in DATA_DIR.glob("*") if proj.is_dir()])
     return render_template("index.html", projects=projects)
 
 
-@app.route("/qa/<project_id>/")
+@app.route("/<project_id>/")
 def project(project_id):
     proj_dir = DATA_DIR / project_id
     subjects = sorted(
@@ -77,7 +76,7 @@ def project(project_id):
     return render_template("project.html", project_id=project_id, subjects=subjects)
 
 
-@app.route("/qa/<project_id>/<subject_id>/")
+@app.route("/<project_id>/<subject_id>/")
 def subject(project_id, subject_id):
     pat_dir = DATA_DIR / project_id / subject_id
     sessions = sorted(
@@ -92,13 +91,13 @@ def subject(project_id, subject_id):
     )
 
 
-@app.route("/qa/set_mode/<mode>/")
+@app.route("/set_mode/<mode>/")
 def set_mode(mode):
     session["qa_mode"] = mode
     return redirect(request.referrer)
 
 
-@app.route("/qa/<project_id>/<subject_id>/<session_id>/")
+@app.route("/<project_id>/<subject_id>/<session_id>/")
 def qa_page(project_id, subject_id, session_id):
     if session.get("qa_mode", "conversion") == "conversion":
         return conversion_qa(project_id, subject_id, session_id)
@@ -348,7 +347,7 @@ def update_manual_entry(project_id, subject_id, session_id, data):
     save_manual(json_obj, filepath)
 
 
-@app.route("/qa/manual-entry", methods=["POST"])
+@app.route("/manual-entry", methods=["POST"])
 def manual_entry():
     data = request.form
     update_manual_entry(
@@ -360,7 +359,7 @@ def manual_entry():
     return "Manual Name Added/Updated"
 
 
-@app.route("/qa/ignore-entry", methods=["POST"])
+@app.route("/ignore-entry", methods=["POST"])
 def ignore_entry():
     data = request.form
     add_manual_entry(
@@ -373,7 +372,7 @@ def ignore_entry():
     return "Image Ignored"
 
 
-@app.route("/qa/ignore-btn", methods=["POST"])
+@app.route("/ignore-btn", methods=["POST"])
 def ignore_btn():
     data = request.get_json()
     add_manual_entry(
@@ -386,7 +385,7 @@ def ignore_btn():
     return jsonify(message="Image Ignored")
 
 
-@app.route("/qa/change-btn", methods=["POST"])
+@app.route("/change-btn", methods=["POST"])
 def change_btn():
     data = request.get_json()
     update_manual_entry(

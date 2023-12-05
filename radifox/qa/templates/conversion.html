@@ -483,7 +483,7 @@
         const api_str = (api === 'change') ? `${api}-${data['body_part']}` : api;
 
         // Define the URL to which the POST request will be sent
-        const url = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/${api}-btn`;
+        const url = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/${api}-btn`;
 
         // Use the jQuery $.ajax() function to send the POST request
         $.ajax({
@@ -539,14 +539,14 @@
     $(function () {
         $('#note-form-submit').click(function (e) {
             e.preventDefault();
-            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/manual-entry`, $('#note-form').serialize())
+            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/manual-entry`, $('#note-form').serialize())
             $('#exampleModal').modal('hide');
         });
     });
     $(function () {
         $('#ignore-button-submit').click(function (e) {
             e.preventDefault();
-            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/ignore-entry`, $('#note-form').serialize())
+            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/ignore-entry`, $('#note-form').serialize())
             $('#exampleModal').modal('hide');
         });
     });
