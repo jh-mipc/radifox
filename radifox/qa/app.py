@@ -339,7 +339,7 @@ def update_manual_entry(project_id, subject_id, session_id, data):
 
     name_list = [
         None if (new == old and not exist) else new
-        for new, old, exist in zip(name_list, data["original"].split("-"), existing)
+        for new, old, exist in zip(name_list, data["original_name"].split("-"), existing)
     ]
 
     json_obj[data["source"]] = name_list
