@@ -88,7 +88,7 @@
         <br />
         {% for id, prov in value|items %}
             {% for output_name, qa_dict in prov.OutputQA|items %}
-                <h4>{{ output_name|replace('-',' ')|title() }}:</h4>
+                <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
                 {% for filestr, qa_img in qa_dict|items %}
                     <div class="container-fluid outer-container" id="image{{ loop.index }}">
                         <div class="row"><div class="col"><h5>{{ filestr }}</h5></div></div>
