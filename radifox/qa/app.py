@@ -328,7 +328,7 @@ def update_manual_entry(project_id, subject_id, session_id, data):
     json_obj = json.loads(filepath.read_text()) if filepath.exists() else {}
 
     name_list = [
-        data.get(key).upper()
+        data.get(key, "").upper()
         for key in ["body_part", "modality", "technique", "acq_dim", "orient", "ex_contrast"]
     ]
     name_list = [None if item.strip() == "" else item for item in name_list]
