@@ -93,7 +93,9 @@ class ProcessingModule(ABC):
     def create_prov(self, args: dict[str], outputs: dict[str, Path | list[Path]]) -> str:
         lbls = self.get_container_labels()
         project_root = [
-            el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])
+            (el[0] if isinstance(el, tuple) else el)
+            for sub in outputs.values()
+            for el in (sub if isinstance(sub, list) else [sub])
         ][0].parent.parent.parent.parent
         user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
