@@ -554,12 +554,18 @@ Any output that is returned from the `run` method will have a QA image generated
 
 ## Quality Assurance
 The web-based quality assurance system is a system for viewing images and recording QA results.
-Currently, it is limited to the results from the RADIFOX conversion system, but will likely include results from the auto-provenance system in the future.
+It is a Flask-based webapp that can be run locally.
+There are two modes: `conversion` and `processing` that can be switched between using the links in the top navigation bar.
 
-There are three types of actions that can be taken with the QA webapp.
+The `conversion` mode is used to view and make corrections to the naming of images after conversion.
+There are three types of actions that can be taken in `conversion` mode.
 - Ignore Button: This will mark the image to be skipped by the conversion process on update.
 - Body Type Buttons: This will change the `bodypart` of the image to the selected value. It is currently available for `BRAIN`, `CSPINE`, `TSPINE`, `LSPINE`, and `ORBITS`.
 - Correct Name Button: This will open a form to correct any of the **core** aspects of the RADIFOX naming convention. `extras` are not yet supported.
+
+The `processing` mode is used to view outputs of various processing steps.
+For each processing step, images of the outputs are shown with the provenance record for that step.
+No actions are currently availabe in `processing` mode, but we hope to record QA results directly from the app.
 
 The QA webapp is launched with the `radifox-qa` command.
 It is a webapp that runs locally on port 5000 by default.
@@ -610,13 +616,13 @@ See [`radifox-qa`](#radifox-qa) above for more details.
 | `--help`           | Show help message and exit.                                | `False`                               |
 
 ### `radifox-qa`
-| Option             | Description                                                          | Default   |
-|--------------------|----------------------------------------------------------------------|-----------|
-| `--port`           | The port to run the QA webapp on.                                    | `5000`    |
-| `--host`           | The host bind address for the QA webapp.                             | `0.0.0.0` |
-| `--root-directory` | The output root to read projects from (contains project directories) | `/data`   |
-| `--secret-key`     | The secret key to use for the QA webapp.                             | `None`    |
-| `--workers`        | Number of workers to use for web server.                             | `1`       |
+| Option             | Description                                                          | Default     |
+|--------------------|----------------------------------------------------------------------|-------------|
+| `--port`           | The port to run the QA webapp on.                                    | `5000`      |
+| `--host`           | The host bind address for the QA webapp.                             | `localhost` |
+| `--root-directory` | The output root to read projects from (contains project directories) | `/data`     |
+| `--secret-key`     | The secret key to use for the QA webapp.                             | `None`      |
+| `--workers`        | Number of workers to use for web server.                             | `1`         |
 
 ### `radifox-stage`
 | Option                   | Description                                                               | Default    |
