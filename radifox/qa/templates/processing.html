@@ -88,21 +88,26 @@
         <br />
         {% for id, prov in value|items %}
             {% for output_name, qa_dict in prov.OutputQA|items %}
-                <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
-                {% for filestr, qa_img in qa_dict|items %}
-                    <div class="container-fluid outer-container" id="image{{ loop.index }}">
-                        <div class="row"><div class="col"><h5>{{ filestr }}</h5></div></div>
-                    {% if qa_img %}
-                        <div class="row border-10 border-secondary mx-auto" style="background:#000000; width: 100%">
-                            <div class="col text-center">
-                                <img src="{{ url_for('image', project_id=project_id, subject_id=subject_id, session_id=qa_img[0], qa_dir=qa_img[1], image_name=qa_img[2]) }}"
-                                     class="pop img-fluid" alt="{{ qa_img[2] }}" loading="lazy"/>
+                <div class="container-fluid">
+                    <div class="row"><div class="col">
+                        <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
+                    </div></div>
+                    <div class="row"><div class="col">
+                        {% for filestr, qa_img in qa_dict|items %}
+                            <div class="container-fluid outer-container" id="image{{ loop.index }}">
+                                <div class="row"><div class="col"><h5>{{ filestr }}</h5></div></div>
+                            {% if qa_img %}
+                                <div class="row border-10 border-secondary mx-auto" style="background:#000000; width: 100%">
+                                    <div class="col text-center">
+                                        <img src="{{ url_for('image', project_id=project_id, subject_id=subject_id, session_id=qa_img[0], qa_dir=qa_img[1], image_name=qa_img[2]) }}"
+                                             class="pop img-fluid" alt="{{ qa_img[2] }}" loading="lazy"/>
+                                    </div>
+                                </div>
+                            {% endif %}
                             </div>
-                        </div>
-                    {% endif %}
-                    </div>
-                    <br />
-                {% endfor %}
+                            <br />
+                        {% endfor %}
+                    </div></div>
                 </div>
             {% endfor %}
             <div class="container-fluid outer-container" id="image{{ prov.OutputQA|length }}">
