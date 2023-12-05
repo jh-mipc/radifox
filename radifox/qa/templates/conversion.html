@@ -59,20 +59,30 @@
     <title>RADIFOX QA - {{ subject_id }}&nbsp;/&nbsp;{{ session_id }}</title>
 </head>
 <body>
-<nav class="navbar sticky-top navbar-dark bg-dark">
-    <a class="navbar-brand" href="#">RADIFOX QA</a>
+<nav class="navbar navbar-expand-md sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand" href="{{ url_for('index') }}">RADIFOX QA</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item active">
+        <a class="nav-link" href="{{ url_for('conversion_qa', project_id=project_id, subject_id=subject_id, session_id=session_id) }}">Conversion</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('processing_qa', project_id=project_id, subject_id=subject_id, session_id=session_id) }}">Processing</a>
+      </li>
+    </ul>
     <span class="navbar-text">
-        <a href="/qa/{{ project_id }}/">{{ project_id | upper() }}</a>&nbsp;/&nbsp;<a
-            href="/qa/{{ project_id }}/{{ subject_id }}/">{{ subject_id }}</a>&nbsp;/&nbsp;{{ session_id }}
-      </span>
+        <a href="{{ url_for('project', project_id=project_id) }}">{{ project_id | upper() }}</a>&nbsp;/&nbsp;
+        <a href="{{ url_for('subject', project_id=project_id, subject_id=subject_id) }}">{{ subject_id }}</a>&nbsp;/&nbsp;{{ session_id }}
+    </span>
+  </div>
 </nav>
+<br />
+<br />
 <div class="container-fluid">
-    <br/>
-    <h1 class="text-center">Conversion QA</h1>
-    <hr/>
-    {% for item in images %}
-        <hr/>
-        <br/>
+    {% for item in conversion_images %}
         <div class="container-fluid outer-container" id="image{{ loop.index }}">
             <div class="row">
                 <div class="col-8"><h3>
@@ -116,83 +126,30 @@
                             id="ignore{{ loop.index }}"
                             class="ignore-btn btn btn-dark">
                         IGNORE
-                    </button> &nbsp;
-                    <button type="button"
-                            onclick="sendPostRequest(this)"
-                            data-api="change"
-                            data-body_part="brain"
-                            data-project="{{ project_id }}"
-                            data-subject="{{ subject_id }}"
-                            data-session="{{ session_id }}"
-                            data-source_path="{{ item.source_path }}"
-                            data-name="{{ item.image_name }}"
-                            data-loop_index="{{ loop.index }}"
-                            id="change-brain{{ loop.index }}"
-                            class="change-brain-btn btn btn-dark">
-                        BRAIN
-                    </button> &nbsp;
-                    <button type="button"
-                            onclick="sendPostRequest(this)"
-                            data-api="change"
-                            data-body_part="cspine"
-                            data-project="{{ project_id }}"
-                            data-subject="{{ subject_id }}"
-                            data-session="{{ session_id }}"
-                            data-source_path="{{ item.source_path }}"
-                            data-name="{{ item.image_name }}"
-                            data-loop_index="{{ loop.index }}"
-                            id="change-cspine{{ loop.index }}"
-                            class="change-cspine-btn btn btn-dark">
-                        CSPINE
-                    </button> &nbsp;
-                    <button type="button"
-                            onclick="sendPostRequest(this)"
-                            data-api="change"
-                            data-body_part="tspine"
-                            data-project="{{ project_id }}"
-                            data-subject="{{ subject_id }}"
-                            data-session="{{ session_id }}"
-                            data-source_path="{{ item.source_path }}"
-                            data-name="{{ item.image_name }}"
-                            data-loop_index="{{ loop.index }}"
-                            id="change-tspine{{ loop.index }}"
-                            class="change-tspine-btn btn btn-dark">
-                        TSPINE
-                    </button> &nbsp;
-                    <button type="button"
-                            onclick="sendPostRequest(this)"
-                            data-api="change"
-                            data-body_part="lspine"
-                            data-project="{{ project_id }}"
-                            data-subject="{{ subject_id }}"
-                            data-session="{{ session_id }}"
-                            data-source_path="{{ item.source_path }}"
-                            data-name="{{ item.image_name }}"
-                            data-loop_index="{{ loop.index }}"
-                            id="change-lspine{{ loop.index }}"
-                            class="change-lspine-btn btn btn-dark">
-                        LSPINE
-                    </button> &nbsp;
-                    <button type="button"
-                            onclick="sendPostRequest(this)"
-                            data-api="change"
-                            data-body_part="orbits"
-                            data-project="{{ project_id }}"
-                            data-subject="{{ subject_id }}"
-                            data-session="{{ session_id }}"
-                            data-source_path="{{ item.source_path }}"
-                            data-name="{{ item.image_name }}"
-                            data-loop_index="{{ loop.index }}"
-                            id="change-orbits{{ loop.index }}"
-                            class="change-orbits-btn btn btn-dark">
-                        ORBITS
                     </button>
+                    {% for part in ["brain", "cspine", "tspine", "lspine", "orbits"] %}
+                        &nbsp;
+                        <button type="button"
+                                onclick="sendPostRequest(this)"
+                                data-api="change"
+                                data-body_part="{{ part }}"
+                                data-project="{{ project_id }}"
+                                data-subject="{{ subject_id }}"
+                                data-session="{{ session_id }}"
+                                data-source_path="{{ item.source_path }}"
+                                data-name="{{ item.image_name }}"
+                                data-loop_index="{{ loop.index }}"
+                                id="change-{{ part }}{{ loop.index }}"
+                                class="change-{{ part }}-btn btn btn-dark">
+                            {{ part | upper() }}
+                        </button>
+                    {% endfor %}
                 </div>
             </div>
             {% if item.image_src %}
                 <div class="row border-10 border-secondary mx-auto" style="background:#000000; width: 100%">
                     <div class="col text-center">
-                        <img src="{{ url_for('image', project_id=project_id, subject_id=subject_id, session_id=session_id, image_name=item.image_src) }}"
+                        <img src="{{ url_for('image', project_id=project_id, subject_id=subject_id, session_id=session_id, qa_dir='conversion', image_name=item.image_src) }}"
                              class="pop img-fluid" alt="{{ item.image_name }}" loading="lazy"/>
                     </div>
                 </div>
@@ -325,6 +282,8 @@
             </div>
         </div>
         <br/>
+        <hr/>
+        <br/>
     {% endfor %}
 </div>
 <br/>
@@ -337,16 +296,16 @@
 <nav class="navbar fixed-bottom navbar-dark bg-dark" style="padding-top: 0; padding-bottom: 0">
       <span class="navbar-text">
         {% if prev_scan %}
-            &larr;&nbsp;&nbsp;<a href="/qa/{{ project_id }}/{{ patient_id }}/{{ prev_scan }}">{{ prev_scan }}</a>
+            &larr;&nbsp;&nbsp;<a href="{{ url_for('session', project_id=project_id, subject_id=subject_id, session_id=prev_scan) }}">{{ prev_scan }}</a>
         {% elif prev_patient %}
-            &larr;&nbsp;&nbsp;<a href="/qa/{{ project_id }}/{{ prev_patient }}">{{ prev_patient }}</a>
+            &larr;&nbsp;&nbsp;<a href="{{ url_for('subject', project_id=project_id, subject_id=prev_subject) }}">{{ prev_subject }}</a>
         {% endif %}
       </span>
     <span class="navbar-text">
         {% if next_scan %}
-            <a href="/qa/{{ project_id }}/{{ patient_id }}/{{ next_scan }}">{{ next_scan }}</a>&nbsp;&nbsp;&rarr;
+            <a href="{{ url_for('session', project_id=project_id, subject_id=subject_id, session_id=next_scan) }}">{{ next_scan }}</a>&nbsp;&nbsp;&rarr;
         {% elif next_patient %}
-            <a href="/qa/{{ project_id }}/{{ next_patient }}">{{ next_patient }}</a>&nbsp;&nbsp;&rarr;
+            <a href="{{ url_for('subject', project_id=project_id, subject_id=next_subject) }}">{{ next_subject }}</a>&nbsp;&nbsp;&rarr;
         {% endif %}
       </span>
 </nav>
