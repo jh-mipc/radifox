@@ -241,6 +241,18 @@
         {% endif %}
     </span>
 </nav>
+
+<div class="modal fade" id="imagemodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 100%"
+         data-dismiss="modal">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img src="" class="imagepreview" alt="full size image">
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Optional JavaScript -->
 <!-- jQuery first, then Popper.js, then Bootstrap JS -->
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"
@@ -253,6 +265,13 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 <script type="text/javascript">
+    $(function () {
+        $('.pop').on('click', function () {
+            $('.imagepreview').attr('src', $(this).attr('src'));
+            $('#imagemodal').modal('show');
+        });
+    });
+
     function updateButtonStatus() {
         // Get all div elements with class "container"
         const containers = $('div.outer-container');
