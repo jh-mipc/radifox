@@ -28,6 +28,7 @@ class ProcessingModule(ABC):
     name: str = None
     version: str = None
     log_uses_filename: bool = True
+    skip_prov_write: tuple[str] = tuple()
 
     def __init__(self, args: list[str] | None = None) -> None:
         self.verify_container()
@@ -168,10 +169,15 @@ class ProcessingModule(ABC):
         return prov_str
 
     @staticmethod
-    def write_prov(prov_str: str, outputs: dict[str, Path | list[Path]]) -> None:
+    def write_prov(
+        prov_str: str,
+        outputs: dict[str, Path | list[Path]],
+        skip_prov_write: tuple[str],
+    ) -> None:
         outs = [
             (el[0] if isinstance(el, tuple) else el)
-            for sub in outputs.values()
+            for key, sub in outputs.items()
+            if key not in skip_prov_write
             for el in (sub if isinstance(sub, list) else [sub])
         ]
         for j, output in enumerate(outs):
@@ -204,10 +210,10 @@ class ProcessingModule(ABC):
                     {k: v[i] for k, v in self.parsed_args.items()},
                     self.outputs[i],
                 )
-                self.write_prov(prov_str, self.outputs[i])
+                self.write_prov(prov_str, self.outputs[i], self.skip_prov_write)
         else:
             prov_str = self.create_prov(self.parsed_args, self.outputs)
-            self.write_prov(prov_str, self.outputs)
+            self.write_prov(prov_str, self.outputs, self.skip_prov_write)
 
     @staticmethod
     def create_qa(outputs: dict[str, Path | list[Path]], name: str) -> None:

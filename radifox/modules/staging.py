@@ -21,6 +21,7 @@ class Staging(ProcessingModule):
     name = "staging"
     version = __version__
     log_uses_filename = False
+    skip_prov_write = ("session_target", "subject_target")
 
     @staticmethod
     def cli(args=None):
@@ -205,8 +206,10 @@ class Staging(ProcessingModule):
 
             # Symlink target images
             for session, img in session_targets.items():
-                (session / "stage" / "sess-target").symlink_to(Path("..", img.path.relative_to(session)))
-                (session / "stage" / "subj-target").symlink_to(
+                (session / "stage" / "session-target").symlink_to(
+                    Path("..", img.path.relative_to(session))
+                )
+                (session / "stage" / "subject-target").symlink_to(
                     Path("..", "..", subject_target.path.relative_to(session.parent))
                 )
 
