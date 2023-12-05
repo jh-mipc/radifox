@@ -335,8 +335,8 @@
             <div class="modal-body">
                 <form id="note-form">
                     <input type="hidden" id="project-id" name="project"/>
-                    <input type="hidden" id="patient-id" name="patient"/>
-                    <input type="hidden" id="scan-id" name="scan"/>
+                    <input type="hidden" id="subject-id" name="subject"/>
+                    <input type="hidden" id="session-id" name="session"/>
                     <input type="hidden" id="source-path" name="source"/>
                     <div class="form-group">
                         <label for="original-name" class="col-form-label">Original Name:</label>
@@ -545,8 +545,8 @@
                 url: url,
                 type: 'POST',
                 dataType: 'json',
-                contentType: 'application/json',
-                data: $('#note-form').serialize(),
+                contentType: 'application/x-www-form-urlencoded',
+                data: ('#note-form').serialize(),
                 success: function (json) {
                     $('#exampleModal').modal('hide');
                 },
@@ -555,6 +555,13 @@
                     console.error("Error:", error);
                 }
             });
+        });
+    });
+    $(function () {
+        $('#note-form-submit').click(function (e) {
+            e.preventDefault();
+            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/manual-entry`, $('#note-form').serialize())
+            $('#exampleModal').modal('hide');
         });
     });
     $(function () {
