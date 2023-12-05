@@ -214,15 +214,17 @@ class ProcessingModule(ABC):
                 overlay = out[0]
                 bg_image = out[1]
                 lut = out[2] if len(out) > 2 else "binary"
+                out_name = f"{overlay.name.split('.')[0]}.png"
             else:
                 overlay = None
                 bg_image = out
                 lut = "binary"
+                out_name = f"{bg_image.name.split('.')[0]}.png"
             if not str(bg_image).endswith(".nii.gz"):
                 continue
             create_qa_image(
                 str(bg_image),
-                out_dir / f"{out.name.split('.')[0]}.png",
+                out_dir / out_name,
                 str(overlay) if overlay is not None else None,
                 lut,
             )
