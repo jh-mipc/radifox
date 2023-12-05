@@ -23,8 +23,7 @@ DATA_DIR = Path(os.environ.get("QA_DATA_DIR", "/data")).resolve()
 SECRET_KEY = os.environ.get("QA_SECRET_KEY", secrets.token_urlsafe())
 
 app = Flask(__name__)
-# app.secret_key = secrets.token_hex()
-app.secret_key = "test"
+app.secret_key = secrets.token_hex()
 
 with app.app_context():
     print(
@@ -67,51 +66,65 @@ def index():
 @app.route("/qa/<project_id>/")
 def project(project_id):
     proj_dir = DATA_DIR / project_id
-    subjects = sorted([pat.name for pat in proj_dir.glob("*") if pat.is_dir()])
+    subjects = sorted(
+        [
+            pat.name
+            for pat in proj_dir.glob("*")
+            if pat.is_dir()
+            if pat.is_dir() and not pat.name.startswith(".")
+        ]
+    )
     return render_template("project.html", project_id=project_id, subjects=subjects)
 
 
 @app.route("/qa/<project_id>/<subject_id>/")
 def subject(project_id, subject_id):
     pat_dir = DATA_DIR / project_id / subject_id
-    sessions = sorted([session_path.name for session_path in pat_dir.glob("*")])
+    sessions = sorted(
+        [
+            session_path.name
+            for session_path in pat_dir.glob("*")
+            if session_path.is_dir() and not session_path.name.startswith(".")
+        ]
+    )
     return render_template(
         "subject.html", project_id=project_id, subject_id=subject_id, sessions=sessions
     )
 
 
+@app.route("/qa/set_mode/<mode>/")
+def set_mode(mode):
+    session["qa_mode"] = mode
+    return redirect(request.referrer)
+
+
 @app.route("/qa/<project_id>/<subject_id>/<session_id>/")
-def route_qa(project_id, subject_id, session_id):
+def qa_page(project_id, subject_id, session_id):
     if session.get("qa_mode", "conversion") == "conversion":
-        return redirect(
-            url_for(
-                "conversion_qa",
-                project_id=project_id,
-                subject_id=subject_id,
-                session_id=session_id,
-            )
-        )
+        return conversion_qa(project_id, subject_id, session_id)
     else:
-        return redirect(
-            url_for(
-                "processing_qa",
-                project_id=project_id,
-                subject_id=subject_id,
-                session_id=session_id,
-            )
-        )
+        return processing_qa(project_id, subject_id, session_id)
 
 
-@app.route("/qa/conversion/<project_id>/<subject_id>/<session_id>/")
 def conversion_qa(project_id, subject_id, session_id):
     # Get subject and session information
     session_dir = DATA_DIR / project_id / subject_id / session_id
-    subjects = sorted([pat.name for pat in (DATA_DIR / project_id).glob(project_id.upper() + "*")])
+    subjects = sorted(
+        [
+            pat.name
+            for pat in (DATA_DIR / project_id).glob("*")
+            if pat.is_dir() and not pat.name.startswith(".")
+        ]
+    )
     pat_idx = subjects.index(subject_id)
     prev_subject = subjects[pat_idx - 1] if pat_idx > 0 else None
     next_subject = subjects[pat_idx + 1] if pat_idx < (len(subjects) - 1) else None
     sessions = sorted(
-        [session_path.name for session_path in (DATA_DIR / project_id / subject_id).glob("*")]
+        [
+            session_path.name
+            for session_path in (DATA_DIR / project_id / subject_id).glob("*")
+            if session_path.is_dir() and not session_path.name.startswith(".")
+        ]
     )
     session_idx = sessions.index(session_id)
     prev_session = sessions[session_idx - 1] if session_idx > 0 else None
@@ -207,16 +220,25 @@ def conversion_qa(project_id, subject_id, session_id):
     )
 
 
-@app.route("/qa/processing/<project_id>/<subject_id>/<session_id>/")
 def processing_qa(project_id, subject_id, session_id):
     # Get subject and session information
     session_dir = DATA_DIR / project_id / subject_id / session_id
-    subjects = sorted([pat.name for pat in (DATA_DIR / project_id).glob(project_id.upper() + "*")])
+    subjects = sorted(
+        [
+            pat.name
+            for pat in (DATA_DIR / project_id).glob("*")
+            if pat.is_dir() and not pat.name.startswith(".")
+        ]
+    )
     pat_idx = subjects.index(subject_id)
     prev_subject = subjects[pat_idx - 1] if pat_idx > 0 else None
     next_subject = subjects[pat_idx + 1] if pat_idx < (len(subjects) - 1) else None
     sessions = sorted(
-        [session_path.name for session_path in (DATA_DIR / project_id / subject_id).glob("*")]
+        [
+            session_path.name
+            for session_path in (DATA_DIR / project_id / subject_id).glob("*")
+            if session_path.is_dir() and not session_path.name.startswith(".")
+        ]
     )
     session_idx = sessions.index(session_id)
     prev_session = sessions[session_idx - 1] if session_idx > 0 else None

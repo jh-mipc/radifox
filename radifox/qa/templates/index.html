@@ -40,17 +40,30 @@
     <title>RADIFOX QA - Projects</title>
 </head>
 <body>
-<nav class="navbar sticky-top navbar-dark bg-dark">
-    <a class="navbar-brand" href="#">RADIFOX QA</a>
+<nav class="navbar navbar-expand-md sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand" href="{{ url_for('index') }}">RADIFOX QA</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item {% if session['qa_mode'] == 'conversion' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='conversion') }}">Conversion</a>
+      </li>
+      <li class="nav-item {% if session['qa_mode'] == 'processing' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='processing') }}">Processing</a>
+      </li>
+    </ul>
     <span class="navbar-text">PROJECTS</span>
+  </div>
 </nav>
 <div class="container-fluid">
-    <br/>
+    <br />
     <h1 class="text-center">Projects</h1>
-    <hr/>
+    <hr />
     <div class="row">
         {% for project in projects %}
-        <div class="col-6 col-sm-4 col-lg-3"><a href="/qa/{{ project }}/"><h4 class="text-center text-monospace">{{
+        <div class="col-6 col-sm-4 col-lg-3"><a href="{{ url_for('project', project_id=project) }}"><h4 class="text-center text-monospace">{{
             project | upper() }}</h4></a></div>
         {% endfor %}
     </div>

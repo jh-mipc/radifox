@@ -40,11 +40,22 @@
     <title>RADIFOX QA - {{ project_id | upper() }}</title>
 </head>
 <body>
-<nav class="navbar sticky-top navbar-dark bg-dark">
-    <a class="navbar-brand" href="#">RADIFOX QA</a>
-    <span class="navbar-text">
-        {{ project_id | upper() }}
-      </span>
+<nav class="navbar navbar-expand-md sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand" href="{{ url_for('index') }}">RADIFOX QA</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item {% if session['qa_mode'] == 'conversion' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='conversion') }}">Conversion</a>
+      </li>
+      <li class="nav-item {% if session['qa_mode'] == 'processing' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='processing') }}">Processing</a>
+      </li>
+    </ul>
+    <span class="navbar-text">{{ project_id | upper() }}</span>
+  </div>
 </nav>
 <div class="container-fluid">
     <br/>
@@ -52,8 +63,11 @@
     <hr/>
     <div class="row">
         {% for subject in subjects %}
-        <div class="col-6 col-sm-4 col-lg-3"><a href="/qa/{{ project_id }}/{{ subject }}/"><h4
-                class="text-center text-monospace">{{ subject }}</h4></a></div>
+            <div class="col-6 col-sm-4 col-lg-3">
+                <a href="{{ url_for('subject', project_id=project_id, subject_id=subject) }}">
+                    <h4 class="text-center text-monospace">{{ subject }}</h4>
+                </a>
+            </div>
         {% endfor %}
     </div>
 </div>

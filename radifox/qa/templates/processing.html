@@ -66,11 +66,11 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
     <ul class="navbar-nav mr-auto">
-      <li class="nav-item">
-        <a class="nav-link" href="{{ url_for('conversion_qa', project_id=project_id, subject_id=subject_id, session_id=session_id) }}">Conversion</a>
+      <li class="nav-item {% if session['qa_mode'] == 'conversion' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='conversion') }}">Conversion</a>
       </li>
-      <li class="nav-item active">
-        <a class="nav-link" href="{{ url_for('processing_qa', project_id=project_id, subject_id=subject_id, session_id=session_id) }}">Processing</a>
+      <li class="nav-item {% if session['qa_mode'] == 'processing' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='processing') }}">Processing</a>
       </li>
     </ul>
     <span class="navbar-text">
@@ -217,20 +217,20 @@
 <button id="scrollToPrevContainer" class="btn btn-primary position-fixed mb-4" style="bottom: 20px; right: 125px;">Prev Image</button>
 
 <nav class="navbar fixed-bottom navbar-dark bg-dark" style="padding-top: 0; padding-bottom: 0">
-      <span class="navbar-text">
-        {% if prev_scan %}
-            &larr;&nbsp;&nbsp;<a href="{{ url_for('session', project_id=project_id, subject_id=subject_id, session_id=prev_scan) }}">{{ prev_scan }}</a>
-        {% elif prev_patient %}
+    <span class="navbar-text">
+        {% if prev_session %}
+            &larr;&nbsp;&nbsp;<a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=prev_session) }}">{{ prev_session }}</a>
+        {% elif prev_subject %}
             &larr;&nbsp;&nbsp;<a href="{{ url_for('subject', project_id=project_id, subject_id=prev_subject) }}">{{ prev_subject }}</a>
         {% endif %}
-      </span>
+    </span>
     <span class="navbar-text">
-        {% if next_scan %}
-            <a href="{{ url_for('session', project_id=project_id, subject_id=subject_id, session_id=next_scan) }}">{{ next_scan }}</a>&nbsp;&nbsp;&rarr;
-        {% elif next_patient %}
+        {% if next_session %}
+            <a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=next_session) }}">{{ next_session }}</a>&nbsp;&nbsp;&rarr;
+        {% elif next_subject %}
             <a href="{{ url_for('subject', project_id=project_id, subject_id=next_subject) }}">{{ next_subject }}</a>&nbsp;&nbsp;&rarr;
         {% endif %}
-      </span>
+    </span>
 </nav>
 <!-- Optional JavaScript -->
 <!-- jQuery first, then Popper.js, then Bootstrap JS -->
