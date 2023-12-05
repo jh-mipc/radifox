@@ -146,21 +146,23 @@ class ProcessingModule(ABC):
         prov_str = ""
         for k, v in path_dict.items():
             if v is None:
-                prov_str += 'f  {k}: None\n'
+                prov_str += "f  {k}: None\n"
             elif isinstance(v, list):
                 prov_str += f"  {k}:\n"
                 for item in v:
+                    val = item[0] if isinstance(item, tuple) else item
                     rel_path = (
-                        item.relative_to(project_root)
-                        if item.is_relative_to(project_root)
-                        else item
+                        val.relative_to(project_root) if val.is_relative_to(project_root) else val
                     )
                     prov_str += (
-                        f"    - {str(rel_path)}:sha256:{hash_file(item, include_names=False)}\n"
+                        f"    - {str(rel_path)}:sha256:{hash_file(val, include_names=False)}\n"
                     )
             else:
-                rel_path = v.relative_to(project_root) if v.is_relative_to(project_root) else v
-                prov_str += f"  {k}: {str(rel_path)}:sha256:{hash_file(v, include_names=False)}\n"
+                val = v[0] if isinstance(v, tuple) else v
+                rel_path = (
+                    val.relative_to(project_root) if val.is_relative_to(project_root) else val
+                )
+                prov_str += f"  {k}: {str(rel_path)}:sha256:{hash_file(val, include_names=False)}\n"
         return prov_str
 
     @staticmethod
@@ -207,9 +209,22 @@ class ProcessingModule(ABC):
         out_dir = outs[0].parent.parent / "qa" / name
         out_dir.mkdir(exist_ok=True, parents=True)
         for out in outs:
-            if not str(out).endswith(".nii.gz"):
+            if isinstance(out, tuple):
+                overlay = out[0]
+                bg_image = out[1]
+                lut = out[2] if len(out) > 2 else "binary"
+            else:
+                overlay = None
+                bg_image = out
+                lut = "binary"
+            if not str(bg_image).endswith(".nii.gz"):
                 continue
-            create_qa_image(str(out), out_dir / f"{out.name.split('.')[0]}.png")
+            create_qa_image(
+                str(bg_image),
+                out_dir / f"{out.name.split('.')[0]}.png",
+                str(overlay) if overlay is not None else None,
+                lut,
+            )
 
     def generate_qa_images(self) -> None:
         if self.check_multi_run():
