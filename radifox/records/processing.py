@@ -216,8 +216,17 @@ class ProcessingModule(ABC):
             self.write_prov(prov_str, self.outputs, self.skip_prov_write)
 
     @staticmethod
-    def create_qa(outputs: dict[str, Path | list[Path]], name: str) -> None:
-        outs = [el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])]
+    def create_qa(
+        outputs: dict[str, Path | list[Path]],
+        name: str,
+        skip_prov_write: tuple[str],
+    ) -> None:
+        outs = [
+            el
+            for key, sub in outputs.items()
+            if key not in skip_prov_write
+            for el in (sub if isinstance(sub, list) else [sub])
+        ]
         out = outs[0][0] if isinstance(outs[0], tuple) else outs[0]
         out_dir = out.parent.parent / "qa" / name
         out_dir.mkdir(exist_ok=True, parents=True)
@@ -244,9 +253,9 @@ class ProcessingModule(ABC):
     def generate_qa_images(self) -> None:
         if self.check_multi_run():
             for i in range(len(list(self.parsed_args.values())[0])):
-                self.create_qa(self.outputs[i], self.name)
+                self.create_qa(self.outputs[i], self.name, self.skip_prov_write)
         else:
-            self.create_qa(self.outputs, self.name)
+            self.create_qa(self.outputs, self.name, self.skip_prov_write)
 
     def create_loggers(self):
         out_paths = None
