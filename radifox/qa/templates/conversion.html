@@ -540,8 +540,21 @@
     $(function () {
         $('#note-form-submit').click(function (e) {
             e.preventDefault();
-            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/manual-entry`, $('#note-form').serialize())
-            $('#exampleModal').modal('hide');
+            const url = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/manual-entry`;
+            $.ajax({
+                url: url,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json',
+                data: $('#note-form').serialize(),
+                success: function (json) {
+                    $('#exampleModal').modal('hide');
+                },
+                error: function (xhr, status, error) {
+                    // Handle any errors
+                    console.error("Error:", error);
+                }
+            });
         });
     });
     $(function () {

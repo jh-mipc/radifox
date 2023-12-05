@@ -56,6 +56,7 @@ def login():
             error = "Invalid Key"
     return render_template("login.html", error=error)
 
+
 @app.route("/")
 def index():
     projects = sorted([proj.name for proj in DATA_DIR.glob("*") if proj.is_dir()])
