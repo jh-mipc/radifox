@@ -343,7 +343,10 @@ def update_manual_entry(project_id, subject_id, session_id, data):
         for new, old, exist in zip(name_list, data["original_name"].split("-"), existing)
     ]
 
-    json_obj[data["source"]] = name_list
+    if all([item is None for item in name_list]):
+        del json_obj[data["source"]]
+    else:
+        json_obj[data["source"]] = name_list
 
     save_manual(json_obj, filepath)
 
