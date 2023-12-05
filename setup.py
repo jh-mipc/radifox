@@ -48,14 +48,16 @@ setup(
             "radifox-convert=radifox.conversion.cli:convert",
             "radifox-update=radifox.conversion.cli:update",
             "radifox-qa=radifox.qa.run:run",
+            "radifox-stage=radifox.modules.staging:Staging",
         ]
     },
     python_requires=">=3.10",
     install_requires=[
         "nibabel",
-        "pydicom",
         "numpy",
         "pillow",
+        "pydicom",
+        "pyyaml",
         "scipy",
         "radifox-utils>=1.0.2",
     ],

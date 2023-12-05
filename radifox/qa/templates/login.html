@@ -36,41 +36,43 @@
                 font-size: 1rem;
             }
         }
+        .modal, .modal-backdrop {
+        display: block;
+    }
+    .modal-backdrop.show {
+        opacity: 0.5; /* Adjust as needed */
+    }
     </style>
-    <title>RADIFOX QA - {{ project_id | upper() }}</title>
+    <title>RADIFOX QA - Login</title>
 </head>
 <body>
-<nav class="navbar navbar-expand-md sticky-top navbar-dark bg-dark">
-    <a class="navbar-brand" href="{{ url_for('index') }}">RADIFOX QA</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-    <ul class="navbar-nav mr-auto">
-      <li class="nav-item {% if not session['qa_mode'] or session['qa_mode'] == 'conversion' %}active{% endif %}">
-        <a class="nav-link" href="{{ url_for('set_mode', mode='conversion') }}">Conversion</a>
-      </li>
-      <li class="nav-item {% if session['qa_mode'] == 'processing' %}active{% endif %}">
-        <a class="nav-link" href="{{ url_for('set_mode', mode='processing') }}">Processing</a>
-      </li>
-    </ul>
-    <span class="navbar-text">{{ project_id | upper() }}</span>
-  </div>
-</nav>
-<div class="container-fluid">
-    <br/>
-    <h1 class="text-center">Subjects</h1>
-    <hr/>
-    <div class="row">
-        {% for subject in subjects %}
-            <div class="col-6 col-sm-4 col-lg-3">
-                <a href="{{ url_for('subject', project_id=project_id, subject_id=subject) }}">
-                    <h4 class="text-center text-monospace">{{ subject }}</h4>
-                </a>
+    <nav class="navbar sticky-top navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">RADIFOX QA</a>
+    </nav>
+    <div class="modal" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true" style="display: block;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="loginModalLabel">Login Required</h5>
             </div>
-        {% endfor %}
+            <div class="modal-body">
+                {% if error %}
+                    <div class="alert alert-warning" role="alert">
+                        {{ error }}
+                    </div>
+                {% endif %}
+                <form method="POST" action="{{ url_for('login') }}">
+                    Key: <input type="password" name="key" class="form-control">
+                    <br>
+                    <input type="submit" value="Login" class="btn btn-primary">
+                </form>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Optional: Adding a backdrop manually -->
+<div class="modal-backdrop show"></div>
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"
         integrity="sha384-tsQFqpEReu7ZLhBV2VZlAu7zcOV+rXbYlF2cqB8txI/8aZajjp4Bqd+V6D5IgvKT"
         crossorigin="anonymous"></script>
@@ -80,5 +82,14 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
+<script>
+    $(document).ready(function(){
+        $('#loginModal').modal({
+            backdrop: 'static',
+            keyboard: false,
+            show: true
+        });
+    });
+</script>
 </body>
 </html>

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2023-12-05
+
+### Added
+ - Secured QA webapp with secret key displayed at start
+ - Added `radifox-stage` command to stage images for processing
+ - Added processing mode to QA webapp
+
 ## [1.0.2] - 2023-11-29
 
 ### Added

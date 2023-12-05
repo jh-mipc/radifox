@@ -1,58 +1,136 @@
-import base64
 import os
+import itertools
 import json
+from collections import defaultdict
 from pathlib import Path
+import secrets
 
-from flask import Flask, request, render_template, jsonify, send_from_directory
+from flask import (
+    Flask,
+    request,
+    render_template,
+    jsonify,
+    send_from_directory,
+    url_for,
+    session,
+    redirect,
+)
+import yaml
 
 from ..conversion.json import JSONObjectEncoder, NoIndent
 
 DATA_DIR = Path(os.environ.get("QA_DATA_DIR", "/data")).resolve()
+SECRET_KEY = os.environ.get("QA_SECRET_KEY", secrets.token_urlsafe())
 
 app = Flask(__name__)
+app.secret_key = secrets.token_hex()
+
+with app.app_context():
+    print(
+        f"Access the QA Webapp Directly at: "
+        f"http://{os.environ['QA_HOST']}:{os.environ['QA_PORT']}/login?key={SECRET_KEY}"
+    )
+    print(f"QA Data Directory: {DATA_DIR}")
+    print(f"QA Secret Key: {SECRET_KEY}")
 
 
-def encode_image(filepath):
-    with filepath.open("rb") as fp:
-        b64_str = base64.b64encode(fp.read())
-    return b64_str
+@app.before_request
+def require_authentication():
+    if session.get("qa_secret_key") != SECRET_KEY and request.endpoint != "login":
+        return redirect(url_for("login"))
 
 
-@app.route("/qa/")
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        test_key = request.form["key"]
+    else:
+        test_key = request.args.get("key")
+
+    if test_key is not None:
+        if test_key == SECRET_KEY:
+            session["qa_secret_key"] = test_key
+            return redirect(url_for("index"))
+        else:
+            error = "Invalid Key"
+    return render_template("login.html", error=error)
+
+
+@app.route("/")
 def index():
     projects = sorted([proj.name for proj in DATA_DIR.glob("*") if proj.is_dir()])
     return render_template("index.html", projects=projects)
 
 
-@app.route("/qa/<project_id>/")
+@app.route("/<project_id>/")
 def project(project_id):
     proj_dir = DATA_DIR / project_id
-    subjects = sorted([pat.name for pat in proj_dir.glob("*") if pat.is_dir()])
+    subjects = sorted(
+        [
+            pat.name
+            for pat in proj_dir.glob("*")
+            if pat.is_dir()
+            if pat.is_dir() and not pat.name.startswith(".")
+        ]
+    )
     return render_template("project.html", project_id=project_id, subjects=subjects)
 
 
-@app.route("/qa/<project_id>/<subject_id>/")
+@app.route("/<project_id>/<subject_id>/")
 def subject(project_id, subject_id):
     pat_dir = DATA_DIR / project_id / subject_id
-    sessions = sorted([session.name for session in pat_dir.glob("*")])
+    sessions = sorted(
+        [
+            session_path.name
+            for session_path in pat_dir.glob("*")
+            if session_path.is_dir() and not session_path.name.startswith(".")
+        ]
+    )
     return render_template(
         "subject.html", project_id=project_id, subject_id=subject_id, sessions=sessions
     )
 
 
-@app.route("/qa/<project_id>/<subject_id>/<session_id>/")
-def qa(project_id, subject_id, session_id):
+@app.route("/set_mode/<mode>/")
+def set_mode(mode):
+    session["qa_mode"] = mode
+    return redirect(request.referrer)
+
+
+@app.route("/<project_id>/<subject_id>/<session_id>/")
+def qa_page(project_id, subject_id, session_id):
+    if session.get("qa_mode", "conversion") == "conversion":
+        return conversion_qa(project_id, subject_id, session_id)
+    else:
+        return processing_qa(project_id, subject_id, session_id)
+
+
+def conversion_qa(project_id, subject_id, session_id):
+    # Get subject and session information
     session_dir = DATA_DIR / project_id / subject_id / session_id
     subjects = sorted(
-        [pat.name for pat in (DATA_DIR / project_id).glob(project_id.upper() + "*")]
+        [
+            pat.name
+            for pat in (DATA_DIR / project_id).glob("*")
+            if pat.is_dir() and not pat.name.startswith(".")
+        ]
     )
     pat_idx = subjects.index(subject_id)
     prev_subject = subjects[pat_idx - 1] if pat_idx > 0 else None
     next_subject = subjects[pat_idx + 1] if pat_idx < (len(subjects) - 1) else None
-    sessions = sorted([session.name for session in (DATA_DIR / project_id / subject_id).glob("*")])
+    sessions = sorted(
+        [
+            session_path.name
+            for session_path in (DATA_DIR / project_id / subject_id).glob("*")
+            if session_path.is_dir() and not session_path.name.startswith(".")
+        ]
+    )
     session_idx = sessions.index(session_id)
     prev_session = sessions[session_idx - 1] if session_idx > 0 else None
     next_session = sessions[session_idx + 1] if session_idx < (len(sessions) - 1) else None
+
+    # Get conversion information
     json_files = (session_dir / "nii").glob("*.json")
     manual_json_path = (
         DATA_DIR
@@ -62,7 +140,7 @@ def qa(project_id, subject_id, session_id):
         / "_".join([subject_id, session_id, "ManualNaming.json"])
     )
     manual_json = json.loads(manual_json_path.read_text()) if manual_json_path.exists() else {}
-    images = []
+    conversion_images = []
     for jsonfile in json_files:
         si = json.loads(jsonfile.read_text())["SeriesInfo"]
         created_by = (
@@ -121,15 +199,94 @@ def qa(project_id, subject_id, session_id):
             "source_path": si["SourcePath"],
             "manual_name": manual_name,
         }
-        img_path = session_dir / "qa" / "autoconv" / jsonfile.name.replace(".json", ".png")
+        img_path = session_dir / "qa" / "conversion" / jsonfile.name.replace(".json", ".png")
         if img_path.exists():
             image_obj["image_src"] = img_path.name
-        images.append(image_obj)
+        conversion_images.append(image_obj)
+
     return render_template(
-        "session.html",
-        images=sorted(
-            images, key=lambda x: (x["study_number"], x["series_number"], x["acq_number"])
+        "conversion.html",
+        conversion_images=sorted(
+            conversion_images,
+            key=lambda x: (x["study_number"], x["series_number"], x["acq_number"]),
         ),
+        project_id=project_id,
+        subject_id=subject_id,
+        session_id=session_id,
+        next_session=next_session,
+        prev_session=prev_session,
+        prev_subject=prev_subject,
+        next_subject=next_subject,
+    )
+
+
+def processing_qa(project_id, subject_id, session_id):
+    # Get subject and session information
+    session_dir = DATA_DIR / project_id / subject_id / session_id
+    subjects = sorted(
+        [
+            pat.name
+            for pat in (DATA_DIR / project_id).glob("*")
+            if pat.is_dir() and not pat.name.startswith(".")
+        ]
+    )
+    pat_idx = subjects.index(subject_id)
+    prev_subject = subjects[pat_idx - 1] if pat_idx > 0 else None
+    next_subject = subjects[pat_idx + 1] if pat_idx < (len(subjects) - 1) else None
+    sessions = sorted(
+        [
+            session_path.name
+            for session_path in (DATA_DIR / project_id / subject_id).glob("*")
+            if session_path.is_dir() and not session_path.name.startswith(".")
+        ]
+    )
+    session_idx = sessions.index(session_id)
+    prev_session = sessions[session_idx - 1] if session_idx > 0 else None
+    next_session = sessions[session_idx + 1] if session_idx < (len(sessions) - 1) else None
+
+    # Get processing information
+    prov_files = list(
+        itertools.chain(
+            (session_dir / "stage").glob("*.prov"),
+            (session_dir / "proc").glob("*.prov"),
+        )
+    )
+    prov_objs = defaultdict(dict)
+    for provfile in prov_files:
+        prov_obj = yaml.safe_load(provfile.read_text())
+        prov_objs[prov_obj["Module"]][prov_obj["Id"]] = prov_obj
+    prov_objs = {
+        k: v
+        for k, v in sorted(
+            prov_objs.items(), key=lambda x: min(val["StartTime"] for val in x[1].values())
+        )
+    }
+
+    for module_str, provs in prov_objs.items():
+        for idstr, prov_obj in provs.items():
+            prov_obj["OutputQA"] = {}
+            for key, val in prov_obj["Outputs"].items():
+                prov_obj["OutputQA"][key] = {}
+                if not isinstance(val, list):
+                    val = [val]
+                for v in val:
+                    filestr = v.split(":")[0]
+                    filepath = session_dir.parent.parent / filestr
+                    qa_path = (
+                        filepath.parent.parent
+                        / "qa"
+                        / module_str.split(":")[0]
+                        / (filepath.name.replace(".nii.gz", ".png"))
+                    )
+                    prov_obj["OutputQA"][key][filestr] = (
+                        (qa_path.parent.parent.parent.name, qa_path.parent.name, qa_path.name)
+                        if qa_path.exists()
+                        else None
+                    )
+
+    return render_template(
+        "processing.html",
+        processing_results=prov_objs,
         project_id=project_id,
         subject_id=subject_id,
         session_id=session_id,
@@ -172,7 +329,7 @@ def update_manual_entry(project_id, subject_id, session_id, data):
     json_obj = json.loads(filepath.read_text()) if filepath.exists() else {}
 
     name_list = [
-        data.get(key).upper()
+        data.get(key, "").upper()
         for key in ["body_part", "modality", "technique", "acq_dim", "orient", "ex_contrast"]
     ]
     name_list = [None if item.strip() == "" else item for item in name_list]
@@ -183,15 +340,18 @@ def update_manual_entry(project_id, subject_id, session_id, data):
 
     name_list = [
         None if (new == old and not exist) else new
-        for new, old, exist in zip(name_list, data["original"].split("-"), existing)
+        for new, old, exist in zip(name_list, data["original_name"].split("-"), existing)
     ]
 
-    json_obj[data["source"]] = name_list
+    if all([item is None for item in name_list]):
+        del json_obj[data["source"]]
+    else:
+        json_obj[data["source"]] = name_list
 
     save_manual(json_obj, filepath)
 
 
-@app.route("/qa/manual-entry", methods=["POST"])
+@app.route("/manual-entry", methods=["POST"])
 def manual_entry():
     data = request.form
     update_manual_entry(
@@ -203,7 +363,7 @@ def manual_entry():
     return "Manual Name Added/Updated"
 
 
-@app.route("/qa/ignore-entry", methods=["POST"])
+@app.route("/ignore-entry", methods=["POST"])
 def ignore_entry():
     data = request.form
     add_manual_entry(
@@ -216,7 +376,7 @@ def ignore_entry():
     return "Image Ignored"
 
 
-@app.route("/qa/ignore-btn", methods=["POST"])
+@app.route("/ignore-btn", methods=["POST"])
 def ignore_btn():
     data = request.get_json()
     add_manual_entry(
@@ -229,7 +389,7 @@ def ignore_btn():
     return jsonify(message="Image Ignored")
 
 
-@app.route("/qa/change-btn", methods=["POST"])
+@app.route("/change-btn", methods=["POST"])
 def change_btn():
     data = request.get_json()
     update_manual_entry(
@@ -241,8 +401,8 @@ def change_btn():
     return jsonify(message="Body Part Updated")
 
 
-@app.route("/image/<project_id>/<subject_id>/<session_id>/<image_name>")
-def image(project_id, subject_id, session_id, image_name):
+@app.route("/image/<project_id>/<subject_id>/<session_id>/<qa_dir>/<image_name>")
+def image(project_id, subject_id, session_id, qa_dir, image_name):
     return send_from_directory(
-        str(DATA_DIR / project_id / subject_id / session_id / "qa" / "autoconv"), image_name
+        str(DATA_DIR / project_id / subject_id / session_id / "qa" / qa_dir), image_name
     )

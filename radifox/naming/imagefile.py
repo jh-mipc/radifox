@@ -168,6 +168,14 @@ class ImageFilter:
     def __str__(self):
         return ";".join([f"{key}={str(value)}" for key, value in self._filter_dict.items()])
 
+    def __getattr__(self, item):
+        if item in self.allowed_keys:
+            return self._filter_dict.get(item)
+        raise AttributeError(
+            f"Invalid key provided {item}. "
+            f"Allowed keys are: {', '.join(self.allowed_keys)}"
+        )
+
     @classmethod
     def from_string(cls, filter_str) -> ImageFilter:
         filter_dict = dict([item.split("=") for item in filter_str.split(";")])

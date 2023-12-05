@@ -28,6 +28,7 @@ class ProcessingModule(ABC):
     name: str = None
     version: str = None
     log_uses_filename: bool = True
+    skip_prov_write: tuple[str] = tuple()
 
     def __init__(self, args: list[str] | None = None) -> None:
         self.verify_container()
@@ -93,7 +94,9 @@ class ProcessingModule(ABC):
     def create_prov(self, args: dict[str], outputs: dict[str, Path | list[Path]]) -> str:
         lbls = self.get_container_labels()
         project_root = [
-            el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])
+            (el[0] if isinstance(el, tuple) else el)
+            for sub in outputs.values()
+            for el in (sub if isinstance(sub, list) else [sub])
         ][0].parent.parent.parent.parent
         user = os.environ["USER"] if "USER" in os.environ else Path(os.environ["HOME"]).name
         prov_str = (
@@ -145,25 +148,38 @@ class ProcessingModule(ABC):
     def get_prov_path_strs(path_dict: dict[str, Path | list[Path]], project_root: Path) -> str:
         prov_str = ""
         for k, v in path_dict.items():
-            if isinstance(v, list):
+            if v is None:
+                prov_str += "f  {k}: None\n"
+            elif isinstance(v, list):
                 prov_str += f"  {k}:\n"
                 for item in v:
+                    val = item[0] if isinstance(item, tuple) else item
                     rel_path = (
-                        item.relative_to(project_root)
-                        if item.is_relative_to(project_root)
-                        else item
+                        val.relative_to(project_root) if val.is_relative_to(project_root) else val
                     )
                     prov_str += (
-                        f"    - {str(rel_path)}:sha256:{hash_file(item, include_names=False)}\n"
+                        f"    - {str(rel_path)}:sha256:{hash_file(val, include_names=False)}\n"
                     )
             else:
-                rel_path = v.relative_to(project_root) if v.is_relative_to(project_root) else v
-                prov_str += f"  {k}: {str(rel_path)}:sha256:{hash_file(v, include_names=False)}\n"
+                val = v[0] if isinstance(v, tuple) else v
+                rel_path = (
+                    val.relative_to(project_root) if val.is_relative_to(project_root) else val
+                )
+                prov_str += f"  {k}: {str(rel_path)}:sha256:{hash_file(val, include_names=False)}\n"
         return prov_str
 
     @staticmethod
-    def write_prov(prov_str: str, outputs: dict[str, Path | list[Path]]) -> None:
-        outs = [el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])]
+    def write_prov(
+        prov_str: str,
+        outputs: dict[str, Path | list[Path]],
+        skip_prov_write: tuple[str],
+    ) -> None:
+        outs = [
+            (el[0] if isinstance(el, tuple) else el)
+            for key, sub in outputs.items()
+            if key not in skip_prov_write
+            for el in (sub if isinstance(sub, list) else [sub])
+        ]
         for j, output in enumerate(outs):
             if j == 0:
                 session_dir = output.parent.parent
@@ -194,29 +210,52 @@ class ProcessingModule(ABC):
                     {k: v[i] for k, v in self.parsed_args.items()},
                     self.outputs[i],
                 )
-                self.write_prov(prov_str, self.outputs[i])
+                self.write_prov(prov_str, self.outputs[i], self.skip_prov_write)
         else:
             prov_str = self.create_prov(self.parsed_args, self.outputs)
-            self.write_prov(prov_str, self.outputs)
+            self.write_prov(prov_str, self.outputs, self.skip_prov_write)
 
     @staticmethod
-    def create_qa(outputs: dict[str, Path | list[Path]], name: str) -> None:
-        outs = []
-        for out in outputs.values():
-            outs.extend(out if isinstance(out, list) else [out])
-        out_dir = outs[0].parent.parent / "qa" / name
+    def create_qa(
+        outputs: dict[str, Path | list[Path]],
+        name: str,
+        skip_prov_write: tuple[str],
+    ) -> None:
+        outs = [
+            el
+            for key, sub in outputs.items()
+            if key not in skip_prov_write
+            for el in (sub if isinstance(sub, list) else [sub])
+        ]
+        out = outs[0][0] if isinstance(outs[0], tuple) else outs[0]
+        out_dir = out.parent.parent / "qa" / name
         out_dir.mkdir(exist_ok=True, parents=True)
         for out in outs:
-            if not str(out).endswith(".nii.gz"):
+            if isinstance(out, tuple):
+                overlay = out[0]
+                bg_image = out[1]
+                lut = out[2] if len(out) > 2 else "binary"
+                out_name = f"{overlay.name.split('.')[0]}.png"
+            else:
+                overlay = None
+                bg_image = out
+                lut = "binary"
+                out_name = f"{bg_image.name.split('.')[0]}.png"
+            if not str(bg_image).endswith(".nii.gz"):
                 continue
-            create_qa_image(str(out), out_dir / f"{out.name.split('.')[0]}.png")
+            create_qa_image(
+                str(bg_image),
+                out_dir / out_name,
+                str(overlay) if overlay is not None else None,
+                lut,
+            )
 
     def generate_qa_images(self) -> None:
         if self.check_multi_run():
             for i in range(len(list(self.parsed_args.values())[0])):
-                self.create_qa(self.outputs[i], self.name)
+                self.create_qa(self.outputs[i], self.name, self.skip_prov_write)
         else:
-            self.create_qa(self.outputs, self.name)
+            self.create_qa(self.outputs, self.name, self.skip_prov_write)
 
     def create_loggers(self):
         out_paths = None

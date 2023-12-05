@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        html {
+            font-size: 0.5rem;
+        }
+
+        @media (min-width: 576px) {
+            html {
+                font-size: 0.625rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            html {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (min-width: 992px) {
+            html {
+                font-size: 0.875rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            html {
+                font-size: 1rem;
+            }
+        }
+
+        .border-10 {
+            border-style: solid;
+            border-width: 10px;
+        }
+
+        .right-button {
+            display: flex;
+            justify-content: right;
+            align-items: center;
+        }
+
+        .negative {
+            color: red;
+        }
+
+        .neutral {
+            color: black;
+        }
+    </style>
+    <title>RADIFOX QA - {{ subject_id }}&nbsp;/&nbsp;{{ session_id }}</title>
+</head>
+<body>
+<nav class="navbar navbar-expand-md sticky-top navbar-dark bg-dark">
+    <a class="navbar-brand" href="{{ url_for('index') }}">RADIFOX QA</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item {% if not session['qa_mode'] or session['qa_mode'] == 'conversion' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='conversion') }}">Conversion</a>
+      </li>
+      <li class="nav-item {% if session['qa_mode'] == 'processing' %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('set_mode', mode='processing') }}">Processing</a>
+      </li>
+    </ul>
+    <span class="navbar-text">
+        <a href="{{ url_for('project', project_id=project_id) }}">{{ project_id | upper() }}</a>&nbsp;/&nbsp;
+        <a href="{{ url_for('subject', project_id=project_id, subject_id=subject_id) }}">{{ subject_id }}</a>&nbsp;/&nbsp;{{ session_id }}
+    </span>
+  </div>
+</nav>
+<br />
+<br />
+<div class="container-fluid">
+    {% for key, value in processing_results|items %}
+        <h2 class="text-center">{{ key | upper() | replace(':', ' v') }}</h2>
+        <hr /><hr />
+        <br />
+        {% for id, prov in value|items %}
+            {% for output_name, qa_dict in prov.OutputQA|items %}
+                <div class="container-fluid">
+                    <div class="row"><div class="col">
+                        <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
+                    </div></div>
+                    <div class="row"><div class="col">
+                        {% for filestr, qa_img in qa_dict|items %}
+                            <div class="container-fluid outer-container" id="image{{ loop.index }}">
+                                <div class="row"><div class="col"><h5>{{ filestr }}</h5></div></div>
+                            {% if qa_img %}
+                                <div class="row border-10 border-secondary mx-auto" style="background:#000000; width: 100%">
+                                    <div class="col text-center">
+                                        <img src="{{ url_for('image', project_id=project_id, subject_id=subject_id, session_id=qa_img[0], qa_dir=qa_img[1], image_name=qa_img[2]) }}"
+                                             class="pop img-fluid" alt="{{ qa_img[2] }}" loading="lazy"/>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            </div>
+                            <br />
+                        {% endfor %}
+                    </div></div>
+                </div>
+            {% endfor %}
+            <div class="container-fluid" id="image{{ prov.OutputQA|length }}">
+               <br/>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-center"><span class="font-weight-bold">ID: </span>{{ prov.Id }}</h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Container:</span>
+                            <br/>
+                            {{ prov.Container.url }}
+                            <br />
+                            {{ prov.Container.hash }}
+                            <br />
+                            Built: {{ prov.Container.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} by {{ prov.Container.builder }}
+                        </h5>
+                    </div>
+                    <div class="col">
+                        <h5 class="text-right">
+                            <span class="font-weight-bold">Run Info:</span>
+                            <br/>
+                            Started: {{ prov.StartTime }}
+                            <br />
+                            Duration: {{ prov.Duration }}
+                            <br />
+                            User: {{ prov.User }}
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Inputs:</span>
+                            <br/>
+                            {% for key, value in prov.Inputs|items %}
+                                {% if value is iterable and value is not string %}
+                                    {{ key }}: <br />
+                                    {% for sub in value %}
+                                        {% set val = sub.split(':') %}
+                                        &emsp; - {{ val[0] }}<br />
+                                        <span class="text-muted">&emsp;&emsp;[{{ val[1] }}:{{ val[2] }}]</span><br />
+                                    {% endfor %}
+                                {% else %}
+                                    {% set val = value.split(':') %}
+                                    {{ key }}: {{ val[0] }}<br />
+                                    <span class="text-muted">&emsp;&emsp;[{{ val[1] }}:{{ val[2] }}]</span><br />
+                                {% endif %}
+                            {% endfor %}
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Outputs:</span>
+                            <br/>
+                            {% for key, value in prov.Outputs|items %}
+                                {% if value is iterable and value is not string %}
+                                    {{ key }}: <br />
+                                    {% for sub in value %}
+                                        {% set val = sub.split(':') %}
+                                        &emsp; - {{ val[0] }}<br />
+                                        <span class="text-muted">&emsp;&emsp;[{{ val[1] }}:{{ val[2] }}]</span><br />
+                                    {% endfor %}
+                                {% else %}
+                                    {% set val = value.split(':') %}
+                                    {{ key }}: {{ val[0] }}<br />
+                                    <span class="text-muted">&emsp;&emsp;[{{ val[1] }}:{{ val[2] }}]</span><br />
+                                {% endif %}
+                            {% endfor %}
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h5 class="text-left">
+                            <span class="font-weight-bold">Parameters:</span>
+                            {% if prov.Parameters is mapping %}
+                                <br/>
+                                {% for key, value in prov.Parameters|items %}
+                                    {% if value is iterable and value is not string %}
+                                        {{ key }}: <br />
+                                        {% for sub in value %}
+                                            &emsp; - {{ sub }}<br />
+                                        {% endfor %}
+                                    {% else %}
+                                        {{ key }}: {{ value }}<br />
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                None
+                            {% endif %}
+                        </h5>
+                    </div>
+                </div>
+                <div class="row">
+                        <div class="col">
+                            <h5 class="text-left">
+                                <span class="font-weight-bold">Command:</span>
+                                <br/>
+                                {{ prov.Command }}
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            <br />
+        {% endfor %}
+        <br /><br />
+    {% endfor %}
+</div>
+<button id="scrollToNextContainer" class="btn btn-primary position-fixed mb-4" style="bottom: 20px; right: 5px;">Next Image</button>
+<button id="scrollToPrevContainer" class="btn btn-primary position-fixed mb-4" style="bottom: 20px; right: 125px;">Prev Image</button>
+
+<nav class="navbar fixed-bottom navbar-dark bg-dark" style="padding-top: 0; padding-bottom: 0">
+    <span class="navbar-text">
+        {% if prev_session %}
+            &larr;&nbsp;&nbsp;<a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=prev_session) }}">{{ prev_session }}</a>
+        {% elif prev_subject %}
+            &larr;&nbsp;&nbsp;<a href="{{ url_for('subject', project_id=project_id, subject_id=prev_subject) }}">{{ prev_subject }}</a>
+        {% endif %}
+    </span>
+    <span class="navbar-text">
+        {% if next_session %}
+            <a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=next_session) }}">{{ next_session }}</a>&nbsp;&nbsp;&rarr;
+        {% elif next_subject %}
+            <a href="{{ url_for('subject', project_id=project_id, subject_id=next_subject) }}">{{ next_subject }}</a>&nbsp;&nbsp;&rarr;
+        {% endif %}
+    </span>
+</nav>
+
+<div class="modal fade" id="imagemodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 100%"
+         data-dismiss="modal">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img src="" class="imagepreview" alt="full size image">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha384-tsQFqpEReu7ZLhBV2VZlAu7zcOV+rXbYlF2cqB8txI/8aZajjp4Bqd+V6D5IgvKT"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+<script type="text/javascript">
+    $(function () {
+        $('.pop').on('click', function () {
+            $('.imagepreview').attr('src', $(this).attr('src'));
+            $('#imagemodal').modal('show');
+        });
+    });
+
+    function updateButtonStatus() {
+        // Get all div elements with class "container"
+        const containers = $('div.outer-container');
+
+        // Find the current container based on scroll position
+        const currentContainer = containers.filter(function () {
+            return $(window).scrollTop() >= $(this).offset().top - 101;
+        }).last();
+
+        // Find the index of the current container
+        const currentIndex = containers.index(currentContainer);
+
+        // Check if we are at the first or last container
+        if (currentIndex <= 0) {
+            $('#scrollToPrevContainer').prop('disabled', true);
+        } else {
+            $('#scrollToPrevContainer').prop('disabled', false);
+        }
+        if (currentIndex >= containers.length - 1) {
+            $('#scrollToNextContainer').prop('disabled', true);
+        } else {
+            $('#scrollToNextContainer').prop('disabled', false);
+        }
+    }
+
+    $('#scrollToPrevContainer').on('click', function () {
+        // Get all div elements with class "container"
+        const containers = $('div.outer-container');
+
+        // Find the current container based on scroll position
+        const currentContainer = containers.filter(function () {
+            return $(window).scrollTop() >= $(this).offset().top - 101;
+        }).last();
+
+        // Find the index of the current container
+        const currentIndex = containers.index(currentContainer);
+
+        // Find the next container
+        const prevContainer = containers.eq(currentIndex - 1);
+
+        // If the next container exists, scroll to it
+        if (prevContainer.length && currentIndex > 0) {
+            $('html, body').animate({
+                scrollTop: prevContainer.offset().top - 100
+            }, 200); // 200ms animation duration
+        }
+    });
+    $('#scrollToNextContainer').on('click', function () {
+        // Get all div elements with class "container"
+        const containers = $('div.outer-container');
+
+        // Find the current container based on scroll position
+        const currentContainer = containers.filter(function () {
+            return $(window).scrollTop() >= $(this).offset().top - 101;
+        }).last();
+
+        // Find the index of the current container
+        const currentIndex = containers.index(currentContainer);
+
+        // Find the next container
+        const nextContainer = containers.eq(currentIndex + 1);
+
+        // If the next container exists, scroll to it
+        if (nextContainer.length) {
+            $('html, body').animate({
+                scrollTop: nextContainer.offset().top - 100
+            }, 200); // 200ms animation duration
+        }
+    });
+    // Update the button status on page load and when scrolling
+    $(window).on('load scroll', updateButtonStatus);
+
+    function sendPostRequest(btn) {
+        const btn_types = ['ignore', 'change-brain', 'change-cspine', 'change-tspine', 'change-lspine', 'change-orbits'];
+        // Retrieve data from the custom data-* attributes of the button
+        const api = btn.getAttribute('data-api');
+        const loop_idx = btn.getAttribute('data-loop_index');
+        const data = {
+            project: btn.getAttribute('data-project'),
+            subject: btn.getAttribute('data-subject'),
+            session: btn.getAttribute('data-session'),
+            source: btn.getAttribute('data-source_path'),
+            body_part: btn.getAttribute('data-body_part'),
+            original_name: btn.getAttribute('data-name')
+        };
+        const api_str = (api === 'change') ? `${api}-${data['body_part']}` : api;
+
+        // Define the URL to which the POST request will be sent
+        const url = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/${api}-btn`;
+
+        // Use the jQuery $.ajax() function to send the POST request
+        $.ajax({
+            url: url,
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (json) {
+                // Handle a successful response
+                btn_types.forEach(curstr => {
+                    let curr_btn = document.getElementById(`${curstr}${loop_idx}`);
+                    curr_btn.classList.remove("btn-success");
+                    curr_btn.classList.add("btn-dark");
+                });
+                const button = document.getElementById(`${api_str}${loop_idx}`);
+                button.classList.remove("btn-dark");
+                button.classList.add("btn-success");
+            },
+            error: function (xhr, status, error) {
+                // Handle any errors
+                console.error("Error:", error);
+            }
+        });
+    }
+
+    $(function () {
+        $('#exampleModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget) // Button that triggered the modal
+            const name = button.data('name') // Extract info from data-* attributes
+            const project = button.data('project')
+            const subject = button.data('subject')
+            const session = button.data('session')
+            const source_path = button.data('source_path')
+            const name_array = name.split('-')
+            // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+            // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+            const modal = $(this)
+            modal.find('.modal-title').text('Correct Naming -- ' + subject + ' / ' + session)
+            modal.find('.modal-body #original-name').val(name)
+            modal.find('.modal-body #project-id').val(project)
+            modal.find('.modal-body #subject-id').val(subject)
+            modal.find('.modal-body #session-id').val(session)
+            modal.find('.modal-body #source-path').val(source_path)
+            modal.find('.modal-body #body-part').val(name_array[0])
+            modal.find('.modal-body #modality').val(name_array[1])
+            modal.find('.modal-body #technique').val(name_array[2])
+            modal.find('.modal-body #acq-dim').val(name_array[3])
+            modal.find('.modal-body #orient').val(name_array[4])
+            modal.find('.modal-body #ex-contrast').val(name_array[5])
+        });
+    });
+    $(function () {
+        $('#note-form-submit').click(function (e) {
+            e.preventDefault();
+            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/manual-entry`, $('#note-form').serialize())
+            $('#exampleModal').modal('hide');
+        });
+    });
+    $(function () {
+        $('#ignore-button-submit').click(function (e) {
+            e.preventDefault();
+            $.post(window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + `/qa/ignore-entry`, $('#note-form').serialize())
+            $('#exampleModal').modal('hide');
+        });
+    });
+</script>
+</body>
+</html>

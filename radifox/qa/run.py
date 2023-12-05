@@ -22,14 +22,19 @@ class StandaloneApplication(WSGIApplication):
 
 def run(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", default="5000")
     parser.add_argument("--root-directory")
+    parser.add_argument("--secret-key")
     parser.add_argument("--workers", type=int, default=1)
     parsed = parser.parse_args(args)
 
-    if parsed.data_dir:
-        os.environ["QA_DATA_DIR"] = parsed.data_dir
+    os.environ["QA_HOST"] = parsed.host
+    os.environ["QA_PORT"] = parsed.port
+    if parsed.root_directory is not None:
+        os.environ["QA_DATA_DIR"] = parsed.root_directory
+    if parsed.secret_key is not None:
+        os.environ["QA_SECRET_KEY"] = parsed.secret_key
 
     options = {
         "bind": "%s:%s" % (parsed.host, parsed.port),
