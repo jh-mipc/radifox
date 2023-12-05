@@ -31,7 +31,7 @@ class Staging(ProcessingModule):
         parser.add_argument("--keep-best-res", action="store_true", default=False)
         parser.add_argument("--plugin-paths", type=Path, nargs="+", default=None)
         parser.add_argument("--skip-default-plugins", action="store_true", default=False)
-        parser.add_argument("--skip-set-sform-qform", action="store_true", default=False)
+        parser.add_argument("--skip-set-sform", action="store_true", default=False)
         parsed = parser.parse_args(args)
 
         parsed.subject_dir = parsed.subject_dir.resolve()
