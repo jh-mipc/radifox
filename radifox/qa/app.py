@@ -265,7 +265,7 @@ def processing_qa(project_id, subject_id, session_id):
     for module_str, provs in prov_objs.items():
         for idstr, prov_obj in provs.items():
             prov_obj["OutputQA"] = {}
-            for key, val in prov_obj.items():
+            for key, val in prov_obj["Outputs"].items():
                 prov_obj["OutputQA"][key] = {}
                 if not isinstance(val, list):
                     val = [val]
