@@ -169,7 +169,11 @@ class ProcessingModule(ABC):
 
     @staticmethod
     def write_prov(prov_str: str, outputs: dict[str, Path | list[Path]]) -> None:
-        outs = [el for sub in outputs.values() for el in (sub if isinstance(sub, list) else [sub])]
+        outs = [
+            (el[0] if isinstance(el, tuple) else el)
+            for sub in outputs.values()
+            for el in (sub if isinstance(sub, list) else [sub])
+        ]
         for j, output in enumerate(outs):
             if j == 0:
                 session_dir = output.parent.parent
