@@ -205,7 +205,11 @@ class Staging(ProcessingModule):
 
             # Symlink target images
             for session, img in session_targets.items():
+                if (session / "stage" / "sess-target").exists():
+                    (session / "stage" / "sess-target").unlink()
                 (session / "stage" / "sess-target").symlink_to(img.path)
+                if (session / "stage" / "subj-target").exists():
+                    (session / "stage" / "subj-target").unlink()
                 (session / "stage" / "subj-target").symlink_to(subject_target.path)
 
             for session, imgs in session_imgs.items():
