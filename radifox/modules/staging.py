@@ -42,9 +42,7 @@ class Staging(ProcessingModule):
             ImageFilter.from_string(filter_str) for filter_str in parsed.image_types
         ]
 
-        if parsed.plugin_paths is None:
-            parsed.plugin_paths = []
-        else:
+        if parsed.plugin_paths is not None:
             parsed.plugin_paths = [p.resolve() for p in parsed.plugin_paths]
             for plugin_path in parsed.plugin_paths:
                 if not plugin_path.is_file():
@@ -125,8 +123,9 @@ class Staging(ProcessingModule):
 
                 # Load plugins
                 proc_plugins = []
-                for plugin_path in proc_plugin_paths:
-                    proc_plugins.extend(load_plugins(plugin_path))
+                if proc_plugin_paths is not None:
+                    for plugin_path in proc_plugin_paths:
+                        proc_plugins.extend(load_plugins(plugin_path))
                 if not skip_defaults:
                     proc_plugins.extend([MEMPRAGEPlugin, MP2RAGEPlugin])
 
