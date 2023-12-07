@@ -297,14 +297,14 @@
 <nav class="navbar fixed-bottom navbar-dark bg-dark" style="padding-top: 0; padding-bottom: 0">
     <span class="navbar-text">
         {% if prev_session %}
-            &larr;&nbsp;&nbsp;<a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=prev_scan) }}">{{ prev_session }}</a>
+            &larr;&nbsp;&nbsp;<a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=prev_session) }}">{{ prev_session }}</a>
         {% elif prev_subject %}
             &larr;&nbsp;&nbsp;<a href="{{ url_for('subject', project_id=project_id, subject_id=prev_subject) }}">{{ prev_subject }}</a>
         {% endif %}
     </span>
     <span class="navbar-text">
         {% if next_session %}
-            <a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=next_scan) }}">{{ next_session }}</a>&nbsp;&nbsp;&rarr;
+            <a href="{{ url_for('qa_page', project_id=project_id, subject_id=subject_id, session_id=next_session) }}">{{ next_session }}</a>&nbsp;&nbsp;&rarr;
         {% elif next_subject %}
             <a href="{{ url_for('subject', project_id=project_id, subject_id=next_subject) }}">{{ next_subject }}</a>&nbsp;&nbsp;&rarr;
         {% endif %}
