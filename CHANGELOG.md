@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2023-12-07
+
+### Fixed
+ - Fixed bug in QA webapp where the next session link would take you to the subject page
+
 ## [1.0.3] - 2023-12-05
 
 ### Added
