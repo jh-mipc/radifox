@@ -330,14 +330,19 @@ class BaseInfo:
         patterns = [
             (r"(brain|^br_)", "BRAIN"),
             (r"ct[ -]?spine", "SPINE"),
-            (r"(cerv|c[ -]?sp|c.?spine|msma)", "CSPINE", r"(thor|t[ -]?sp|t.?spine)", "SPINE"),
             (
-                r"(thor|t[ -]?sp|t.?spine)",
-                "TSPINE",
-                r"(cerv|(?<!ci)c[ -]?sp|(?<!ci)c.?spine)",
+                r"(?<!\w)(cerv|c[ -]?sp|c.?spine|msma)",
+                "CSPINE",
+                r"(?<!\w)(thor|t[ -]?sp|t.?spine)",
                 "SPINE",
             ),
-            (r"(lumb|l[ -]?sp|l.?spine)", "LSPINE"),
+            (
+                r"(?<!\w)(thor|t[ -]?sp|t.?spine)",
+                "TSPINE",
+                r"(?<!\w)(cerv|(?<!ci)c[ -]?sp|(?<!ci)c.?spine)",
+                "SPINE",
+            ),
+            (r"(?<!\w)(lumb|l[ -]?sp|l.?spine)", "LSPINE"),
             (r"(\sc.?tl?(?:\s+|$)|^sp_|t1.ax.vibe|t1.vibe.tra|ax.t1.vibe)", "SPINE"),
             (r"(orbit|thin|^on_)", "ORBITS"),
             (r"spine", "SPINE"),
@@ -467,10 +472,7 @@ class BaseSet:
         manual_names: Optional[dict] = None,
         input_hash: Optional[str] = None,
     ) -> None:
-        self.__version__ = {
-            'radifox': __version__,
-            'dcm2niix': get_software_versions()['dcm2niix']
-        }
+        self.__version__ = {"radifox": __version__, "dcm2niix": get_software_versions()["dcm2niix"]}
         self.ConversionSoftwareVersions = get_software_versions()
         if input_hash is None:
             logging.info("Hashing source file(s) for record keeping.")
@@ -887,7 +889,7 @@ def create_nii(output_dir: Path, source_path: Path, di_list: list[BaseInfo]) -> 
 
     # Remove images that have an _e# without an EchoTime
     # Remove any images that are a, b, c, etc. of another image
-    suffix_pattern = re.compile(r'^(.*)([a-z])$')
+    suffix_pattern = re.compile(r"^(.*)([a-z])$")
     removes = []
     for i, filename in enumerate(filenames):
         removes.append(False)

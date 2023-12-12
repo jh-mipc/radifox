@@ -16,7 +16,7 @@ class LookupTable:
             if is_intstr(site_name) and is_intstr(site_id):
                 site_name = str(int(site_name))
                 site_id = str(int(site_id))
-            if site_name == site_id and project == project_id:
+            if site_name.lower() == site_id.lower() and project.lower() == project_id.lower():
                 inst_name = (
                     "NONE"
                     if lut["InstitutionName"][row].upper() == "NONE"
