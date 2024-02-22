@@ -69,7 +69,8 @@ class Staging(ProcessingModule):
             all_imgs = glob(session / "nii" / "*.nii.gz")
             all_imgs = sorted(all_imgs, key=lambda x: x.name, reverse=True)
             all_imgs = [img for img in all_imgs if "ND" not in img.extras]
-            session_imgs[session] = all_imgs
+            if all_imgs:
+                session_imgs[session] = all_imgs
 
         return {
             "session_filepaths": list(session_imgs.values()),
