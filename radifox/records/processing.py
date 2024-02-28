@@ -239,7 +239,7 @@ class ProcessingModule(ABC):
         out_dir = out.parent.parent / "qa" / name
         out_dir.mkdir(exist_ok=True, parents=True)
         for out in outs:
-            if out is None or not out.name.endswith(".nii.gz"):
+            if out is None:
                 continue
             if isinstance(out, tuple):
                 overlay = out[0]
