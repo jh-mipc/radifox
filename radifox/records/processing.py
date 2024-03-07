@@ -145,7 +145,7 @@ class ProcessingModule(ABC):
         return prov_str
 
     @staticmethod
-    def get_prov_path_strs(path_dict: dict[str, Path | list[Path]], project_root: Path) -> str:
+    def get_prov_path_strs(path_dict: dict[str, Path | list[Path] | None], project_root: Path) -> str:
         prov_str = ""
         for k, v in path_dict.items():
             if v is None:
@@ -171,7 +171,7 @@ class ProcessingModule(ABC):
     @staticmethod
     def write_prov(
         prov_str: str,
-        outputs: dict[str, Path | list[Path]],
+        outputs: dict[str, Path | list[Path] | None],
         skip_prov_write: tuple[str],
     ) -> None:
         outs = [
@@ -180,13 +180,19 @@ class ProcessingModule(ABC):
             if key not in skip_prov_write
             for el in (sub if isinstance(sub, list) else [sub])
         ]
-        for j, output in enumerate(outs):
-            if j == 0:
+        if len(outs) == 0:
+            return
+        first = True
+        for output in outs:
+            if output is None:
+                continue
+            if first:
                 session_dir = output.parent.parent
                 session_file = "_".join(
                     [session_dir.parent.name, session_dir.name, "Provenance.yml"]
                 )
                 safe_append_to_file(session_dir / session_file, prov_str)
+                first = False
             suffix = "".join(output.suffixes)
             prov_path = output.parent / output.name.replace(suffix, ".prov")
             with open(prov_path, "w") as f:
@@ -217,7 +223,7 @@ class ProcessingModule(ABC):
 
     @staticmethod
     def create_qa(
-        outputs: dict[str, Path | list[Path]],
+        outputs: dict[str, Path | list[Path] | None],
         name: str,
         skip_prov_write: tuple[str],
     ) -> None:
@@ -227,10 +233,14 @@ class ProcessingModule(ABC):
             if key not in skip_prov_write
             for el in (sub if isinstance(sub, list) else [sub])
         ]
+        if len(outs) == 0:
+            return
         out = outs[0][0] if isinstance(outs[0], tuple) else outs[0]
         out_dir = out.parent.parent / "qa" / name
         out_dir.mkdir(exist_ok=True, parents=True)
         for out in outs:
+            if out is None:
+                continue
             if isinstance(out, tuple):
                 overlay = out[0]
                 bg_image = out[1]

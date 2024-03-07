@@ -69,9 +69,8 @@ class Staging(ProcessingModule):
             all_imgs = glob(session / "nii" / "*.nii.gz")
             all_imgs = sorted(all_imgs, key=lambda x: x.name, reverse=True)
             all_imgs = [img for img in all_imgs if "ND" not in img.extras]
-            if not all_imgs:
-                parser.error(f"No images found in {session}")
-            session_imgs[session] = all_imgs
+            if all_imgs:
+                session_imgs[session] = all_imgs
 
         return {
             "session_filepaths": list(session_imgs.values()),
@@ -110,6 +109,8 @@ class Staging(ProcessingModule):
             skip_default_plugins,
             skip_set_sform,
         ):
+            if not all_imgs:
+                continue
             # Create "stage" directory
             session = all_imgs[0].parent.parent
             (session / "stage").mkdir(exist_ok=True, parents=True)
@@ -229,8 +230,8 @@ class Staging(ProcessingModule):
         return [
             {
                 "staged_files": imgs,
-                "session_target": session_targets[session],
-                "subject_target": subject_target,
+                "session_target": session_targets[session] if session in session_targets else None,
+                "subject_target": subject_target if session in session_targets else None,
             }
             for session, imgs in session_imgs.items()
         ]

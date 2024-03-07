@@ -194,7 +194,7 @@ class BaseInfo:
             resolution = "3D" if "3d" in series_desc else "2D"
         # 3) Ex-contrast
         excontrast = "PRE"
-        if not (self.ExContrastAgent is None or self.ExContrastAgent == ""):
+        if not (self.ExContrastAgent is None or self.ExContrastAgent.upper() in ["", "NONE"]):
             excontrast = "POST"
         elif any([item in series_desc for item in POSTGAD_DESC]) and "pre" not in series_desc:
             excontrast = "POST"
