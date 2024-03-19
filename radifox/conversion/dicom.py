@@ -226,9 +226,16 @@ def sort_dicoms(dcm_dir: Path, force_dicom: bool = False) -> None:
     for filepath in dcm_dir.rglob("*"):
         if filepath.is_file():
             try:
-                ds = dcmread(str(filepath), stop_before_pixels=True, force=force_dicom)
+                ds = dcmread(str(filepath), stop_before_pixels=True)
             except (InvalidDicomError, KeyError):
-                continue
+                if force_dicom:
+                    try:
+                        ds = dcmread(str(filepath), stop_before_pixels=True, force=True)
+                        ds.save_as(str(filepath), write_like_original=False)
+                    except ValueError:
+                        continue
+                else:
+                    continue
             if isinstance(ds, DicomDir):
                 continue
             if ds.SOPClassUID not in ["1.2.840.10008.5.1.4.1.1.4", "1.2.840.10008.5.1.4.1.1.4.1"]:
