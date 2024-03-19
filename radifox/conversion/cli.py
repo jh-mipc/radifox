@@ -151,7 +151,7 @@ def convert(args: Optional[List[str]] = None) -> None:
             )
 
     manual_arg = {
-        "MagneticiFieldStrength": args.field_strength,
+        "MagneticFieldStrength": args.field_strength,
         "InstitutionName": args.institution,
     }
 
