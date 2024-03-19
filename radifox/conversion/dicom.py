@@ -220,13 +220,13 @@ def get_intra_series_meta(ds: Dataset) -> tuple:
     )
 
 
-def sort_dicoms(dcm_dir: Path) -> None:
+def sort_dicoms(dcm_dir: Path, force_dicom: bool = False) -> None:
     logging.info("Sorting DICOMs")
     valid_dcms = []
     for filepath in dcm_dir.rglob("*"):
         if filepath.is_file():
             try:
-                ds = dcmread(str(filepath), stop_before_pixels=True)
+                ds = dcmread(str(filepath), stop_before_pixels=True, force=force_dicom)
             except (InvalidDicomError, KeyError):
                 continue
             if isinstance(ds, DicomDir):
@@ -240,7 +240,7 @@ def sort_dicoms(dcm_dir: Path) -> None:
             else:
                 valid_dcms.append((filepath, ds))
     if not valid_dcms:
-        return
+        raise ValueError("No valid DICOMs found in %s, try re-running with --force-dicom" % dcm_dir)
 
     # Sort valid DICOMs according to series and intra-series metadata
     valid_dcms = sorted(valid_dcms, key=lambda x: (x[1].SeriesInstanceUID, x[1].InstanceNumber))

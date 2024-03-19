@@ -50,6 +50,9 @@ def convert(args: Optional[List[str]] = None) -> None:
     )
     parser.add_argument("--institution", type=str, help="Institution name.")
     parser.add_argument("--field-strength", type=int, help="Magnetic field strength.")
+    parser.add_argument(
+        "--force-dicom", action="store_true", help="Force read DICOM files.", default=False
+    )
     parser.add_argument("--anonymize", action="store_true", help="Anonymize DICOM data.")
     parser.add_argument("--date-shift-days", type=int, help="Number of days to shift dates.")
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
@@ -165,6 +168,7 @@ def convert(args: Optional[List[str]] = None) -> None:
         False,
         linking,
         manual_arg,
+        args.force_dicom,
         args.anonymize,
         args.date_shift_days,
         manual_names,
@@ -212,9 +216,7 @@ def update(args: Optional[List[str]] = None) -> None:
         if metadata._NoProjectSubdir:
             lut_file = output_root / (metadata.projectname + "-lut.csv")
         else:
-            lut_file = (
-                output_root / metadata.projectname / (metadata.projectname + "-lut.csv")
-            )
+            lut_file = output_root / metadata.projectname / (metadata.projectname + "-lut.csv")
     else:
         lut_file = args.lut_file
     lookup_dict = (
