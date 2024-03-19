@@ -35,6 +35,7 @@ def run_conversion(
     rerun: bool,
     link: Optional[str],
     manual_args: dict,
+    force_dicom: bool,
     remove_identifiers: bool,
     date_shift_days: int,
     manual_names: dict,
@@ -74,7 +75,6 @@ def run_conversion(
             )
         logging.info("RADIFOX conversion starting: %s" % metadata.dir_to_str())
         type_folder = session_path / ("parrec" if parrec else "dcm")
-        sort_func = sort_parrecs if parrec else sort_dicoms
         if not rerun:
             if source.is_dir():
                 if link is not None:
@@ -96,7 +96,10 @@ def run_conversion(
                     "the available archive formats (%s)" % ", ".join(allowed_archives()[0])
                 )
             recursive_chmod(type_folder)
-            sort_func(type_folder)
+            if parrec:
+                sort_parrecs(type_folder)
+            else:
+                sort_dicoms(type_folder, force_dicom)
             recursive_chmod(type_folder)
 
         if parrec:
