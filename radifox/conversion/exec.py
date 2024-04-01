@@ -13,7 +13,6 @@ from .utils import (
     mkdir_p,
     extract_archive,
     allowed_archives,
-    recursive_chmod,
     copytree_link,
     DIR_OCTAL,
     has_permissions,
@@ -95,12 +94,10 @@ def run_conversion(
                     "Source is not a directory, but does not match one of "
                     "the available archive formats (%s)" % ", ".join(allowed_archives()[0])
                 )
-            recursive_chmod(type_folder)
             if parrec:
                 sort_parrecs(type_folder)
             else:
                 sort_dicoms(type_folder, force_dicom)
-            recursive_chmod(type_folder)
 
         if parrec:
             img_set = ParrecSet(
@@ -126,11 +123,8 @@ def run_conversion(
                 input_hash=input_hash,
             )
         img_set.create_all_nii()
-        recursive_chmod(session_path / "nii")
-        recursive_chmod(session_path / "qa")
         img_set.generate_unconverted_info()
 
-        recursive_chmod(session_path / "logs")
         if remove_identifiers:
             shutil.rmtree(type_folder)
         logging.info("RADIFOX conversion finished: %s" % metadata.dir_to_str())
