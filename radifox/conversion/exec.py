@@ -80,12 +80,12 @@ def run_conversion(
                     logging.info("Linking files from source to %s folder" % type_folder.name)
                     if link not in ["symlink", "hardlink"]:
                         raise ValueError("Unsupported linking type.")
-                    copytree_link(source, type_folder, link == "symlink")
+                    copytree_link(source, type_folder, link)
                     logging.info("Linking complete")
                 else:
                     logging.info("Copying files from source to %s folder" % type_folder.name)
                     # noinspection PyTypeChecker
-                    shutil.copytree(source, type_folder, copy_function=shutil.copyfile)
+                    copytree_link(source, type_folder, "copy")
                     logging.info("Copying complete")
             elif any([source.name.endswith(ext) for ext in allowed_archives()[1]]):
                 extract_archive(source, type_folder)
