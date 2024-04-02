@@ -4,6 +4,7 @@ import csv
 from datetime import datetime, date, time, timedelta
 import hashlib
 import logging
+import os
 from pathlib import Path
 import re
 import shutil
@@ -20,17 +21,18 @@ def mkdir_p(path: Path, mode: int = 0o777) -> None:
     path.mkdir(mode=mode, parents=True, exist_ok=True)
 
 
-def copytree_link(source: Path, dest: Path, symlink: bool) -> None:
+def copytree_link(source: Path, dest: Path, method: str) -> None:
+    if method in ["hardlink", "softlink", "copy"]:
+        func = {"hardlink": os.link, "symlink": os.symlink, "copy": shutil.copyfile}[method]
+    else:
+        raise ValueError(f"Unsupported copy method: {method}")
     dest.mkdir(parents=True, exist_ok=True)
     for path in source.glob("*"):
         if path.is_file():
-            if symlink:
-                (dest / path.name).symlink_to(path)
-            else:
-                (dest / path.name).hardlink_to(path)
+            func(path, dest / path.name)
         elif path.is_dir():
             (dest / path.name).mkdir()
-            copytree_link(path, dest / path.name, symlink)
+            copytree_link(path, dest / path.name, method)
 
 
 # http://stackoverflow.com/a/10840586
