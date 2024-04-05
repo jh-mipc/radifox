@@ -408,7 +408,7 @@ def qa_pass_btn():
         data["subject"],
         data["session"],
         data["source"],
-        True,
+        "pass",
     )
     return jsonify(message="QA Pass")
 
@@ -420,7 +420,7 @@ def qa_fail_btn():
         data["subject"],
         data["session"],
         data["source"],
-        False,
+        "fail",
     )
     return jsonify(message="QA Fail")
 
