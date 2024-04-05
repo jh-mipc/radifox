@@ -317,6 +317,18 @@ def add_manual_entry(project_id, subject_id, session_id, key, value):
     json_obj[key] = value
     save_manual(json_obj, filepath)
 
+def add_qa_entry(project_id, subject_id, session_id, key, value):
+    filepath = (
+        DATA_DIR
+        / project_id
+        / subject_id
+        / session_id
+        / "_".join([subject_id, session_id, "qa.json"])
+    )
+    json_obj = json.loads(filepath.read_text()) if filepath.exists() else {}
+    json_obj[key] = value
+    save_manual(json_obj, filepath)
+
 
 def update_manual_entry(project_id, subject_id, session_id, data):
     filepath = (
@@ -387,6 +399,30 @@ def ignore_btn():
         False,
     )
     return jsonify(message="Image Ignored")
+
+@app.route("/qa-pass-btn", methods=["POST"])
+def qa_pass_btn():
+    data = request.get_json()
+    add_qa_entry(
+        data["project"],
+        data["subject"],
+        data["session"],
+        data["source"],
+        True,
+    )
+    return jsonify(message="QA Pass")
+
+@app.route("/qa-pass-btn", methods=["POST"])
+def qa_fail_btn():
+    data = request.get_json()
+    add_qa_entry(
+        data["project"],
+        data["subject"],
+        data["session"],
+        data["source"],
+        False,
+    )
+    return jsonify(message="QA Fail")
 
 
 @app.route("/change-btn", methods=["POST"])
