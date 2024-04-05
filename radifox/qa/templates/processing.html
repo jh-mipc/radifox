@@ -88,6 +88,7 @@
         <br />
         {% for id, prov in value|items %}
             {% for output_name, qa_dict in prov.OutputQA|items %}
+                {% for outputs_key, outputs_values in qa_dict.Outputs|items %}
                 <div class="container-fluid">
                     <div class="row"><div class="col">
                         <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
@@ -99,8 +100,8 @@
                                 data-project="{{ project_id }}"
                                 data-subject="{{ subject_id }}"
                                 data-session="{{ session_id }}"
-                                data-source_path="{{ output_name }}"
-                                data-name="{{ output_name }}"
+                                data-source_path="{{ outputs_values }}"
+                                data-name="{{ outputs_values }}"
                                 data-loop_index="{{ loop.index }}"
                                 id="ignore{{ loop.index }}"
                                 class="qa-pass-btn btn btn-dark">
@@ -112,8 +113,8 @@
                                 data-project="{{ project_id }}"
                                 data-subject="{{ subject_id }}"
                                 data-session="{{ session_id }}"
-                                data-source_path="{{ output_name }}"
-                                data-name="{{ output_name }}"
+                                data-source_path="{{ outputs_values }}"
+                                data-name="{{ outputs_values }}"
                                 data-loop_index="{{ loop.index }}"
                                 id="ignore{{ loop.index }}"
                                 class="qa-fail-btn btn btn-dark">
