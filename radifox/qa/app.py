@@ -412,7 +412,7 @@ def qa_pass_btn():
     )
     return jsonify(message="QA Pass")
 
-@app.route("/qa-pass-btn", methods=["POST"])
+@app.route("/qa-fail-btn", methods=["POST"])
 def qa_fail_btn():
     data = request.get_json()
     add_qa_entry(
