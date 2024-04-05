@@ -373,7 +373,7 @@
     $(window).on('load scroll', updateButtonStatus);
 
     function sendPostRequest(btn) {
-        const btn_types = ['ignore', 'change-brain', 'change-cspine', 'change-tspine', 'change-lspine', 'change-orbits'];
+        const btn_types = ['qa-pass', 'qa-fail', 'ignore', 'change-brain', 'change-cspine', 'change-tspine', 'change-lspine', 'change-orbits'];
         // Retrieve data from the custom data-* attributes of the button
         const api = btn.getAttribute('data-api');
         const loop_idx = btn.getAttribute('data-loop_index');
