@@ -88,39 +88,42 @@
         <br />
         {% for id, prov in value|items %}
             {% for output_name, qa_dict in prov.OutputQA|items %}
-                {% for outputs_key, outputs_values in qa_dict.Outputs|items %}
                 <div class="container-fluid">
                     <div class="row"><div class="col">
                         <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
                     </div></div>
-                    <div class="col-7 right-button">
-                        <button type="button"
-                                onclick="sendPostRequest(this)"
-                                data-api="qa-pass"
-                                data-project="{{ project_id }}"
-                                data-subject="{{ subject_id }}"
-                                data-session="{{ session_id }}"
-                                data-source_path="{{ outputs_values }}"
-                                data-name="{{ outputs_values }}"
-                                data-loop_index="{{ loop.index }}"
-                                id="ignore{{ loop.index }}"
-                                class="qa-pass-btn btn btn-dark">
-                            QA Pass
-                        </button>
-                        <button type="button"
-                                onclick="sendPostRequest(this)"
-                                data-api="qa-fail"
-                                data-project="{{ project_id }}"
-                                data-subject="{{ subject_id }}"
-                                data-session="{{ session_id }}"
-                                data-source_path="{{ outputs_values }}"
-                                data-name="{{ outputs_values }}"
-                                data-loop_index="{{ loop.index }}"
-                                id="ignore{{ loop.index }}"
-                                class="qa-fail-btn btn btn-dark">
-                            QA Fail
-                        </button>
-                    </div>
+
+                    {% for outputs_key, outputs_values in qa_dict.Outputs|items %}
+                        <div class="col-7 right-button">
+                            <button type="button"
+                                    onclick="sendPostRequest(this)"
+                                    data-api="qa-pass"
+                                    data-project="{{ project_id }}"
+                                    data-subject="{{ subject_id }}"
+                                    data-session="{{ session_id }}"
+                                    data-source_path="{{ outputs_values }}"
+                                    data-name="{{ outputs_values }}"
+                                    data-loop_index="{{ loop.index }}"
+                                    id="ignore{{ loop.index }}"
+                                    class="qa-pass-btn btn btn-dark">
+                                QA Pass
+                            </button>
+                            <button type="button"
+                                    onclick="sendPostRequest(this)"
+                                    data-api="qa-fail"
+                                    data-project="{{ project_id }}"
+                                    data-subject="{{ subject_id }}"
+                                    data-session="{{ session_id }}"
+                                    data-source_path="{{ outputs_values }}"
+                                    data-name="{{ outputs_values }}"
+                                    data-loop_index="{{ loop.index }}"
+                                    id="ignore{{ loop.index }}"
+                                    class="qa-fail-btn btn btn-dark">
+                                QA Fail
+                            </button>
+                        </div>
+                    {% endfor %}
+                    
                     <div class="row"><div class="col">
                         {% for filestr, qa_img in qa_dict|items %}
                             <div class="container-fluid outer-container" id="image{{ loop.index }}">
@@ -135,7 +138,7 @@
                             {% endif %}
                             </div>
                             <br />
-                        {% endfor %}
+                        
                         {% endfor %}
                     </div></div>
                 </div>
