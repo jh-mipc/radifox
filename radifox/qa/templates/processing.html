@@ -92,6 +92,34 @@
                     <div class="row"><div class="col">
                         <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
                     </div></div>
+                    <div class="col-7 right-button">
+                        <button type="button"
+                                onclick="sendPostRequest(this)"
+                                data-api="ignore"
+                                data-project="{{ project_id }}"
+                                data-subject="{{ subject_id }}"
+                                data-session="{{ session_id }}"
+                                data-source_path="{{ item.source_path }}"
+                                data-name="{{ item.image_name }}"
+                                data-loop_index="{{ loop.index }}"
+                                id="ignore{{ loop.index }}"
+                                class="qa-pass-btn btn btn-dark">
+                            QA Pass
+                        </button>
+                        <button type="button"
+                                onclick="sendPostRequest(this)"
+                                data-api="ignore"
+                                data-project="{{ project_id }}"
+                                data-subject="{{ subject_id }}"
+                                data-session="{{ session_id }}"
+                                data-source_path="{{ item.source_path }}"
+                                data-name="{{ item.image_name }}"
+                                data-loop_index="{{ loop.index }}"
+                                id="ignore{{ loop.index }}"
+                                class="qa-fail-btn btn btn-dark">
+                            QA Fail
+                        </button>
+                    </div>
                     <div class="row"><div class="col">
                         {% for filestr, qa_img in qa_dict|items %}
                             <div class="container-fluid outer-container" id="image{{ loop.index }}">
