@@ -93,6 +93,17 @@
                         <h4>{{ output_name|replace('_',' ')|title() }}:</h4>
                     </div></div>
 
+
+                    <!-- JavaScript for Debugging -->
+                    <script type="text/javascript">
+                        // Serialize the qa_dict to a JSON string
+                        var qaDictString = '{{ qa_dict | tojson | safe }}';
+                        // Parse the JSON string to a JavaScript object
+                        var qaDict = JSON.parse(qaDictString);
+                        // Console log qaDict for debugging
+                        console.log(qaDict);
+                    </script>
+
                     {% set corresponding_img_fpath = qa_dict.Outputs.values() | first %}
                     <div class="col-7 right-button">
                         <button type="button"
