@@ -258,6 +258,7 @@ def update(args: Optional[List[str]] = None) -> None:
             None,
             json_obj.get("ManualArgs", {}),
             False,
+            False,
             0,
             manual_names,
             json_obj["InputHash"],
