@@ -109,37 +109,11 @@
                 <div class="col-5">
                     {% if item.manual_name != '' %}
                         <h4 class="{% if item.created_by == 'MODIFIED' %}negative{% else %}neutral{% endif %}">
-                            Manual: {{ item.manual_name }}
+                            {% if item.created_by == 'LOOKUP' %}Lookup{% else %}Manual{% endif %}: {{ item.manual_name }}
                         </h4>
                     {% endif %}
                 </div>
                 <div class="col-7 right-button">
-                    <button type="button"
-                            onclick="sendPostRequest(this)"
-                            data-api="qa-pass"
-                            data-project="{{ project_id }}"
-                            data-subject="{{ subject_id }}"
-                            data-session="{{ session_id }}"
-                            data-source_path="{{ item.source_path }}"
-                            data-name="{{ item.image_name }}"
-                            data-loop_index="{{ loop.index }}"
-                            id="ignore{{ loop.index }}"
-                            class="qa-pass-btn btn btn-dark">
-                        QA Pass
-                    </button>
-                    <button type="button"
-                            onclick="sendPostRequest(this)"
-                            data-api="qa-fail"
-                            data-project="{{ project_id }}"
-                            data-subject="{{ subject_id }}"
-                            data-session="{{ session_id }}"
-                            data-source_path="{{ item.source_path }}"
-                            data-name="{{ item.image_name }}"
-                            data-loop_index="{{ loop.index }}"
-                            id="ignore{{ loop.index }}"
-                            class="qa-fail-btn btn btn-dark">
-                        QA Fail
-                    </button>
                     <button type="button"
                             onclick="sendPostRequest(this)"
                             data-api="ignore"
