@@ -1,4 +1,5 @@
 import os
+import datetime
 import itertools
 import json
 from collections import defaultdict
@@ -44,17 +45,23 @@ def require_authentication():
 def login():
     error = None
     if request.method == "POST":
-        test_key = request.form["key"]
+        key = request.form["key"]
+        user = request.form["user"]
     else:
-        test_key = request.args.get("key")
+        key = request.args.get("key", "")
+        user = ""
 
-    if test_key is not None:
-        if test_key == SECRET_KEY:
-            session["qa_secret_key"] = test_key
-            return redirect(url_for("index"))
+    if key:
+        if key == SECRET_KEY:
+            if user:
+                session["qa_user"] = user
+                session["qa_secret_key"] = key
+                return redirect(url_for("index"))
+            else:
+                error = "Please enter a username"
         else:
             error = "Invalid Key"
-    return render_template("login.html", error=error)
+    return render_template("login.html", error=error, key=key, user=user)
 
 
 @app.route("/")
@@ -164,6 +171,10 @@ def conversion_qa(project_id, subject_id, session_id):
                     ]
                 ):
                     created_by = "MODIFIED"
+        elif created_by == "LOOKUP":
+            manual_name = "/".join(
+                [item if item is not None else "--" for item in si["LookupName"]]
+            )
         study_num, series_num = si["NiftiName"].split("_")[-2].split("-")
         image_obj = {
             "acq_date_time": si["AcqDateTime"],
@@ -262,6 +273,18 @@ def processing_qa(project_id, subject_id, session_id):
         )
     }
 
+    qa_filepath = (
+            DATA_DIR
+            / project_id
+            / subject_id
+            / session_id
+            / "_".join([subject_id, session_id, "QA.yml"])
+    )
+    qa_data = yaml.safe_load_all(qa_filepath.read_text()) if qa_filepath.exists() else []
+    qa_dict = {}
+    for entry in qa_data:
+        qa_dict[entry["file"]] = entry["status"]
+
     for module_str, provs in prov_objs.items():
         for idstr, prov_obj in provs.items():
             prov_obj["OutputQA"] = {}
@@ -271,6 +294,9 @@ def processing_qa(project_id, subject_id, session_id):
                     val = [val]
                 for v in val:
                     filestr = v.split(":")[0]
+                    if not filestr.endswith(".nii.gz"):
+                        continue
+                    existing_qa = qa_dict.get(filestr, "")
                     filepath = session_dir.parent.parent / filestr
                     qa_path = (
                         filepath.parent.parent
@@ -278,11 +304,24 @@ def processing_qa(project_id, subject_id, session_id):
                         / module_str.split(":")[0]
                         / (filepath.name.replace(".nii.gz", ".png"))
                     )
+                    display_name = (
+                        filestr.split("_")[2]
+                        + "_"
+                        + " / ".join(filestr.split(".")[0].split("_")[3:])
+                    )
                     prov_obj["OutputQA"][key][filestr] = (
-                        (qa_path.parent.parent.parent.name, qa_path.parent.name, qa_path.name)
+                        (
+                            qa_path.parent.parent.parent.name,
+                            qa_path.parent.name,
+                            qa_path.name,
+                            display_name,
+                            existing_qa,
+                        )
                         if qa_path.exists()
                         else None
                     )
+                if len(prov_obj["OutputQA"][key]) == 0:
+                    del prov_obj["OutputQA"][key]
 
     return render_template(
         "processing.html",
@@ -316,6 +355,24 @@ def add_manual_entry(project_id, subject_id, session_id, key, value):
     json_obj = json.loads(filepath.read_text()) if filepath.exists() else {}
     json_obj[key] = value
     save_manual(json_obj, filepath)
+
+
+def add_qa_entry(project_id, subject_id, session_id, key, value):
+    filepath = (
+        DATA_DIR
+        / project_id
+        / subject_id
+        / session_id
+        / "_".join([subject_id, session_id, "QA.yml"])
+    )
+    yml_obj = {
+        "user": session["qa_user"],
+        "timestamp": datetime.datetime.now().isoformat(),
+        "file": key,
+        "status": value,
+    }
+    with open(filepath, "a") as f:
+        yaml.safe_dump(yml_obj, f, explicit_start=True, explicit_end=True, sort_keys=True)
 
 
 def update_manual_entry(project_id, subject_id, session_id, data):
@@ -387,6 +444,32 @@ def ignore_btn():
         False,
     )
     return jsonify(message="Image Ignored")
+
+
+@app.route("/qa/qa-pass-btn", methods=["POST"])
+def qa_pass_btn():
+    data = request.get_json()
+    add_qa_entry(
+        data["project"],
+        data["subject"],
+        data["session"],
+        data["source"],
+        'pass',
+    )
+    return jsonify(message="QA Pass")
+
+
+@app.route("/qa/qa-fail-btn", methods=["POST"])
+def qa_fail_btn():
+    data = request.get_json()
+    add_qa_entry(
+        data["project"],
+        data["subject"],
+        data["session"],
+        data["source"],
+        'fail',
+    )
+    return jsonify(message="QA Fail")
 
 
 @app.route("/change-btn", methods=["POST"])

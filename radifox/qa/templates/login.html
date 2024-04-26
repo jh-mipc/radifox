@@ -62,7 +62,9 @@
                     </div>
                 {% endif %}
                 <form method="POST" action="{{ url_for('login') }}">
-                    Key: <input type="password" name="key" class="form-control">
+                    User: <input type="text" name="user" value="{{ user }}" class="form-control">
+                    <br />
+                    Key: <input type="password" name="key" value="{{ key }}" class="form-control">
                     <br>
                     <input type="submit" value="Login" class="btn btn-primary">
                 </form>
