@@ -45,7 +45,7 @@ class ProcessingModule(ABC):
             if not self.check_outputs():
                 logging.error(f"Processing failed. No outputs reported.")
                 return
-            logging.info(f"Generating QA imagees.")
+            logging.info(f"Generating QA images.")
             self.generate_qa_images()
             logging.info(f"Generating provenance records.")
             self.generate_prov()

@@ -109,7 +109,7 @@
                 <div class="col-5">
                     {% if item.manual_name != '' %}
                         <h4 class="{% if item.created_by == 'MODIFIED' %}negative{% else %}neutral{% endif %}">
-                            Manual: {{ item.manual_name }}
+                            {% if item.created_by == 'LOOKUP' %}Lookup{% else %}Manual{% endif %}: {{ item.manual_name }}
                         </h4>
                     {% endif %}
                 </div>
