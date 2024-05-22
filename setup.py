@@ -59,6 +59,8 @@ setup(
         "pydicom",
         "pyyaml",
         "scipy",
+        "matplotlib",
+        "trimesh",
         "radifox-utils>=1.0.2",
     ],
     extras_require={

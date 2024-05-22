@@ -12,7 +12,7 @@ from typing import Any
 from .utils import safe_append_to_file, format_timedelta
 from ..conversion import hash_file, create_loggers
 from ..naming import ImageFile
-from ..qa import create_qa_image
+from ..qa import create_qa_image, create_surface_qa_image
 
 CONTAINER_LABELS = [
     "ci.image",
@@ -253,12 +253,19 @@ class ProcessingModule(ABC):
                 out_name = f"{bg_image.name.split('.')[0]}.png"
             if not str(bg_image).endswith(".nii.gz"):
                 continue
-            create_qa_image(
-                str(bg_image),
-                out_dir / out_name,
-                str(overlay) if overlay is not None else None,
-                lut,
-            )
+            if overlay is not None and overlay.name.endswith(".gii"):
+                create_surface_qa_image(
+                    overlay,
+                    bg_image,
+                    out_dir / out_name
+                )
+            else:
+                create_qa_image(
+                    str(bg_image),
+                    out_dir / out_name,
+                    str(overlay) if overlay is not None else None,
+                    lut,
+                )
 
     def generate_qa_images(self) -> None:
         if self.check_multi_run():
