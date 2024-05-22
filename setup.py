@@ -61,6 +61,7 @@ setup(
         "scipy",
         "matplotlib",
         "trimesh",
+        "networkx",
         "radifox-utils>=1.0.2",
     ],
     extras_require={
