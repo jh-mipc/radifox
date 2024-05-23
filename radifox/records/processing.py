@@ -9,6 +9,8 @@ import socket
 import sys
 from typing import Any
 
+import nibabel as nib
+
 from .utils import safe_append_to_file, format_timedelta
 from ..conversion import hash_file, create_loggers
 from ..naming import ImageFile
@@ -254,6 +256,9 @@ class ProcessingModule(ABC):
             if not str(bg_image).endswith(".nii.gz"):
                 continue
             if overlay is not None and overlay.name.endswith(".gii"):
+                if len(nib.GiftiImage.load(overlay).agg_data('pointset')) == 0 \
+                        or len(nib.GiftiImage.load(overlay).agg_data('triangle')) == 0:
+                    continue
                 create_surface_qa_image(
                     overlay,
                     bg_image,
