@@ -262,7 +262,8 @@ class ProcessingModule(ABC):
                 create_surface_qa_image(
                     overlay,
                     bg_image,
-                    out_dir / out_name
+                    out_dir / out_name,
+                    color=lut,
                 )
             else:
                 create_qa_image(
