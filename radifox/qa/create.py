@@ -292,11 +292,17 @@ def create_surface_qa_image(
     surf_file,
     img_file,
     output_file,
+    color="red",
     axial_slices=(0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7),
     coronal_slices=(0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7),
     sagittal_slices=(0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7),
-    color="red",
 ):
+    linewidth = 0.5
+    if color == "binary":
+        color = "red"
+    if isinstance(color, (list, tuple)):
+        color = color[0]
+        linewidth = color[1]
     img_obj = nib.Nifti1Image.load(img_file)
     img_data = img_obj.get_fdata()
     # noinspection PyUnresolvedReferences
@@ -381,7 +387,7 @@ def create_surface_qa_image(
                             points[:, 0] = img_data.shape[0] - points[:, 0]
                     else:
                         points[:, 1] = img_data.shape[1] - points[:, 1]
-                    ax.plot(*points.T, color=color, linewidth=0.5)
+                    ax.plot(*points.T, color=color, linewidth=linewidth)
             buf = io.BytesIO()
             fig.savefig(buf, format="png")
             buf.seek(0)
