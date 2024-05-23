@@ -299,10 +299,12 @@ def create_surface_qa_image(
 ):
     linewidth = 0.5
     if color == "binary":
-        color = "red"
+        linecolor = "red"
     if isinstance(color, (list, tuple)):
-        color = color[0]
+        linecolor = color[0]
         linewidth = color[1]
+    else:
+        linecolor = color
     img_obj = nib.Nifti1Image.load(img_file)
     img_data = img_obj.get_fdata()
     # noinspection PyUnresolvedReferences
@@ -387,7 +389,7 @@ def create_surface_qa_image(
                             points[:, 0] = img_data.shape[0] - points[:, 0]
                     else:
                         points[:, 1] = img_data.shape[1] - points[:, 1]
-                    ax.plot(*points.T, color=color, linewidth=linewidth)
+                    ax.plot(*points.T, color=linecolor, linewidth=linewidth)
             buf = io.BytesIO()
             fig.savefig(buf, format="png")
             buf.seek(0)
