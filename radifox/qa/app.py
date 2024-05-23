@@ -294,16 +294,16 @@ def processing_qa(project_id, subject_id, session_id):
                     val = [val]
                 for v in val:
                     filestr = v.split(":")[0]
-                    if not (filestr.endswith(".nii.gz") or filestr.endswith(".gii")):
-                        continue
                     existing_qa = qa_dict.get(filestr, "")
                     filepath = session_dir.parent.parent / filestr
                     qa_path = (
                         filepath.parent.parent
                         / "qa"
                         / module_str.split(":")[0]
-                        / (filepath.name.replace(".nii.gz", ".png").replace(".gii", ".png"))
+                        / (filepath.name.split('.')[0] + '.png')
                     )
+                    if not qa_path.exists():
+                        continue
                     display_name = (
                         filestr.split("_")[2]
                         + "_"
