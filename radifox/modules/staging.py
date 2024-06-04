@@ -30,6 +30,7 @@ class Staging(ProcessingModule):
         parser.add_argument("--image-types", type=str, nargs="+", required=True)
         parser.add_argument("--reg-filters", type=str, nargs="+", default=None)
         parser.add_argument("--keep-best-res", action="store_true", default=False)
+        parser.add_argument("--update", action="store_true", default=False)
         parser.add_argument("--plugin-paths", type=Path, nargs="+", default=None)
         parser.add_argument("--skip-default-plugins", action="store_true", default=False)
         parser.add_argument("--skip-set-sform", action="store_true", default=False)
@@ -61,16 +62,28 @@ class Staging(ProcessingModule):
                     )
 
         session_imgs = {}
+        subject_target = None
         for session in sorted(parsed.subject_dir.iterdir()):
             # Skip non-directories (if they exist)
             if not session.is_dir():
                 continue
+            # Return an error if the session has already been staged
+            # If we are updating, skip sessions that already have staged images
+            if (session / "stage").exists():
+                if parsed.update:
+                    subject_target = (session / "stage" / "subject-target").resolve()
+                    continue
+                else:
+                    parser.error('Session has already been staged. Use "--update" to skip existing.')
             # Get all images in session "nii" directory, sort by reverse name and skip "ND"
             all_imgs = glob(session / "nii" / "*.nii.gz")
             all_imgs = sorted(all_imgs, key=lambda x: x.name, reverse=True)
             all_imgs = [img for img in all_imgs if "ND" not in img.extras]
             if all_imgs:
                 session_imgs[session] = all_imgs
+
+        if parsed.update and subject_target is None:
+            logging.warning("No subject target found for updating. Subject target will be reselected.")
 
         return {
             "session_filepaths": list(session_imgs.values()),
@@ -80,6 +93,7 @@ class Staging(ProcessingModule):
             "plugin_paths": [parsed.plugin_paths] * len(session_imgs),
             "skip_default_plugins": [parsed.skip_default_plugins] * len(session_imgs),
             "skip_set_sform": [parsed.skip_set_sform] * len(session_imgs),
+            "subject_target": [subject_target] * len(session_imgs),
         }
 
     @staticmethod
@@ -91,6 +105,7 @@ class Staging(ProcessingModule):
         reg_filters: list[list[ImageFilter] | None],
         skip_default_plugins: list[bool],
         skip_set_sform: list[bool],
+        subject_target: list[Path | None],
     ):
         # For each session, find images that match the contrast filters
         session_imgs = {}
@@ -196,14 +211,15 @@ class Staging(ProcessingModule):
                         break
 
             # Find subject target
-            subject_target = None
-            for img_filter in reg_filters:
-                filtered = img_filter.filter(list(session_targets.values()))
-                if filtered:
-                    subject_target = filtered[0]
-                    break
+            subject_target = subject_target[0]
             if subject_target is None:
-                raise ValueError("No target images found for subject.")
+                for img_filter in reg_filters:
+                    filtered = img_filter.filter(list(session_targets.values()))
+                    if filtered:
+                        subject_target = filtered[0]
+                        break
+                if subject_target is None:
+                    raise ValueError("No target images found for subject.")
 
             # Symlink target images
             for session, img in session_targets.items():
