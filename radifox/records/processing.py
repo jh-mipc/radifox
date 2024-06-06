@@ -151,7 +151,7 @@ class ProcessingModule(ABC):
         prov_str = ""
         for k, v in path_dict.items():
             if v is None:
-                prov_str += "f  {k}: None\n"
+                prov_str += f"  {k}: None\n"
             elif isinstance(v, list):
                 prov_str += f"  {k}:\n"
                 for item in v:
