@@ -82,8 +82,11 @@ class Staging(ProcessingModule):
             if all_imgs:
                 session_imgs[session] = all_imgs
 
+        if len(session_imgs) == 0:
+            parser.error("No images found for this subject.")
+
         if parsed.update and subject_target is None:
-            logging.warning("No subject target found for updating. Subject target will be reselected.")
+            parser.error("No subject target found for updating.")
 
         return {
             "session_filepaths": list(session_imgs.values()),
