@@ -244,12 +244,13 @@ class Staging(ProcessingModule):
                 logging.info("---")
                 for img in imgs:
                     logging.info(f"{str(img.path)}")
-            logging.info("---")
-            logging.info("Registration Targets")
-            logging.info("---")
-            logging.info(subject_target.path)
-            for session, img in session_targets.items():
-                logging.info(f"{session}: {str(img.path)}")
+            if subject_target is not None:
+                logging.info("---")
+                logging.info("Registration Targets")
+                logging.info("---")
+                logging.info(subject_target.path)
+                for session, img in session_targets.items():
+                    logging.info(f"{session}: {str(img.path)}")
 
         return [
             {
