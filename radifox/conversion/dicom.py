@@ -313,7 +313,7 @@ def remove_duplicates(dcmdir: Path) -> None:
     for dcmfile in dcmdir.glob("*"):
         ds = dcmread(str(dcmfile), stop_before_pixels=True)
         inst_nums[ds.InstanceNumber].append((dcmfile, ds))
-    count = 0
+    to_unlink = set()
     for num in inst_nums:
         inst_nums[num] = sorted(
             inst_nums[num], key=lambda x: getattr(x[1], "InstanceCreationTime", 0)
@@ -332,10 +332,11 @@ def remove_duplicates(dcmdir: Path) -> None:
                     if dcmread(str(dcmfile1)).PixelData == dcmread(str(dcmfile2)).PixelData:
                         logging.debug("Found duplicate of %s" % dcmfile1)
                         logging.debug("Removing duplicate file %s" % dcmfile2)
-                        dcmfile2.unlink()
-                        count += 1
+                        to_unlink.add(dcmfile2)
                         break
-    if count > 0:
-        logging.info("Removed %d duplicate DICOM files" % count)
+    for dcmpath in to_unlink:
+        dcmpath.unlink()
+    if len(to_unlink) > 0:
+        logging.info("Removed %d duplicate DICOM files" % len(to_unlink))
     else:
         logging.info("No duplicate DICOM files found")

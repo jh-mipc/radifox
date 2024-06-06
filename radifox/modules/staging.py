@@ -30,6 +30,7 @@ class Staging(ProcessingModule):
         parser.add_argument("--image-types", type=str, nargs="+", required=True)
         parser.add_argument("--reg-filters", type=str, nargs="+", default=None)
         parser.add_argument("--keep-best-res", action="store_true", default=False)
+        parser.add_argument("--update", action="store_true", default=False)
         parser.add_argument("--plugin-paths", type=Path, nargs="+", default=None)
         parser.add_argument("--skip-default-plugins", action="store_true", default=False)
         parser.add_argument("--skip-set-sform", action="store_true", default=False)
@@ -61,16 +62,31 @@ class Staging(ProcessingModule):
                     )
 
         session_imgs = {}
+        subject_target = None
         for session in sorted(parsed.subject_dir.iterdir()):
             # Skip non-directories (if they exist)
             if not session.is_dir():
                 continue
+            # Return an error if the session has already been staged
+            # If we are updating, skip sessions that already have staged images
+            if (session / "stage").exists():
+                if parsed.update:
+                    subject_target = ImageFile((session / "stage" / "subject-target").resolve())
+                    continue
+                else:
+                    parser.error('Session has already been staged. Use "--update" to skip existing.')
             # Get all images in session "nii" directory, sort by reverse name and skip "ND"
             all_imgs = glob(session / "nii" / "*.nii.gz")
             all_imgs = sorted(all_imgs, key=lambda x: x.name, reverse=True)
             all_imgs = [img for img in all_imgs if "ND" not in img.extras]
             if all_imgs:
                 session_imgs[session] = all_imgs
+
+        if len(session_imgs) == 0:
+            parser.error("No images found for this subject.")
+
+        if parsed.update and (subject_target is None or not subject_target.path.exists()):
+            parser.error("No subject target found for updating.")
 
         return {
             "session_filepaths": list(session_imgs.values()),
@@ -80,6 +96,7 @@ class Staging(ProcessingModule):
             "plugin_paths": [parsed.plugin_paths] * len(session_imgs),
             "skip_default_plugins": [parsed.skip_default_plugins] * len(session_imgs),
             "skip_set_sform": [parsed.skip_set_sform] * len(session_imgs),
+            "subject_target": [subject_target] * len(session_imgs),
         }
 
     @staticmethod
@@ -91,6 +108,7 @@ class Staging(ProcessingModule):
         reg_filters: list[list[ImageFilter] | None],
         skip_default_plugins: list[bool],
         skip_set_sform: list[bool],
+        subject_target: list[Path | None],
     ):
         # For each session, find images that match the contrast filters
         session_imgs = {}
@@ -167,7 +185,13 @@ class Staging(ProcessingModule):
                 if stage_img.name not in [img.name for img in filtered_imgs]:
                     stage_img.unlink()
 
-            session_imgs[session] = filtered_imgs
+            if not filtered_imgs:
+                logging.warning(f"No matching images found for {session}. Skipping.")
+                (session / "stage").rmdir()
+                session_imgs[session] = None
+                continue
+            else:
+                session_imgs[session] = filtered_imgs
 
         reg_filters = reg_filters[0]
         if reg_filters is None:
@@ -184,6 +208,8 @@ class Staging(ProcessingModule):
             # Find session targets
             session_targets: dict[Path, ImageFile] = {}
             for session, imgs in session_imgs.items():
+                if imgs is None:
+                    continue
                 for reg_filter in reg_filters:
                     # Currenly use private _filter_dict to check acqdim
                     # Radifox should be updated to expose these parameters readonly
@@ -196,14 +222,13 @@ class Staging(ProcessingModule):
                         break
 
             # Find subject target
-            subject_target = None
-            for img_filter in reg_filters:
-                filtered = img_filter.filter(list(session_targets.values()))
-                if filtered:
-                    subject_target = filtered[0]
-                    break
+            subject_target = subject_target[0]
             if subject_target is None:
-                raise ValueError("No target images found for subject.")
+                for img_filter in reg_filters:
+                    filtered = img_filter.filter(list(session_targets.values()))
+                    if filtered:
+                        subject_target = filtered[0]
+                        break
 
             # Symlink target images
             for session, img in session_targets.items():
@@ -215,17 +240,20 @@ class Staging(ProcessingModule):
                 )
 
             for session, imgs in session_imgs.items():
+                if imgs is None:
+                    continue
                 logging.info("---")
                 logging.info(session)
                 logging.info("---")
                 for img in imgs:
                     logging.info(f"{str(img.path)}")
-            logging.info("---")
-            logging.info("Registration Targets")
-            logging.info("---")
-            logging.info(subject_target.path)
-            for session, img in session_targets.items():
-                logging.info(f"{session}: {str(img.path)}")
+            if subject_target is not None:
+                logging.info("---")
+                logging.info("Registration Targets")
+                logging.info("---")
+                logging.info(subject_target.path)
+                for session, img in session_targets.items():
+                    logging.info(f"{session}: {str(img.path)}")
 
         return [
             {
@@ -233,6 +261,7 @@ class Staging(ProcessingModule):
                 "session_target": session_targets[session] if session in session_targets else None,
                 "subject_target": subject_target if session in session_targets else None,
             }
+            if imgs is not None else None
             for session, imgs in session_imgs.items()
         ]
 
