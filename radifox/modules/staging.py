@@ -71,7 +71,7 @@ class Staging(ProcessingModule):
             # If we are updating, skip sessions that already have staged images
             if (session / "stage").exists():
                 if parsed.update:
-                    subject_target = (session / "stage" / "subject-target").resolve()
+                    subject_target = ImageFile((session / "stage" / "subject-target").resolve())
                     continue
                 else:
                     parser.error('Session has already been staged. Use "--update" to skip existing.')
