@@ -182,7 +182,12 @@ class Staging(ProcessingModule):
                 if stage_img.name not in [img.name for img in filtered_imgs]:
                     stage_img.unlink()
 
-            session_imgs[session] = filtered_imgs
+            if not filtered_imgs:
+                logging.warning(f"No matching images found for {session}. Skipping.")
+                (session / "stage").rmdir()
+                continue
+            else:
+                session_imgs[session] = filtered_imgs
 
         reg_filters = reg_filters[0]
         if reg_filters is None:
@@ -218,8 +223,6 @@ class Staging(ProcessingModule):
                     if filtered:
                         subject_target = filtered[0]
                         break
-                if subject_target is None:
-                    raise ValueError("No target images found for subject.")
 
             # Symlink target images
             for session, img in session_targets.items():
