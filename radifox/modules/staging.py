@@ -185,6 +185,7 @@ class Staging(ProcessingModule):
             if not filtered_imgs:
                 logging.warning(f"No matching images found for {session}. Skipping.")
                 (session / "stage").rmdir()
+                session_imgs[session] = None
                 continue
             else:
                 session_imgs[session] = filtered_imgs
@@ -204,6 +205,8 @@ class Staging(ProcessingModule):
             # Find session targets
             session_targets: dict[Path, ImageFile] = {}
             for session, imgs in session_imgs.items():
+                if imgs is None:
+                    continue
                 for reg_filter in reg_filters:
                     # Currenly use private _filter_dict to check acqdim
                     # Radifox should be updated to expose these parameters readonly
@@ -234,6 +237,8 @@ class Staging(ProcessingModule):
                 )
 
             for session, imgs in session_imgs.items():
+                if imgs is None:
+                    continue
                 logging.info("---")
                 logging.info(session)
                 logging.info("---")
