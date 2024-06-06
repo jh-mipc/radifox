@@ -85,7 +85,7 @@ class Staging(ProcessingModule):
         if len(session_imgs) == 0:
             parser.error("No images found for this subject.")
 
-        if parsed.update and subject_target is None:
+        if parsed.update and (subject_target is None or not subject_target.path.exists()):
             parser.error("No subject target found for updating.")
 
         return {
