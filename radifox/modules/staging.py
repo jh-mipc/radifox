@@ -257,6 +257,7 @@ class Staging(ProcessingModule):
                 "session_target": session_targets[session] if session in session_targets else None,
                 "subject_target": subject_target if session in session_targets else None,
             }
+            if imgs is not None else None
             for session, imgs in session_imgs.items()
         ]
 

@@ -214,11 +214,12 @@ class ProcessingModule(ABC):
     def generate_prov(self) -> None:
         if self.check_multi_run():
             for i in range(len(list(self.parsed_args.values())[0])):
-                prov_str = self.create_prov(
-                    {k: v[i] for k, v in self.parsed_args.items()},
-                    self.outputs[i],
-                )
-                self.write_prov(prov_str, self.outputs[i], self.skip_prov_write)
+                if self.outputs[i] is not None:
+                    prov_str = self.create_prov(
+                        {k: v[i] for k, v in self.parsed_args.items()},
+                        self.outputs[i],
+                    )
+                    self.write_prov(prov_str, self.outputs[i], self.skip_prov_write)
         else:
             prov_str = self.create_prov(self.parsed_args, self.outputs)
             self.write_prov(prov_str, self.outputs, self.skip_prov_write)
@@ -276,7 +277,8 @@ class ProcessingModule(ABC):
     def generate_qa_images(self) -> None:
         if self.check_multi_run():
             for i in range(len(list(self.parsed_args.values())[0])):
-                self.create_qa(self.outputs[i], self.name, self.skip_prov_write)
+                if self.outputs[i] is not None:
+                    self.create_qa(self.outputs[i], self.name, self.skip_prov_write)
         else:
             self.create_qa(self.outputs, self.name, self.skip_prov_write)
 
