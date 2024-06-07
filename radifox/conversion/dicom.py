@@ -106,6 +106,7 @@ class DicomInfo(BaseInfo):
             if self.TriggerTime is not None and "mp2rage" in self.SeriesDescription.lower():
                 self.InversionTime = self.TriggerTime
                 self.TriggerTime = None
+        self.ReconMatrix = [getattr(ds, "Columns", 0), getattr(ds, "Rows", 0)]
         if self.AcquisitionMatrix is not None:
             # noinspection PyUnresolvedReferences
             self.AcquisitionMatrix = (
@@ -113,16 +114,19 @@ class DicomInfo(BaseInfo):
                 if self.AcquisitionMatrix[1] == 0
                 else [self.AcquisitionMatrix[2], self.AcquisitionMatrix[1]]
             )
-            self.ReconMatrix = [getattr(ds, "Columns", 0), getattr(ds, "Rows", 0)]
-            self.FieldOfView = [
-                res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)
-            ]
-            self.AcquiredResolution = [
-                fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)
-            ]
-            self.FieldOfView = [round(fov, 2) for fov in self.FieldOfView]
-            self.AcquiredResolution = [round(res, 5) for res in self.AcquiredResolution]
-            self.ReconResolution = [round(res, 5) for res in self.ReconResolution]
+        else:
+            # Assume ReconMatrix is AcquisitionMatrix if AcquisitionMatrix is not present
+            self.AcquisitionMatrix = self.ReconMatrix
+        self.FieldOfView = [
+            res * num for res, num in zip(self.ReconResolution, self.ReconMatrix)
+        ]
+        self.AcquiredResolution = [
+            fov / num for fov, num in zip(self.FieldOfView, self.AcquisitionMatrix)
+        ]
+        self.FieldOfView = [round(fov, 2) for fov in self.FieldOfView]
+        self.AcquiredResolution = [round(res, 5) for res in self.AcquiredResolution]
+        self.ReconResolution = [round(res, 5) for res in self.ReconResolution]
+
         self.SequenceName = getattr(ds, "SequenceName", getattr(ds, "PulseSequenceName", None))
         if self.SequenceName is None and (0x0019, 0x109C) in ds:
             self.SequenceName = str(ds[(0x0019, 0x109C)].value)
