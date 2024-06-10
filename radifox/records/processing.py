@@ -88,7 +88,7 @@ class ProcessingModule(ABC):
             return (
                 isinstance(self.outputs, list)
                 and len(self.outputs) > 0
-                and isinstance(self.outputs[0], dict)
+                and all(isinstance(out, dict) or (out is None) for out in self.outputs)
             )
         else:
             return isinstance(self.outputs, dict) and len(self.outputs) > 0
