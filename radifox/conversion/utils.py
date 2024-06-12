@@ -329,8 +329,12 @@ def shift_date(datetime_str: str, date_shift_days: int = 0) -> str:
     return (orig_date + timedelta(days=date_shift_days)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def none_to_float(value: float | None) -> float:
+def none_to_num(value: float | int | None) -> float:
     return float("inf") if value is None else value
+
+
+def none_to_str(value: str | None) -> str:
+    return "" if value is None else value
 
 
 def get_flattened_dataset(dataset: FileDataset | Dataset) -> Dataset:
@@ -401,7 +405,7 @@ def fix_sf_headers(dataset: Dataset) -> Dataset:
     )
     if dataset.get("RectilinearPhaseEncodeReordering", "LINEAR") != "LINEAR":
         scan_opts.append("PER")
-    frame_type3 = dataset.FrameType[2]
+    frame_type3 = dataset.FrameType[2] if 'FrameType' in dataset else ""
     if frame_type3 == "ANGIO":
         dataset.AngioFlag = "Y"
     if frame_type3.startswith("CARD"):

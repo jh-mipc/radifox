@@ -25,7 +25,8 @@ from .utils import (
     parse_dcm2niix_filenames,
     remove_created_files,
     hash_file_list,
-    none_to_float,
+    none_to_num,
+    none_to_str,
     find_closest,
     FILE_OCTAL,
     hash_file_dir,
@@ -504,10 +505,10 @@ class BaseSet:
             series_list,
             key=lambda x: (
                 x.AcqDateTime,
-                x.SeriesNumber,
-                x.InstitutionName,
-                none_to_float(x.MagneticFieldStrength),
-                x.ScannerModelName,
+                none_to_num(x.SeriesNumber),
+                none_to_str(x.InstitutionName),
+                none_to_num(x.MagneticFieldStrength),
+                none_to_num(x.ScannerModelName),
             ),
         )
         breaks = []
