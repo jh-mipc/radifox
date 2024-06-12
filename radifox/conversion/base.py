@@ -1,23 +1,21 @@
 from __future__ import annotations
-from collections import defaultdict
+
 import datetime
 import json
 import logging
-from pathlib import Path
 import re
 import secrets
 import shutil
+from collections import defaultdict
+from pathlib import Path
 from subprocess import run, PIPE, STDOUT
 from typing import Callable, List, Tuple, Union, Any, Optional
 
 import numpy as np
 
-from .._version import __version__
-from ..qa.create import create_qa_image
 from .json import NoIndent, JSONObjectEncoder
 from .lut import LookupTable
 from .metadata import Metadata
-
 # from .logging import WARNING_DEBUG
 from .utils import (
     mkdir_p,
@@ -36,6 +34,8 @@ from .utils import (
     shift_date,
     parse_dcm2niix_suffixes,
 )
+from .._version import __version__
+from ..qa.create import create_qa_image
 
 DESCRIPTION_IGNORE = ["loc", "survey", "scout", "3-pl", "scanogram", "smartbrain", "pride"]
 POSTGAD_DESC = ["post", "+c", "gad", "gd", "pstc", "+ c", "c+"]
@@ -701,27 +701,55 @@ class BaseSet:
                     di.update_name(lambda x: x.replace("-T1-", "-T2STAR-"))
 
             if "ImageOrientationPatient" in non_matching:
-                for i, val in enumerate(
-                    sorted(
-                        set(di.ImagePositionPatient for di in di_list),
-                        key=lambda x: x[2],
-                        reverse=True,
+                try:
+                    for i, val in enumerate(
+                        sorted(
+                            set(di.ImagePositionPatient for di in di_list),
+                            key=lambda x: x[2],
+                            reverse=True,
+                        )
+                    ):
+                        for di in [di for di in di_list if di.ImagePositionPatient == val]:
+                            di.update_name(lambda x: x + ("-POS%d" % (i + 1)))
+                except TypeError:
+                    logging.exception(
+                        "Error in naming ImagePositionPatient for [%s]"
+                        % " ,".join(["%s (%s)" % (di.SeriesUID, di.NiftiName) for di in di_list])
                     )
-                ):
-                    for di in [di for di in di_list if di.ImagePositionPatient == val]:
-                        di.update_name(lambda x: x + ("-POS%d" % (i + 1)))
+                else:
                     non_matching -= {"ImageOrientationPatient"}
 
             for attr_str, name_str in [("InversionTime", "INV"), ("EchoTime", "ECHO")]:
                 if attr_str in non_matching:
-                    for i, val in enumerate(sorted(set(getattr(di, attr_str) for di in di_list))):
-                        for di in [di for di in di_list if getattr(di, attr_str) == val]:
-                            di.update_name(lambda x: x + ("-%s%d" % (name_str, i + 1)))
-                    non_matching -= {attr_str}
+                    try:
+                        for i, val in enumerate(
+                            sorted(set(getattr(di, attr_str) for di in di_list))
+                        ):
+                            for di in [di for di in di_list if getattr(di, attr_str) == val]:
+                                di.update_name(lambda x: x + ("-%s%d" % (name_str, i + 1)))
+                    except TypeError:
+                        logging.exception(
+                            "Error in naming %s for [%s]"
+                            % (
+                                attr_str,
+                                " ,".join(
+                                    ["%s (%s)" % (di.SeriesUID, di.NiftiName) for di in di_list]
+                                ),
+                            )
+                        )
+                    else:
+                        non_matching -= {attr_str}
 
             if "ComplexImageComponent" in non_matching:
                 for di in di_list:
-                    di.update_name(lambda x: x + "-" + di.ComplexImageComponent[:3])
+                    try:
+                        di.update_name(lambda x: x + "-" + di.ComplexImageComponent[:3])
+                    except TypeError:
+                        logging.exception(
+                            "Error in naming ComplexImageComponent for %s (%s)"
+                            % (di.SeriesUID, di.NiftiName)
+                        )
+
                 non_matching -= {"ComplexImageComponent"}
 
             if non_matching:
