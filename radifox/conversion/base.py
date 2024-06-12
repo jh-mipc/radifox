@@ -741,6 +741,7 @@ class BaseSet:
                         non_matching -= {attr_str}
 
             if "ComplexImageComponent" in non_matching:
+                had_error = False
                 for di in di_list:
                     try:
                         di.update_name(lambda x: x + "-" + di.ComplexImageComponent[:3])
@@ -749,8 +750,9 @@ class BaseSet:
                             "Error in naming ComplexImageComponent for %s (%s)"
                             % (di.SeriesUID, di.NiftiName)
                         )
-
-                non_matching -= {"ComplexImageComponent"}
+                        had_error = True
+                if not had_error:
+                    non_matching -= {"ComplexImageComponent"}
 
             if non_matching:
                 for i, di in enumerate(di_list):
