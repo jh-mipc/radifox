@@ -305,14 +305,14 @@ def processing_qa(project_id, subject_id, session_id):
                         / module_str.split(":")[0]
                         / (filepath.name.split('.')[0] + '.png')
                     )
-                    if not filestr.endswith(QA_SUFFIXES) or not qa_path.exists():
+                    if not qa_path.exists():
                         continue
                     display_name = (
                         filestr.split("_")[2]
                         + "_"
                         + " / ".join(filestr.split(".")[0].split("_")[3:])
                     )
-                    prov_obj["OutputQA"][key][filestr] = (
+                    prov_obj["OutputQA"][key][filepath.name.split('.')[0]] = (
                         (
                             qa_path.parent.parent.parent.name,
                             qa_path.parent.name,
