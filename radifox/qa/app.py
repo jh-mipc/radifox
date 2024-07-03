@@ -231,7 +231,7 @@ def conversion_qa(project_id, subject_id, session_id):
     )
 
 
-QA_SUFFIXES = (".nii.gz", ".gii")
+NO_QA_SUFFIXES = (".mat",)
 
 
 def processing_qa(project_id, subject_id, session_id):
@@ -305,7 +305,7 @@ def processing_qa(project_id, subject_id, session_id):
                         / module_str.split(":")[0]
                         / (filepath.name.split('.')[0] + '.png')
                     )
-                    if not qa_path.exists():
+                    if filestr.endswith(NO_QA_SUFFIXES) or not qa_path.exists():
                         continue
                     display_name = (
                         filestr.split("_")[2]
