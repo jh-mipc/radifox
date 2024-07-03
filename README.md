@@ -9,13 +9,13 @@ There are multiple components under the RADIFOX umbrella:
 
 RADIFOX is designed to be flexible and extensible.
 
+**Note:** Looking for conversion scripts? They have been moved to the [radifox-convert](github.com/jh-mipc/radifox-convert) repository.
+
 ## Table of Contents
 - [Overview](#overview)
 - [Installation](#installation)
 - [Basic Usage](#basic-usage)
   - [CLI Scripts](#cli-scripts)
-    - [`radifox-convert`](#radifox-convert)
-    - [`radifox-update`](#radifox-update)
     - [`radifox-qa`](#radifox-qa)
   - [Python API](#python-api)
     - [`ImageFile`](#imagefile)
@@ -24,16 +24,10 @@ RADIFOX is designed to be flexible and extensible.
 - [RADIFOX Components](#radifox-components)
   - [File Organization](#file-organization)
   - [Naming](#naming)
-  - [Conversion](#conversion)
-    - [Look-up Tables](#look-up-tables)
-    - [Manual Naming](#manual-naming)
-    - [JSON Sidecar Files](#json-sidecar-files)
   - [Provenance](#provenance)
   - [Quality Assurance](#quality-assurance)
 - [Additional Information](#additional-information)
     - [Advanced CLI Usage](#advanced-cli-usage)
-        - [`radifox-convert`](#radifox-convert)
-        - [`radifox-update`](#radifox-update)
         - [`radifox-qa`](#radifox-qa)
     - [JSON Sidecar Format](#json-sidecar-format)
     - [Container Creation](#container-creation)
@@ -76,35 +70,6 @@ pip install radifox[qa]
 The `radifox` package includes a number of CLI scripts to access various components of RADIFOX.
 These scripts are installed to your PATH when you install the `radifox` package.
 For a full listing of command line options, see [Advanced CLI Usage](#advanced-cli-usage).
-
-#### `radifox-convert`
-The `radifox-convert` script is used to convert DICOM files to NIfTI files using the `dcm2niix` tool.
-It is a wrapper around `dcm2niix` that uses the RADIFOX naming system to organize the output files.
-
-Example Usage:
-```bash
-radifox-convert \
-    --output-root /path/to/output \
-    --project-id study \
-    --subject-id 123456 \
-    --session-id 1 \
-    /path/to/dicom_files
-```
-This will copy the files in the direction `/path/to/dicom_files` to the output directory `/path/to/output/study/123456/STUDY-1/dcm`, organize them and convert them to NIfTI.
-The NIfTI files (and their JSON sidecar files) will be placed in `/path/to/output/study/STUDY-123456/1/nii`.
-
-#### `radifox-update`
-The `radifox-update` script is used to update naming for a directory of images.
-This is commonly done after an update to RADIFOX to ensure that all images are named according to the latest version of the naming system.
-It also could be done to incorporate a new look-up table or manual naming entries after QA.
-
-Example Usage:
-```bash
-radifox-update --directory /path/to/output/study/STUDY-123456/1
-```
-This will update the naming for all images in the existing RADIFOX session directory `/path/to/output/study/STUDY-123456/1`.
-If the RADIFOX version, look-up table, or manual naming entries have changed, the images will be renamed to reflect the new information.
-If none of these have changed, the update will be skipped.
 
 #### `radifox-qa`
 The `radifox-qa` script is used to run the web-based quality assurance system.

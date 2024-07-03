@@ -19,6 +19,9 @@ class ImageFile:
     def __str__(self):
         return str(self.path)
 
+    def __lt__(self, other):
+        return self.path < other.path
+
     @property
     def info(self) -> ImageInfo:
         if self._info is None:

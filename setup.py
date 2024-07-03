@@ -42,11 +42,9 @@ setup(
         "Topic :: Scientific/Engineering",
     ],
     packages=find_packages(),
-    keywords="mri conversion",
+    keywords="medical imaging reproducible organization",
     entry_points={
         "console_scripts": [
-            "radifox-convert=radifox.conversion.cli:convert",
-            "radifox-update=radifox.conversion.cli:update",
             "radifox-qa=radifox.qa.run:run",
             "radifox-stage=radifox.modules.staging:Staging",
         ]
@@ -56,13 +54,11 @@ setup(
         "nibabel",
         "numpy",
         "pillow",
-        "pydicom",
         "pyyaml",
         "scipy",
         "matplotlib",
         "trimesh",
         "networkx",
-        "radifox-utils>=1.0.2",
     ],
     extras_require={
         "qa": [

@@ -12,7 +12,8 @@ from typing import Any
 import nibabel as nib
 
 from .utils import safe_append_to_file, format_timedelta
-from ..conversion import hash_file, create_loggers
+from .hashing import hash_file
+from .logging import create_loggers
 from ..naming import ImageFile
 from ..qa import create_qa_image, create_surface_qa_image
 

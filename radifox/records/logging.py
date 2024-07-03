@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 import sys
 
-from .utils import mkdir_p
 
 WARNING_DEBUG = 25
 
@@ -23,7 +22,7 @@ def create_loggers(
     verbose: bool = False,
     add_stream_handler: bool = True,
 ) -> None:
-    mkdir_p(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
     log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     # noinspection PyTypeChecker

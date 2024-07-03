@@ -18,7 +18,7 @@ from flask import (
 )
 import yaml
 
-from ..conversion.json import JSONObjectEncoder, NoIndent
+from ..records.json import JSONObjectEncoder, NoIndent
 
 DATA_DIR = Path(os.environ.get("QA_DATA_DIR", "/data")).resolve()
 SECRET_KEY = os.environ.get("QA_SECRET_KEY", secrets.token_urlsafe())
@@ -61,13 +61,13 @@ def login():
                 error = "Please enter a username"
         else:
             error = "Invalid Key"
-    return render_template("login.html", error=error, key=key, user=user)
+    return render_template("templates/login.html", error=error, key=key, user=user)
 
 
 @app.route("/")
 def index():
     projects = sorted([proj.name for proj in DATA_DIR.glob("*") if proj.is_dir()])
-    return render_template("index.html", projects=projects)
+    return render_template("templates/index.html", projects=projects)
 
 
 @app.route("/<project_id>/")
@@ -81,7 +81,7 @@ def project(project_id):
             if pat.is_dir() and not pat.name.startswith(".")
         ]
     )
-    return render_template("project.html", project_id=project_id, subjects=subjects)
+    return render_template("templates/project.html", project_id=project_id, subjects=subjects)
 
 
 @app.route("/<project_id>/<subject_id>/")
@@ -95,7 +95,7 @@ def subject(project_id, subject_id):
         ]
     )
     return render_template(
-        "subject.html", project_id=project_id, subject_id=subject_id, sessions=sessions
+        "templates/subject.html", project_id=project_id, subject_id=subject_id, sessions=sessions
     )
 
 
@@ -216,7 +216,7 @@ def conversion_qa(project_id, subject_id, session_id):
         conversion_images.append(image_obj)
 
     return render_template(
-        "conversion.html",
+        "templates/conversion.html",
         conversion_images=sorted(
             conversion_images,
             key=lambda x: (x["study_number"], x["series_number"], x["acq_number"]),
@@ -327,7 +327,7 @@ def processing_qa(project_id, subject_id, session_id):
                     del prov_obj["OutputQA"][key]
 
     return render_template(
-        "processing.html",
+        "templates/processing.html",
         processing_results=prov_objs,
         project_id=project_id,
         subject_id=subject_id,
