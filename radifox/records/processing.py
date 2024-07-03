@@ -15,7 +15,7 @@ from .utils import safe_append_to_file, format_timedelta
 from .hashing import hash_file
 from .logging import create_loggers
 from ..naming import ImageFile
-from ..qa import create_qa_image, create_surface_qa_image
+from ..qa.create import create_qa_image, create_surface_qa_image
 
 CONTAINER_LABELS = [
     "ci.image",
