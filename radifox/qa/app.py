@@ -18,7 +18,7 @@ from flask import (
 )
 import yaml
 
-from ..conversion.json import JSONObjectEncoder, NoIndent
+from ..records.json import JSONObjectEncoder, NoIndent
 
 DATA_DIR = Path(os.environ.get("QA_DATA_DIR", "/data")).resolve()
 SECRET_KEY = os.environ.get("QA_SECRET_KEY", secrets.token_urlsafe())
@@ -231,7 +231,7 @@ def conversion_qa(project_id, subject_id, session_id):
     )
 
 
-QA_SUFFIXES = (".nii.gz", ".gii")
+NO_QA_SUFFIXES = (".mat",)
 
 
 def processing_qa(project_id, subject_id, session_id):
@@ -272,7 +272,7 @@ def processing_qa(project_id, subject_id, session_id):
     prov_objs = {
         k: v
         for k, v in sorted(
-            prov_objs.items(), key=lambda x: min(val["StartTime"] for val in x[1].values())
+            prov_objs.items(), key=lambda x: min(value["StartTime"] for value in x[1].values())
         )
     }
 
@@ -305,14 +305,14 @@ def processing_qa(project_id, subject_id, session_id):
                         / module_str.split(":")[0]
                         / (filepath.name.split('.')[0] + '.png')
                     )
-                    if not filestr.endswith(QA_SUFFIXES) or not qa_path.exists():
+                    if filestr.endswith(NO_QA_SUFFIXES) or not qa_path.exists():
                         continue
                     display_name = (
                         filestr.split("_")[2]
                         + "_"
                         + " / ".join(filestr.split(".")[0].split("_")[3:])
                     )
-                    prov_obj["OutputQA"][key][filestr] = (
+                    prov_obj["OutputQA"][key][filepath.name.split('.')[0]] = (
                         (
                             qa_path.parent.parent.parent.name,
                             qa_path.parent.name,

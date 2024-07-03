@@ -1,13 +1,12 @@
 import io
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
 import trimesh
 from PIL import Image
-from radifox.utils.resize.scipy import resize
 
+from .resize import nn_resize_1mmiso
 from .utils import get_tkr_matrix
 
 BINARY_LUT = {1: [255, 0, 0]}
@@ -186,7 +185,9 @@ def create_montage(img_obj, axial_slices, coronal_slices, sagittal_slices):
                 )
                 for i in range(2)
             ]
-            slices[i].append(np.pad(sel_slice, pad_width, "constant"))
+            slices[i].append(
+                np.pad(sel_slice, pad_width, "constant", constant_values=reslicer.bg_value)
+            )
     return np.concatenate([np.concatenate(slices[i], 0) for i in range(len(slices))], 1)
 
 
@@ -230,8 +231,8 @@ class Reslicer:
     """
     Reslice a NIfTI image
 
-    This class reslices and image to a set resolution and provides as way to
-    extract a slice in a specific orientation. It can currently bring the
+    This class reslices and image to a set resolution using nearest neighbor interpolation
+    and provides as way to extract a slice in a specific orientation. It can currently bring the
     image to axial, coronal, and sagittal views.
 
     Params:
@@ -247,21 +248,16 @@ class Reslicer:
     slice_dirs = {"axial": "S", "sagittal": "L", "coronal": "P"}
     flip_dict = {"L": "R", "R": "L", "P": "A", "A": "P", "I": "S", "S": "I"}
 
-    def __init__(self, nii_obj, vox_res=1.0, order=0):
+    def __init__(self, nii_obj):
         """
         Args:
             nii_obj (nib.Nifti1Image): The Nifti image object from nibabel
-            vox_res (float): Resliced object voxel resolution
-            order (int, optional): The interpolation order (0 for nearest
-                interpolation, 1 for linear interpolation, etc.)
         """
         # noinspection PyTypeChecker
         obj_3d = nii_obj if len(nii_obj.shape) == 3 else nib.four_to_three(nii_obj)[0]
-        data = obj_3d.get_fdata()
-        self.data: np.ndarray = resize(
-            data, [vox_res / s for s in obj_3d.header.get_zooms()], order=order
-        )
+        self.data = nn_resize_1mmiso(obj_3d)
         self.orient = nib.aff2axcodes(nii_obj.affine)
+        self.bg_value = self.data.min()
 
     def get_num_slices(self, plane="axial") -> int:
         if self.slice_dirs[plane] in self.orient:
