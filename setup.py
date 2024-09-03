@@ -45,7 +45,6 @@ setup(
     keywords="medical imaging reproducible organization",
     entry_points={
         "console_scripts": [
-            "radifox-qa=radifox.qa.run:run",
             "radifox-stage=radifox.modules.staging:Staging",
         ]
     },
@@ -60,17 +59,5 @@ setup(
         "trimesh",
         "networkx",
     ],
-    extras_require={
-        "qa": [
-            "flask",
-            "gunicorn",
-        ]
-    },
-    package_data={
-        "radifox": [
-            "conversion/parrec_templates/*.txt",
-            "qa/templates/*.html",
-        ]
-    },
     cmdclass=cmdclass,
 )
