@@ -9,7 +9,9 @@ There are multiple components under the RADIFOX umbrella:
 
 RADIFOX is designed to be flexible and extensible.
 
-**Note:** Looking for conversion scripts? They have been moved to the [radifox-convert](github.com/jh-mipc/radifox-convert) repository.
+
+
+**Note:** Looking for conversion scripts? They have been moved to the [radifox-convert](https://github.com/jh-mipc/radifox-convert) repository.
 
 ## Table of Contents
 - [Overview](#overview)
