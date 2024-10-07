@@ -257,7 +257,7 @@ class Reslicer:
         """
         # noinspection PyTypeChecker
         obj_3d = nii_obj if len(nii_obj.shape) == 3 else nib.four_to_three(nii_obj)[0]
-        data = obj_3d.get_fdata()
+        data = obj_3d.get_fdata().squeeze()
         self.data: np.ndarray = resize(
             data, [vox_res / s for s in obj_3d.header.get_zooms()], order=order
         )
