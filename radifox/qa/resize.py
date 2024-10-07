@@ -7,7 +7,7 @@ from scipy.ndimage import map_coordinates
 
 def nn_resize_1mmiso(img_obj):
     # Extract image data
-    data = img_obj.get_fdata()
+    data = img_obj.get_fdata().squeeze()
 
     # Calculate the scaling factors for each dimension
     scaling_factors = [1.0 / zoom for zoom in img_obj.header.get_zooms()]
