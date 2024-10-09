@@ -1,6 +1,9 @@
 import datetime
 import fcntl
 
+import nibabel as nib
+import numpy as np
+
 
 def safe_append_to_file(filename, data):
     with open(filename, 'a') as file:
@@ -21,3 +24,10 @@ def format_timedelta(delta: datetime.timedelta) -> str:
 
     # return formatted string
     return f"{days}-{hours:02}:{minutes:02}:{seconds:02}"
+
+
+def get_tkr_matrix(shape, zooms):
+    tkrcosines = np.array([[-1, 0, 0], [0, 0, 1], [0, -1, 0]])
+    mat = tkrcosines * zooms
+    # noinspection PyUnresolvedReferences
+    return nib.affines.from_matvec(mat, -mat @ shape / 2)

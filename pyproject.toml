@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", 'tomli;python_version<"3.11"']
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "radifox"
+dynamic = ["version"]
+description = "Conversion tools using the RADIFOX framework."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "JH-MIPC", email = "jhmipc@jh.edu" },
+]
+urls = { "Homepage" = "https://github.com/jh-mipc/radifox" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "nibabel",
+    "numpy",
+    "pillow",
+    "pyyaml",
+    "scipy",
+    "matplotlib",
+    "trimesh",
+    "networkx",
+]
+
+[project.scripts]
+radifox-stage = "radifox.modules.staging:Staging"
+
+[tool.setuptools.packages]
+find = {}
