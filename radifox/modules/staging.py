@@ -76,7 +76,9 @@ class Staging(ProcessingModule):
                 else:
                     parser.error('Session has already been staged. Use "--update" to skip existing.')
             # Get all images in session "nii" directory, sort by reverse name and skip "ND"
-            all_imgs = glob(session / "nii" / "*.nii.gz")
+            # Avoid extra images by first grabbing jsons, then swapping exts
+            all_imgs = glob(session / "nii" / "*.json")
+            all_imgs = [img.parent / img.name.replace(".json", ".nii.gz") for img in all_imgs]
             all_imgs = sorted(all_imgs, key=lambda x: x.name, reverse=True)
             all_imgs = [img for img in all_imgs if "ND" not in img.extras]
             if all_imgs:
