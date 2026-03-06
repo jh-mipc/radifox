@@ -78,8 +78,6 @@ class Staging(ProcessingModule):
                         st_path = (session / "stage" / "subject-target")
                         if st_path.exists():
                             subject_target = ImageFile(st_path.resolve())
-                        else:
-                            subject_target = None
                     continue
                 else:
                     parser.error('Session has already been staged. Use "--update" to skip existing.')
