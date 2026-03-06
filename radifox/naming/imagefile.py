@@ -223,7 +223,7 @@ class ImageFilter:
         return img_value == dict_value
 
 
-def iglob(path: str | os.PathLike[str], recursive: bool = False) -> list[ImageFile]:
+def iglob(path: str | os.PathLike[str], recursive: bool = False) -> Generator[ImageFile]:
     for p in standard_iglob(str(path), recursive=recursive):
         yield ImageFile(p)
 

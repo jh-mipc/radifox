@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 import argparse
-from collections import defaultdict
 import importlib.util
 import inspect
 import logging
+import warnings
+from abc import ABC, abstractmethod
+from collections import defaultdict
 from pathlib import Path
 
 import nibabel as nib
 import numpy as np
+
 from .._version import __version__
 from ..naming import ImageFile, ImageFilter, glob
 from ..records import ProcessingModule
@@ -71,7 +74,12 @@ class Staging(ProcessingModule):
             # If we are updating, skip sessions that already have staged images
             if (session / "stage").exists():
                 if parsed.update:
-                    subject_target = ImageFile((session / "stage" / "subject-target").resolve())
+                    if subject_target is None:
+                        st_path = (session / "stage" / "subject-target")
+                        if st_path.exists():
+                            subject_target = ImageFile(st_path.resolve())
+                        else:
+                            subject_target = None
                     continue
                 else:
                     parser.error('Session has already been staged. Use "--update" to skip existing.')
@@ -87,8 +95,10 @@ class Staging(ProcessingModule):
         if len(session_imgs) == 0:
             parser.error("No images found for this subject.")
 
-        if parsed.update and (subject_target is None or not subject_target.path.exists()):
-            parser.error("No subject target found for updating.")
+        if parsed.update and subject_target is None:
+            warnings.warn("No subject target found for updating. "
+                          "Subject target will be attempted from registration "
+                          "filters if provided.")
 
         return {
             "session_filepaths": list(session_imgs.values()),
@@ -110,7 +120,7 @@ class Staging(ProcessingModule):
         reg_filters: list[list[ImageFilter] | None],
         skip_default_plugins: list[bool],
         skip_set_sform: list[bool],
-        subject_target: list[Path | None],
+        subject_target: list[ImageFile | None],
     ):
         # For each session, find images that match the contrast filters
         session_imgs = {}
@@ -414,8 +424,8 @@ class MP2RAGEPlugin(StagingPlugin):
             temp_img = img_dict["INV1-MAG"][0]
             for inv in ["INV1", "INV2"]:
                 data[f"{inv}-PHA"] = (
-                    (data["INV1-PHA"] - data["INV1-PHA"].min())
-                    / (data["INV1-PHA"].max() - data["INV1-PHA"].min())
+                    (data[f"{inv}-PHA"] - data[f"{inv}-PHA"].min())
+                    / (data[f"{inv}-PHA"].max() - data[f"{inv}-PHA"].min())
                     * (2 * np.pi)
                 )
                 data[f"{inv}-CPX"] = data[f"{inv}-MAG"] * np.exp(data[f"{inv}-PHA"] * 1j)
