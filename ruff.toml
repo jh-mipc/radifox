@@ -6,4 +6,4 @@ select = ["E", "F"]
 ignore = []
 
 [lint.per-file-ignores]
-__init__.py = ["F401"]
+"__init__.py" = ["F401"]
