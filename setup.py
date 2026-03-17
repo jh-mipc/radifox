@@ -2,7 +2,7 @@ from setuptools import setup
 
 
 def get_version_and_cmdclass():
-    """Load version metadata from the package's _version.py file."""
+    """Compatibility shim for miniver; packaging metadata lives in pyproject.toml."""
     import os
     from importlib.util import module_from_spec, spec_from_file_location
 
