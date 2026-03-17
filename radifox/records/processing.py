@@ -46,13 +46,13 @@ class ProcessingModule(ABC):
             logging.info(f"Command: {self.cli_call}")
             self.outputs = self.run(**self.parsed_args)
             if not self.check_outputs():
-                logging.error(f"Processing failed. No outputs reported.")
+                logging.error("Processing failed. No outputs reported.")
                 return
-            logging.info(f"Generating QA images.")
+            logging.info("Generating QA images.")
             self.generate_qa_images()
-            logging.info(f"Generating provenance records.")
+            logging.info("Generating provenance records.")
             self.generate_prov()
-            logging.info(f"Processing complete.")
+            logging.info("Processing complete.")
         except Exception as e:
             logging.error(f"An error occurred during processing: {e}.", exc_info=True)
             raise
@@ -126,10 +126,10 @@ class ProcessingModule(ABC):
             prov_str += self.get_prov_path_strs(inputs, project_root)
         else:
             prov_str += "None\n"
-        prov_str += f"Outputs: \n"
+        prov_str += "Outputs: \n"
         prov_str += self.get_prov_path_strs(outputs, project_root)
         params = {k: v for k, v in args.items() if k not in inputs}
-        prov_str += f"Parameters: "
+        prov_str += "Parameters: "
         if len(params) > 0:
             prov_str += "\n"
             for k, v in params.items():
@@ -144,11 +144,14 @@ class ProcessingModule(ABC):
         prov_str += f"Command: {self.cli_call}\n"
         hashobj = hashlib.sha256()
         hashobj.update(prov_str.encode("utf-8"))
-        prov_str = f"---\nId: {hashobj.hexdigest()}\n" + prov_str + f"...\n"
+        prov_str = f"---\nId: {hashobj.hexdigest()}\n{prov_str}...\n"
         return prov_str
 
     @staticmethod
-    def get_prov_path_strs(path_dict: dict[str, Path | list[Path] | None], project_root: Path) -> str:
+    def get_prov_path_strs(
+        path_dict: dict[str, Path | list[Path] | None],
+        project_root: Path,
+    ) -> str:
         prov_str = ""
         for k, v in path_dict.items():
             if v is None:

@@ -163,7 +163,8 @@ class ImageFilter:
         for key in kwargs.keys():
             if key not in self.allowed_keys:
                 raise ValueError(
-                    f"Invalid key provided {key}. Allowed keys are: {', '.join(self.allowed_keys)}\n"
+                    f"Invalid key provided {key}. "
+                    f"Allowed keys are: {', '.join(self.allowed_keys)}\n"
                     f"Keys provided: {', '.join(kwargs.keys())}"
                 )
         self._filter_dict = kwargs

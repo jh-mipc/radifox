@@ -5,18 +5,20 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "radifox"
 dynamic = ["version"]
-description = "Conversion tools using the RADIFOX framework."
+description = "Core naming, organization, provenance, and staging framework for RADIFOX."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "JH-MIPC", email = "jhmipc@jh.edu" },
 ]
-urls = { "Homepage" = "https://github.com/jh-mipc/radifox" }
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
 ]
 dependencies = [
     "nibabel",
@@ -29,8 +31,11 @@ dependencies = [
     "networkx",
 ]
 
+[project.urls]
+Homepage = "https://github.com/jh-mipc/radifox"
+
 [project.scripts]
 radifox-stage = "radifox.modules.staging:Staging"
 
-[tool.setuptools.packages]
-find = {}
+[miniver]
+package_path = "radifox"

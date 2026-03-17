@@ -80,7 +80,10 @@ class Staging(ProcessingModule):
                             subject_target = ImageFile(st_path.resolve())
                     continue
                 else:
-                    parser.error('Session has already been staged. Use "--update" to skip existing.')
+                    parser.error(
+                        'Session has already been staged. '
+                        'Use "--update" to skip existing.'
+                    )
             # Get all images in session "nii" directory, sort by reverse name and skip "ND"
             # Avoid extra images by first grabbing jsons, then swapping exts
             all_imgs = glob(session / "nii" / "*.json")

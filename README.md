@@ -19,6 +19,7 @@ The QA webapp has also moved to [radifox-qa](https://github.com/jh-mipc/radifox-
 ## Table of Contents
 - [Overview](#overview)
 - [Installation](#installation)
+- [Development] (#development)
 - [Basic Usage](#basic-usage)
   - [CLI Scripts](#cli-scripts)
     - [`radifox-stage`](#radifox-stage)
@@ -62,6 +63,17 @@ pip install radifox
 ```
 This base install will cover the core functionality of RADIFOX.
 However, to run conversions, you will need the [dcm2niix](https://github.com/rordenlab/dcm2niix) tool installed on your system (and included in your PATH).
+
+## Development
+
+For local development:
+
+```bash
+pip install -e .
+pip install pytest ruff
+pytest
+ruff check .
+```
 
 ## Basic Usage
 ### CLI Scripts
