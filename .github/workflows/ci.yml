@@ -71,6 +71,7 @@ jobs:
   ci-complete:
     name: CI
     needs: [lint, tests]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any dependency failed
