@@ -73,4 +73,10 @@ jobs:
     needs: [lint, tests]
     runs-on: ubuntu-latest
     steps:
-      - run: echo "All checks passed"
+      - name: Fail if any dependency failed
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.tests.result }}" != "success" ]; then
+            echo "Upstream jobs failed"
+            exit 1
+          fi
