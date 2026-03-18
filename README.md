@@ -19,7 +19,7 @@ The QA webapp has also moved to [radifox-qa](https://github.com/jh-mipc/radifox-
 ## Table of Contents
 - [Overview](#overview)
 - [Installation](#installation)
-- [Development] (#development)
+- [Development](#development)
 - [Basic Usage](#basic-usage)
   - [CLI Scripts](#cli-scripts)
     - [`radifox-stage`](#radifox-stage)
