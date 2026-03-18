@@ -4,7 +4,7 @@ except ImportError:
     from importlib_metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("radifox-convert")
+    __version__ = version("radifox")
 except PackageNotFoundError:
     try:
         from ._version import __version__
