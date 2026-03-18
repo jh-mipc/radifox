@@ -31,6 +31,9 @@ jobs:
       - name: Lint
         run: |
           ruff check .
+      
+      - name: Temporary failure test
+        run: exit 1
 
   tests:
     runs-on: ubuntu-latest
