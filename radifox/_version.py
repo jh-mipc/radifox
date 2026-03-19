@@ -1,49 +1,129 @@
-# -*- coding: utf-8 -*-
-# This file is part of 'miniver': https://github.com/jbweston/miniver
-#
-from collections import namedtuple
-import os
-import subprocess
-
-Version = namedtuple("Version", ("release", "dev", "labels"))
-
-# No public API
-__all__ = ['__version__']
-
-package_root = os.path.dirname(os.path.realpath(__file__))
-package_name = os.path.basename(package_root)
-
-STATIC_VERSION_FILE = "_static_version.py"
+from pathlib import Path
 
 
-def get_version(version_file=STATIC_VERSION_FILE):
-    version_info = get_static_version_info(version_file)
-    version = version_info["version"]
-    if version == "__use_git__":
-        version = get_version_from_git()
-        if not version:
-            version = get_version_from_git_archive(version_info)
-        if not version:
-            version = Version("unknown", None, None)
-        return pep440_format(version)
-    else:
+def get_version() -> str:
+    """
+    Return the best available version string.
+
+    Resolution order:
+    1. Live Git checkout
+    2. Git archival metadata
+    3. Generated static version file
+    4. Fallback constant
+    """
+    package_root = Path(__file__).resolve().parent
+
+    version = _version_from_git(package_root)
+    if version is not None:
         return version
 
+    version = _version_from_git_archive(package_root)
+    if version is not None:
+        return version
 
-def get_static_version_info(version_file=STATIC_VERSION_FILE):
-    version_info = {}
-    with open(os.path.join(package_root, version_file), "rb") as f:
-        exec(f.read(), {}, version_info)
-    return version_info
+    version = _version_from_static()
+    if version is not None:
+        return version
+
+    return "0+unknown"
 
 
-def version_is_from_git(version_file=STATIC_VERSION_FILE):
-    return get_static_version_info(version_file)["version"] == "__use_git__"
+def _version_from_git(package_root: Path) -> str | None:
+    # git describe --first-parent does not take into account tags from branches
+    # that were merged-in. The '--long' flag gets us the 'dev' version and
+    # git hash, '--always' returns the git hash even if there are no tags.
+    import subprocess
+
+    for opts in [["--first-parent"], []]:
+        try:
+            p = subprocess.Popen(
+                ["git", "describe", "--long", "--always", "--tags", "--dirty"] + opts,
+                cwd=package_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except OSError:
+            return None
+        if p.wait() == 0:
+            break
+    else:
+        return None
+
+    description = (
+        p.communicate()[0]
+        .decode()
+        .lstrip("v")  # Tags can have a leading 'v', but the version should not
+        .rstrip("\n")
+        .rsplit("-")  # Split the latest tag, commits since tag, and hash
+    )
+
+    try:
+        release, dev, git = description[:3]
+    except ValueError:  # No tags, only the git hash
+        # prepend 'g' to match with format returned by 'git describe'
+        git = "g{}".format(*description)
+        release = "unknown"
+        dev = None
+
+    labels = []
+    if dev == "0":
+        dev = None
+    else:
+        labels.append(git)
+
+    if description[-1] == "dirty":
+        labels.append("dirty")
+
+    return pep440_format(release, dev, labels)
 
 
-def pep440_format(version_info):
-    release, dev, labels = version_info
+def _version_from_git_archive(package_root: Path) -> str | None:
+    import json
+    import re
 
+    archival_path = package_root / ".git_archival.json"
+    if not archival_path.exists():
+        return None
+
+    try:
+        data = json.loads(archival_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    tag = data.get("describe")
+    commit = data.get("commit")
+
+    if not tag or not commit:
+        return None
+
+    if tag.startswith("$Format:") or commit.startswith("$Format:"):
+        return None
+
+    tag_match = re.fullmatch(r"v?(\d+\.\d+\.\d+)", tag)
+    if tag_match:
+        return pep440_format(tag_match.group(1), None, None)
+
+    tag_match = re.fullmatch(r"v?(\d+\.\d+\.\d+)-(\d+)-g([0-9a-f]+)", tag)
+    if tag_match:
+        release, dev, git = tag_match.groups()
+        labels = [] if dev == "0" else [f"g{git}"]
+        return pep440_format(release, None if dev == "0" else dev, labels)
+    
+    return pep440_format("unknown", dev=None, labels=["g{}".format(commit[:7])])
+
+
+def _version_from_static() -> str | None:
+    try:
+        from ._static_version import version as static_version
+    except ImportError:
+        return None
+
+    return static_version or None
+
+
+def pep440_format(release: str, dev: str | None, labels: list[str] | None) -> str:
+    if release.startswith("v"):
+        release = release[1:]
     version_parts = [release]
     if dev:
         if release.endswith("-dev") or release.endswith(".dev"):
@@ -58,127 +138,29 @@ def pep440_format(version_info):
     return "".join(version_parts)
 
 
-def get_version_from_git():
-    # git describe --first-parent does not take into account tags from branches
-    # that were merged-in. The '--long' flag gets us the 'dev' version and
-    # git hash, '--always' returns the git hash even if there are no tags.
-    for opts in [["--first-parent"], []]:
-        try:
-            p = subprocess.Popen(
-                ["git", "describe", "--long", "--always"] + opts,
-                cwd=package_root,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except OSError:
-            return
-        if p.wait() == 0:
-            break
-    else:
-        return
-
-    description = (
-        p.communicate()[0]
-        .decode()
-        .strip("v")  # Tags can have a leading 'v', but the version should not
-        .rstrip("\n")
-        .rsplit("-", 2)  # Split the latest tag, commits since tag, and hash
-    )
-
-    try:
-        release, dev, git = description
-    except ValueError:  # No tags, only the git hash
-        # prepend 'g' to match with format returned by 'git describe'
-        git = "g{}".format(*description)
-        release = "unknown"
-        dev = None
-
-    labels = []
-    if dev == "0":
-        dev = None
-    else:
-        labels.append(git)
-
-    try:
-        p = subprocess.Popen(["git", "diff", "--quiet"], cwd=package_root)
-    except OSError:
-        labels.append("confused")  # This should never happen.
-    else:
-        if p.wait() == 1:
-            labels.append("dirty")
-
-    return Version(release, dev, labels)
-
-
-# TODO: change this logic when there is a git pretty-format
-#       that gives the same output as 'git describe'.
-#       Currently we can only tell the tag the current commit is
-#       pointing to, or its hash (with no version info)
-#       if it is not tagged.
-def get_version_from_git_archive(version_info):
-    try:
-        refnames = version_info["refnames"]
-        git_hash = version_info["git_hash"]
-    except KeyError:
-        # These fields are not present if we are running from an sdist.
-        # Execution should never reach here, though
-        return None
-
-    if git_hash.startswith("$Format") or refnames.startswith("$Format"):
-        # variables not expanded during 'git archive'
-        return None
-
-    VTAG = "tag: v"
-    refs = set(r.strip() for r in refnames.split(","))
-    version_tags = set(r[len(VTAG) :] for r in refs if r.startswith(VTAG))
-    if version_tags:
-        release, *_ = sorted(version_tags)  # prefer e.g. "2.0" over "2.0rc1"
-        return Version(release, dev=None, labels=None)
-    else:
-        return Version("unknown", dev=None, labels=["g{}".format(git_hash)])
-
-
-__version__ = get_version()
-
-
-# The following section defines a 'get_cmdclass' function
-# that can be used from setup.py. The '__version__' module
-# global is used (but not modified).
-
-
-def _write_version(fname):
-    # This could be a hard link, so try to delete it first.  Is there any way
-    # to do this atomically together with opening?
-    try:
-        os.remove(fname)
-    except OSError:
-        pass
-    with open(fname, "w") as f:
-        f.write(
-            "# This file has been created by setup.py.\n"
-            "version = '{}'\n".format(__version__)
+def get_cmd_class():
+    from setuptools.command.build_py import build_py as _build_py
+    from setuptools.command.sdist import sdist as _sdist
+    
+    def write_static_version(version: str) -> None:
+        (Path(__file__).resolve().parent / "_static_version.py").write_text(
+            "# This file is auto-generated at build time.\n"
+            f'version = "{version}"\n',
+            encoding="utf-8",
         )
-
-
-def get_cmdclass(pkg_source_path):
-    from setuptools.command.build_py import build_py as build_py_orig
-    from setuptools.command.sdist import sdist as sdist_orig
-
-    class _build_py(build_py_orig):
+    
+    class build_py(_build_py):
         def run(self):
+            write_static_version(get_version())
             super().run()
+    
+    class sdist(_sdist):
+        def run(self):
+            write_static_version(get_version())
+            super().run()
+    
+    return {"build_py": build_py, "sdist": sdist}
 
-            src_marker = "".join(["src", os.path.sep])
-
-            if pkg_source_path.startswith(src_marker):
-                path = pkg_source_path[len(src_marker) :]
-            else:
-                path = pkg_source_path
-            _write_version(os.path.join(self.build_lib, path, STATIC_VERSION_FILE))
-
-    class _sdist(sdist_orig):
-        def make_release_tree(self, base_dir, files):
-            super().make_release_tree(base_dir, files)
-            _write_version(os.path.join(base_dir, pkg_source_path, STATIC_VERSION_FILE))
-
-    return dict(sdist=_sdist, build_py=_build_py)
+_cmdclass = get_cmd_class()
+build_py_cls = _cmdclass["build_py"]
+sdist_cls = _cmdclass["sdist"]

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", 'tomli;python_version<"3.11"']
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -37,5 +37,9 @@ Homepage = "https://github.com/jh-mipc/radifox"
 [project.scripts]
 radifox-stage = "radifox.modules.staging:Staging"
 
-[miniver]
-package_path = "radifox"
+[tool.setuptools.dynamic]
+version = {attr = "radifox.__version__"}
+
+[tool.setuptools.cmdclass]
+build_py = "radifox._version.build_py_cls"
+sdist = "radifox._version.sdist_cls"
