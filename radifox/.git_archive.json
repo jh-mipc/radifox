@@ -1,0 +1,4 @@
+{
+  "commit": "$Format:%H$",
+  "describe": "$Format:%(describe:tags=true,match=v[0-9]*)$"
+}

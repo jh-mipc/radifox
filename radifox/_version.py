@@ -81,7 +81,7 @@ def _version_from_git_archive(package_root: Path) -> str | None:
     import json
     import re
 
-    archival_path = package_root / ".git_archival.json"
+    archival_path = package_root / ".git_archive.json"
     if not archival_path.exists():
         return None
 
