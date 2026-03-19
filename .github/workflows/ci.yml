@@ -17,12 +17,6 @@ jobs:
 
       - name: Fetch tags
         run: git fetch --force --tags
-      
-      - name: Debug git version context
-        run: |
-          git describe --long --always --tags --dirty
-          git describe --long --always --tags --dirty --first-parent
-
 
       - name: Set up Python
         uses: actions/setup-python@v5

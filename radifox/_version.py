@@ -34,19 +34,17 @@ def _version_from_git(package_root: Path) -> str | None:
     # git hash, '--always' returns the git hash even if there are no tags.
     import subprocess
 
-    for opts in [["--first-parent"], []]:
-        try:
-            p = subprocess.Popen(
-                ["git", "describe", "--long", "--always", "--tags", "--dirty"] + opts,
-                cwd=package_root,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except OSError:
-            return None
-        if p.wait() == 0:
-            break
-    else:
+    try:
+        p = subprocess.Popen(
+            ["git", "describe", "--long", "--always", "--tags", "--dirty"],
+            cwd=package_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError:
+        return None
+
+    if p.wait() != 0:
         return None
 
     description = (
