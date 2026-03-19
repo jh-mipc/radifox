@@ -41,5 +41,5 @@ radifox-stage = "radifox.modules.staging:Staging"
 version = {attr = "radifox.__version__"}
 
 [tool.setuptools.cmdclass]
-build_py = "radifox._version.build_py_cls"
-sdist = "radifox._version.sdist_cls"
+build_py = "autoversion.build_py"
+sdist = "autoversion.sdist"

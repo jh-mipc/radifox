@@ -136,31 +136,3 @@ def pep440_format(release: str, dev: str | None, labels: list[str] | None) -> st
         version_parts.append(".".join(labels))
 
     return "".join(version_parts)
-
-
-def get_cmd_class():
-    from setuptools.command.build_py import build_py as _build_py
-    from setuptools.command.sdist import sdist as _sdist
-    
-    def write_static_version(version: str) -> None:
-        (Path(__file__).resolve().parent / "_static_version.py").write_text(
-            "# This file is auto-generated at build time.\n"
-            f'version = "{version}"\n',
-            encoding="utf-8",
-        )
-    
-    class build_py(_build_py):
-        def run(self):
-            write_static_version(get_version())
-            super().run()
-    
-    class sdist(_sdist):
-        def run(self):
-            write_static_version(get_version())
-            super().run()
-    
-    return {"build_py": build_py, "sdist": sdist}
-
-_cmdclass = get_cmd_class()
-build_py_cls = _cmdclass["build_py"]
-sdist_cls = _cmdclass["sdist"]
